@@ -31,7 +31,7 @@ const UserList = ({ setAssignedTo, assignedTo, users, loading, error, label, fil
 
   return (
     <div>
-      <p className="text-gray-300 mb-2">{label}</p>
+      <p className="text-[var(--text-secondary)] mb-2">{label}</p>
       <Autocomplete
         multiple
         disableCloseOnSelect

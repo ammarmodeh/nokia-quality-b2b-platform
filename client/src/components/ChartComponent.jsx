@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useRef } from "react";
 import { Box, Typography, IconButton, Tooltip } from "@mui/material";
 import { Line } from "react-chartjs-2";
@@ -59,7 +60,7 @@ export const ChartComponent = ({ chartData }) => {
       chart.options.scales.y.grid.color = 'rgba(0, 0, 0, 0.05)';
       chart.options.scales.y.ticks.color = '#475569';
       chart.options.plugins.legend.labels.color = '#1e293b';
-      chart.options.plugins.customCanvasBackgroundColor.color = '#ffffff';
+      chart.options.plugins.customCanvasBackgroundColor.color = tok('--text');
 
       // Update datalabels for contrast (Dark text on light background)
       chart.data.datasets.forEach(dataset => {
@@ -71,11 +72,11 @@ export const ChartComponent = ({ chartData }) => {
       });
     } else {
       // Dark Mode Styles (Ensure defaults are enforced)
-      chart.options.scales.x.grid.color = 'rgba(255, 255, 255, 0.05)';
-      chart.options.scales.x.ticks.color = '#94a3b8';
-      chart.options.scales.y.grid.color = 'rgba(255, 255, 255, 0.1)';
-      chart.options.scales.y.ticks.color = '#94a3b8';
-      chart.options.plugins.legend.labels.color = '#e0e0e0';
+      chart.options.scales.x.grid.color = tok('--overlay-subtle');
+      chart.options.scales.x.ticks.color = tok('--text-secondary');
+      chart.options.scales.y.grid.color = tok('--overlay-subtle');
+      chart.options.scales.y.ticks.color = tok('--text-secondary');
+      chart.options.plugins.legend.labels.color = tok('--text-secondary');
       chart.options.plugins.customCanvasBackgroundColor.color = '#1e1e1e';
     }
 
@@ -111,7 +112,7 @@ export const ChartComponent = ({ chartData }) => {
       legend: {
         position: "top",
         labels: {
-          color: "#e0e0e0",
+          color: tok('--text-secondary'),
           usePointStyle: true,
           padding: 15,
           font: { size: 12, weight: 'bold' }
@@ -143,16 +144,16 @@ export const ChartComponent = ({ chartData }) => {
     },
     scales: {
       x: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
-        ticks: { color: "#94a3b8", font: { size: 11 } }
+        grid: { color: tok('--overlay-subtle') },
+        ticks: { color: tok('--text-secondary'), font: { size: 11 } }
       },
       y: {
         beginAtZero: true,
         min: -20,
         max: 100,
-        grid: { color: "rgba(255, 255, 255, 0.1)" },
+        grid: { color: tok('--overlay-subtle') },
         ticks: {
-          color: "#94a3b8",
+          color: tok('--text-secondary'),
           font: { size: 11 },
           callback: (value) => value
         }
@@ -160,15 +161,15 @@ export const ChartComponent = ({ chartData }) => {
     },
     elements: {
       line: { tension: 0, borderWidth: 2.5 },
-      point: { radius: 5, hoverRadius: 7, borderWidth: 2, backgroundColor: "#1e1e1e" }
+      point: { radius: 5, hoverRadius: 7, borderWidth: 2, backgroundColor: tok('--surface') }
     }
   };
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Box sx={{ bgcolor: '#1e1e1e', p: 3, borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+      <Box sx={{ bgcolor: tok('--surface'), p: 3, borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+          <Typography variant="subtitle2" sx={{ color: tok('--text-secondary'), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
             NPS Performance Trends
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -177,11 +178,11 @@ export const ChartComponent = ({ chartData }) => {
                 onClick={() => handleCapture('dark')}
                 size="small"
                 sx={{
-                  color: '#7b68ee',
+                  color: tok('--accent-text'),
                   backgroundColor: 'rgba(123, 104, 238, 0.05)',
                   '&:hover': {
                     backgroundColor: 'rgba(123, 104, 238, 0.15)',
-                    color: '#9c8dff'
+                    color: tok('--accent-text')
                   }
                 }}
               >

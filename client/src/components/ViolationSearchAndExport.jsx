@@ -181,7 +181,7 @@ const SearchAndExport = ({
             onChange={(e, val) => val && setStatusFilter(val)}
             size="small"
             sx={{
-              backgroundColor: '#1a1a1a',
+              backgroundColor: 'var(--bg)',
               borderRadius: '8px',
               display: 'flex',
               flexDirection: 'row',
@@ -190,10 +190,10 @@ const SearchAndExport = ({
               width: '100%',
               maxWidth: isMobile ? 'calc(100vw - 40px)' : 'auto', // Ensure it doesn't push parent wide
               '&::-webkit-scrollbar': { height: '3px' },
-              '&::-webkit-scrollbar-thumb': { backgroundColor: '#333', borderRadius: '3px' },
+              '&::-webkit-scrollbar-thumb': { backgroundColor: 'var(--surface-hover)', borderRadius: '3px' },
               '& .MuiToggleButton-root': {
-                color: '#888',
-                border: '1px solid #333',
+                color: 'var(--text-muted)',
+                border: '1px solid var(--border)',
                 px: 2,
                 py: 0.5,
                 textTransform: 'none',
@@ -203,8 +203,8 @@ const SearchAndExport = ({
                 minWidth: 'max-content',
                 '&.Mui-selected': {
                   backgroundColor: 'rgba(123, 104, 238, 0.15)',
-                  color: '#7b68ee',
-                  borderColor: '#7b68ee',
+                  color: 'var(--accent-text)',
+                  borderColor: 'var(--accent)',
                   '&:hover': {
                     backgroundColor: 'rgba(123, 104, 238, 0.25)',
                   }
@@ -230,14 +230,14 @@ const SearchAndExport = ({
               onChange={(e) => setSearchText(e.target.value)}
               fullWidth
               sx={{
-                backgroundColor: '#1e1e1e',
+                backgroundColor: 'var(--surface)',
                 borderRadius: '8px',
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#333' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
                 '& .MuiInputBase-input': {
-                  color: '#fff',
+                  color: 'var(--text)',
                   fontSize: '0.875rem',
                   padding: '8px 14px',
                 },
@@ -245,7 +245,7 @@ const SearchAndExport = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MdSearch style={{ color: '#666' }} />
+                    <MdSearch style={{ color: 'var(--text-muted)' }} />
                   </InputAdornment>
                 ),
               }}
@@ -255,8 +255,8 @@ const SearchAndExport = ({
               <IconButton
                 onClick={exportToExcel}
                 sx={{
-                  backgroundColor: '#1e1e1e',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--border)',
                   color: '#4caf50',
                   '&:hover': {
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
@@ -274,7 +274,7 @@ const SearchAndExport = ({
       <Stack direction={`${isMobile ? "column" : "row"}`} alignItems="center" justifyContent={"space-between"} gap={2} width={"100%"} sx={{ mt: 2 }}>
         {totalGlobalSamples > 0 && calculationBreakdown && (
           <Collapse in={showLimitsInfo} sx={{ width: '100%' }}>
-            <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '8px', p: 2, flexDirection: 'column', border: '1px solid #333' }}>
+            <Stack direction="row" gap={1} width={"100%"} sx={{ backgroundColor: '#191919', borderRadius: '8px', p: 2, flexDirection: 'column', border: '1px solid var(--border)' }}>
               <Typography variant="caption" sx={{ color: '#5b5b5b', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 📊 Monthly Per-Team Baseline (Guideline)
               </Typography>

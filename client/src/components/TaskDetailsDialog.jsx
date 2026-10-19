@@ -1,31 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Paper,
-  Typography,
-  Box,
-  Divider,
-  Chip,
-  Stack,
-  IconButton,
-  Tooltip,
-  Avatar,
-  Grid,
-  useTheme,
-  useMediaQuery,
-  alpha,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Paper, Typography, Box, Divider, Chip, Stack, IconButton, Tooltip, Avatar, Grid, useTheme, useMediaQuery, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress } from '@mui/material';
 import * as XLSX from 'xlsx';
 import {
   MdClose,
@@ -104,7 +79,7 @@ const ExpandableNote = ({ text }) => {
   return (
     <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
       <Typography variant="body2" sx={{
-        color: '#aaa',
+        color: 'var(--text-secondary)',
         whiteSpace: isExpanded ? 'pre-wrap' : 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -382,7 +357,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
         fullScreen
         PaperProps={{
           sx: {
-            bgcolor: '#1a1a1a',
+            bgcolor: 'var(--bg)',
             backgroundImage: 'none'
           }
         }}
@@ -391,8 +366,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          bgcolor: '#252525',
-          borderBottom: '1px solid #333',
+          bgcolor: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
           py: 2,
           px: 3
         }}>
@@ -404,7 +379,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
               <MdAssignment size={24} />
             </Box>
             <Box>
-              <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold" color="white">
+              <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold" color="var(--text)">
                 {displayTitle}
               </Typography>
               <Typography variant="caption" color="gray">
@@ -415,12 +390,12 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
 
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Tooltip title="Copy to Clipboard">
-              <IconButton onClick={copyToClipboard} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
+              <IconButton onClick={copyToClipboard} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'var(--text)' } }}>
                 <MdContentCopy />
               </IconButton>
             </Tooltip>
             <Tooltip title="Export to Excel">
-              <IconButton onClick={exportToExcel} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'white' } }}>
+              <IconButton onClick={exportToExcel} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'var(--text)' } }}>
                 <MdFileDownload />
               </IconButton>
             </Tooltip>
@@ -431,13 +406,13 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                 </IconButton>
               </Tooltip>
             )}
-            <IconButton onClick={onClose} sx={{ color: 'gray', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}>
+            <IconButton onClick={onClose} sx={{ color: 'gray', '&:hover': { color: 'white', bgcolor: 'var(--overlay-subtle)' } }}>
               <MdClose />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ bgcolor: '#121212', p: { xs: 2, md: 4 } }}>
+        <DialogContent sx={{ bgcolor: 'var(--bg)', p: { xs: 2, md: 4 } }}>
           <Stack spacing={4}>
             {tasks.map((task, index) => (
               <Paper
@@ -445,9 +420,9 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                 elevation={0}
                 sx={{
                   p: 0,
-                  bgcolor: '#1e1e1e',
+                  bgcolor: 'var(--surface)',
                   borderRadius: '16px',
-                  border: '1px solid #333',
+                  border: '1px solid var(--border)',
                   overflow: 'hidden',
                   transition: 'transform 0.2s',
                   '&:hover': {
@@ -460,7 +435,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                 <Box sx={{
                   p: 2,
                   bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  borderBottom: '1px solid #333',
+                  borderBottom: '1px solid var(--border)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
@@ -475,10 +450,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                         borderRadius: '8px',
                         fontWeight: 'bold',
                         bgcolor: theme.palette.primary.main,
-                        color: 'white'
+                        color: 'var(--text)'
                       }}
                     />
-                    <Typography variant="subtitle1" fontWeight="bold" color="white">
+                    <Typography variant="subtitle1" fontWeight="bold" color="var(--text)">
                       Request #{task.requestNumber}
                     </Typography>
                     {task.interviewDate && (
@@ -499,12 +474,12 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                         label={task.slid}
                         variant="outlined"
                         size="small"
-                        sx={{ borderColor: '#555', color: '#aaa', fontWeight: 500 }}
+                        sx={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', fontWeight: 500 }}
                       />
                     )}
                   </Stack>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Typography variant="body2" sx={{ color: '#aaa', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 1 }}>
                       <MdTimer />
                       PIS: {task.pisDate ? moment(task.pisDate).format("MMM DD, YYYY") : 'N/A'}
                     </Typography>
@@ -558,7 +533,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                               size="small"
                               sx={{
                                 fontWeight: 'bold',
-                                color: 'white',
+                                color: 'var(--text)',
                                 bgcolor: task.evaluationScore >= 9 ? '#10b981' :
                                   task.evaluationScore >= 7 ? '#64748b' : '#ef4444'
                               }}
@@ -625,41 +600,41 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                           </Stack>
                         </Grid>
                         <Grid item xs={12} md={8}>
-                          <Box sx={{ border: '1px solid #333', borderRadius: 2, overflow: 'hidden' }}>
+                          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, overflow: 'hidden' }}>
                             <TableContainer sx={{ maxHeight: 300 }}>
                               <Table size="small" stickyHeader>
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Execution Date</TableCell>
-                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Type / State</TableCell>
-                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Agent</TableCell>
-                                    <TableCell sx={{ bgcolor: '#2c2c2c', color: '#aaa', fontWeight: 'bold' }}>Note</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Execution Date</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Type / State</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Agent</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Note</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
                                   {loadingLogs ? (
                                     <TableRow>
-                                      <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
+                                      <TableCell colSpan={4} align="center" sx={{ color: 'var(--text-secondary)', py: 3 }}>
                                         <CircularProgress size={20} sx={{ mr: 1 }} /> Loading logs...
                                       </TableCell>
                                     </TableRow>
                                   ) : qopsLogs.length > 0 ? (
                                     qopsLogs.map((log, i) => (
-                                      <TableRow key={i} sx={{ '&:hover': { bgcolor: '#2a2a2a' } }}>
-                                        <TableCell sx={{ color: '#fff' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
-                                        <TableCell sx={{ color: '#fff' }}>
+                                      <TableRow key={i} sx={{ '&:hover': { bgcolor: 'var(--surface)' } }}>
+                                        <TableCell sx={{ color: 'var(--text)' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
+                                        <TableCell sx={{ color: 'var(--text)' }}>
                                           <Typography variant="body2" fontSize="0.75rem">{log.transactionType || log.mainCategory}</Typography>
                                           <Typography variant="caption" color="gray">{log.transactionState}</Typography>
                                         </TableCell>
-                                        <TableCell sx={{ color: '#fff' }}>{log.agentName || '-'}</TableCell>
-                                        <TableCell sx={{ color: '#aaa', maxWidth: 250 }}>
+                                        <TableCell sx={{ color: 'var(--text)' }}>{log.agentName || '-'}</TableCell>
+                                        <TableCell sx={{ color: 'var(--text-secondary)', maxWidth: 250 }}>
                                           <ExpandableNote text={log.note} />
                                         </TableCell>
                                       </TableRow>
                                     ))
                                   ) : (
                                     <TableRow>
-                                      <TableCell colSpan={4} align="center" sx={{ color: '#aaa', py: 3 }}>
+                                      <TableCell colSpan={4} align="center" sx={{ color: 'var(--text-secondary)', py: 3 }}>
                                         No Q-Ops logs found.
                                       </TableCell>
                                     </TableRow>
@@ -683,8 +658,8 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
         </DialogContent>
 
         <DialogActions sx={{
-          bgcolor: '#252525',
-          borderTop: '1px solid #333',
+          bgcolor: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
           p: 2,
           justifyContent: 'space-between'
         }}>

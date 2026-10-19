@@ -1,24 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  Paper,
-  Stack,
-  Container,
-  Breadcrumbs,
-  Link,
-  Grid,
-  Card as MuiCard,
-  CardContent,
-  Chip,
-  Avatar,
-  IconButton,
-  Tooltip,
-  useTheme,
-  alpha,
-  Divider,
-  Button,
-} from "@mui/material";
+import { Box, Typography, Paper, Stack, Container, Breadcrumbs, Link, Grid, Card as MuiCard, CardContent, Chip, Avatar, IconButton, Tooltip, useTheme, Divider, Button } from "@mui/material";
 import {
   NavigateNext as NavigateNextIcon,
   Assessment as AssessmentIcon,
@@ -174,7 +156,7 @@ const PreventionDeepDive = () => {
           size="small"
           sx={{
             backgroundColor: params.value <= 4 ? "#d32f2f" : "#ed6c02",
-            color: "white",
+            color: "var(--text)",
             fontWeight: "bold"
           }}
         />
@@ -429,8 +411,8 @@ const PreventionDeepDive = () => {
                   <XAxis dataKey="name" fontSize={12} stroke={theme.palette.text.secondary} axisLine={false} tickLine={false} />
                   <YAxis fontSize={12} stroke={theme.palette.text.secondary} axisLine={false} tickLine={false} />
                   <RechartsTooltip
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: '#1e1e1e' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: 'var(--surface)' }}
+                    itemStyle={{ color: 'var(--text)' }}
                   />
                   <Bar dataKey="value" fill="url(#scoreGradient)" radius={[6, 6, 0, 0]} barSize={40} />
                 </BarChart>
@@ -462,8 +444,8 @@ const PreventionDeepDive = () => {
                     ))}
                   </Pie>
                   <RechartsTooltip
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: '#1e1e1e' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: 'var(--surface)' }}
+                    itemStyle={{ color: 'var(--text)' }}
                   />
                   <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: 20 }} />
                 </PieChart>
@@ -485,8 +467,8 @@ const PreventionDeepDive = () => {
                   <XAxis type="number" fontSize={12} stroke={theme.palette.text.secondary} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="displayName" fontSize={11} width={150} stroke={theme.palette.text.secondary} axisLine={false} tickLine={false} />
                   <RechartsTooltip
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: '#1e1e1e' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: 'var(--surface)' }}
+                    itemStyle={{ color: 'var(--text)' }}
                   />
                   <Bar dataKey="value" fill={theme.palette.warning.main} radius={[0, 4, 4, 0]} barSize={30} />
                 </BarChart>
@@ -514,8 +496,8 @@ const PreventionDeepDive = () => {
                   <XAxis dataKey="name" fontSize={10} stroke={theme.palette.text.secondary} angle={-30} textAnchor="end" height={80} axisLine={false} tickLine={false} />
                   <YAxis fontSize={12} stroke={theme.palette.text.secondary} axisLine={false} tickLine={false} />
                   <RechartsTooltip
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: '#1e1e1e' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', backgroundColor: 'var(--surface)' }}
+                    itemStyle={{ color: 'var(--text)' }}
                   />
                   <Bar dataKey="value" fill="url(#errorGradient)" radius={[6, 6, 0, 0]} />
                 </BarChart>

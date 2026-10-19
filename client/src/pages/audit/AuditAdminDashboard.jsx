@@ -1,3 +1,4 @@
+import { alpha } from "../../theme/colorFns";
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -60,7 +61,7 @@ import * as XLSX from "xlsx";
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver'; // Added
 
-import { ThemeProvider, alpha } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
 import auditTheme from "../../theme/auditTheme";
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { format, startOfWeek, endOfWeek, subDays, subWeeks, subMonths, getISOWeek, isWithinInterval } from 'date-fns';

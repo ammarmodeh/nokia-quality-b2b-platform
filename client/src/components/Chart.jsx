@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useState, useEffect, useMemo } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
 import * as XLSX from "xlsx";
@@ -156,7 +157,7 @@ const prepareChartData = (groupedData, timeRange, settings = {}) => {
             borderRadius: 4,
             padding: { top: 2, bottom: 2, left: 4, right: 4 },
             font: { weight: 'bold', size: 10 },
-            color: '#ffffff',
+            color: tok('--text'),
             display: (context) => {
               // Show all labels, but hide NPS if it's identical to Promoter
               const val = context.parsed?.y;
@@ -550,7 +551,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
   };
 
   // if (loading) {
-  //   return <CircularProgress sx={{ color: "#7b68ee" }} />;
+  //   return <CircularProgress sx={{ color: tok('--accent-text') }} />;
   // }
 
   if (error) {
@@ -559,7 +560,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
 
   return (
     <Box sx={{
-      // backgroundColor: "#2d2d2d",
+      // backgroundColor: tok('--surface'),
       py: 2,
       borderRadius: "8px",
       maxWidth: '100%',
@@ -572,7 +573,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
         alignItems="center"
         justifyContent="space-between"
       >
-        <Typography variant="h6" sx={{ color: "#E2E8F0", fontWeight: "bold", fontSize: "1.1rem" }}>
+        <Typography variant="h6" sx={{ color: tok('--text-secondary'), fontWeight: "bold", fontSize: "1.1rem" }}>
           {viewType === 'weekly' ? 'Weekly' : 'Monthly'} QoS Trends
         </Typography>
 
@@ -587,15 +588,15 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               height: '32px',
               mr: 1,
               "& .MuiToggleButton-root": {
-                color: "#94a3b8",
-                borderColor: "rgba(255,255,255,0.05)",
+                color: tok('--text-secondary'),
+                borderColor: tok('--border'),
                 px: 2,
                 fontSize: '0.75rem',
                 textTransform: 'none',
                 fontWeight: 700,
                 "&.Mui-selected": {
                   backgroundColor: "rgba(123, 104, 238, 0.15)",
-                  color: "#7b68ee",
+                  color: tok('--accent-text'),
                   borderColor: "rgba(123, 104, 238, 0.3)",
                   "&:hover": { backgroundColor: "rgba(123, 104, 238, 0.2)" }
                 }
@@ -615,7 +616,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
             size="small"
             startIcon={<FilterAltOffIcon />}
             sx={{
-              color: "#94a3b8",
+              color: tok('--text-secondary'),
               borderColor: "rgba(148, 163, 184, 0.3)",
               textTransform: 'none',
               "&:hover": { borderColor: "#3b82f6", color: "#3b82f6" }
@@ -646,17 +647,17 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
         elevation={0}
         sx={{
           mb: 3,
-          backgroundColor: "rgba(255, 255, 255, 0.03)",
+          backgroundColor: tok('--overlay-subtle'),
           border: "1px solid rgba(255, 255, 255, 0.05)",
           borderRadius: "12px !important",
           "&::before": { display: 'none' },
           "&.Mui-expanded": { mb: 3 }
         }}
       >
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#94a3b8" }} />}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: tok('--text-secondary') }} />}>
           <Stack direction="row" spacing={1} alignItems="center">
             <FilterAltIcon sx={{ color: "#3b82f6", fontSize: 20 }} />
-            <Typography sx={{ color: "#e2e8f0", fontWeight: 600, fontSize: "0.9rem" }}>
+            <Typography sx={{ color: tok('--text-secondary'), fontWeight: 600, fontSize: "0.9rem" }}>
               Customize Queries
             </Typography>
             {(queryFilters.teamName || queryFilters.responsible || queryFilters.reason || queryFilters.governorate || queryFilters.district) && (
@@ -686,8 +687,8 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
                   backgroundColor: "rgba(0,0,0,0.2)",
                   height: '40px',
                   "& .MuiToggleButton-root": {
-                    color: "#94a3b8",
-                    borderColor: "rgba(255,255,255,0.05)",
+                    color: tok('--text-secondary'),
+                    borderColor: tok('--border'),
                     px: 3,
                     textTransform: 'none',
                     fontWeight: 600,
@@ -730,8 +731,8 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
                       onChange={(e) => setRecentDaysValue(Number(e.target.value))}
                       sx={{
                         width: 80,
-                        "& .MuiOutlinedInput-root": { color: "#cbd5e1" },
-                        "& .MuiInputLabel-root": { color: "#94a3b8" }
+                        "& .MuiOutlinedInput-root": { color: tok('--text-secondary') },
+                        "& .MuiInputLabel-root": { color: tok('--text-secondary') }
                       }}
                     />
                   </Stack>
@@ -749,10 +750,10 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
                     )}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        color: "#cbd5e1",
-                        "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                        color: tok('--text-secondary'),
+                        "& fieldset": { borderColor: tok('--border') },
                       },
-                      "& .MuiInputLabel-root": { color: "#94a3b8" }
+                      "& .MuiInputLabel-root": { color: tok('--text-secondary') }
                     }}
                   />
                 )}
@@ -770,10 +771,10 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
                     )}
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        color: "#cbd5e1",
-                        "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+                        color: tok('--text-secondary'),
+                        "& fieldset": { borderColor: tok('--border') },
                       },
-                      "& .MuiInputLabel-root": { color: "#94a3b8" }
+                      "& .MuiInputLabel-root": { color: tok('--text-secondary') }
                     }}
                   />
                 )}
@@ -781,7 +782,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
             </Stack>
           </Box>
 
-          <Divider sx={{ mb: 4, borderColor: "rgba(255,255,255,0.03)" }} />
+          <Divider sx={{ mb: 4, borderColor: tok('--border') }} />
 
           <Typography variant="overline" sx={{ color: "#3b82f6", fontWeight: 800, letterSpacing: 1.2, mb: 2, display: 'block' }}>
             Metadata Filters
@@ -815,7 +816,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  color: "#cbd5e1",
+                  color: tok('--text-secondary'),
                   "& fieldset": { borderColor: queryFilters.teamName ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
@@ -843,7 +844,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  color: "#cbd5e1",
+                  color: tok('--text-secondary'),
                   "& fieldset": { borderColor: queryFilters.responsible ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
@@ -871,7 +872,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  color: "#cbd5e1",
+                  color: tok('--text-secondary'),
                   "& fieldset": { borderColor: queryFilters.reason ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
@@ -899,7 +900,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  color: "#cbd5e1",
+                  color: tok('--text-secondary'),
                   "& fieldset": { borderColor: queryFilters.governorate ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },
@@ -924,7 +925,7 @@ const Chart = ({ tasks: initialTasks, samplesData = [], settings: propSettings }
               )}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  color: "#cbd5e1",
+                  color: tok('--text-secondary'),
                   "& fieldset": { borderColor: queryFilters.district ? "#3b82f6" : "rgba(255,255,255,0.1)" },
                   "&:hover fieldset": { borderColor: "#3b82f6" },
                 },

@@ -1,32 +1,6 @@
+import { alpha } from "../../theme/colorFns";
 import React, { useMemo, useState } from 'react';
-import {
-    Box,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    Grid,
-    alpha,
-    useTheme,
-    TextField,
-    InputAdornment,
-    IconButton,
-    Tooltip as MuiTooltip,
-    TableSortLabel,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Divider,
-    Slide,
-    ToggleButtonGroup,
-    ToggleButton
-} from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Grid, useTheme, TextField, InputAdornment, IconButton, Tooltip as MuiTooltip, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Slide, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import {
     MdSearch,
     MdFileDownload,
@@ -75,7 +49,7 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
     }, [open, initialType]);
 
     const renderChart = () => {
-        const labelStyle = { fill: '#fff', fontSize: 10, fontWeight: 600 };
+        const labelStyle = { fill: 'var(--text)', fontSize: 10, fontWeight: 600 };
         const colors = ['#7b68ee', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
         switch (chartType) {
@@ -85,11 +59,11 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                     <ResponsiveContainer width="100%" height={500}>
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
                             <PolarGrid stroke="#444" />
-                            <PolarAngleAxis dataKey="name" tick={{ fill: '#aaa', fontSize: 11 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: '#aaa' }} />
-                            <Radar name="Primary Metric" dataKey={radarKey} stroke="#7b68ee" fill="#7b68ee" fillOpacity={0.6} />
+                            <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: 'var(--text-secondary)' }} />
+                            <Radar name="Primary Metric" dataKey={radarKey} stroke="#7b68ee" fill="var(--accent-text)" fillOpacity={0.6} />
                             {data[0]?.detractors !== undefined && <Radar name="Detractors" dataKey="detractors" stroke="#ef4444" fill="#ef4444" fillOpacity={0.5} />}
-                            <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: 8, color: '#fff' }} />
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8, color: 'var(--text)' }} />
                             <Legend wrapperStyle={{ paddingTop: 20 }} />
                         </RadarChart>
                     </ResponsiveContainer>
@@ -100,11 +74,11 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                     <ResponsiveContainer width="100%" height={500}>
                         <ComposedChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                            <XAxis dataKey="name" tick={{ fill: '#aaa', fontSize: 10 }} angle={-15} textAnchor="end" height={80} />
-                            <YAxis tick={{ fill: '#aaa' }} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: 8 }} />
+                            <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} angle={-15} textAnchor="end" height={80} />
+                            <YAxis tick={{ fill: 'var(--text-secondary)' }} />
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8 }} />
                             <Legend wrapperStyle={{ paddingTop: 10 }} />
-                            <Area type="monotone" dataKey={areaKey} name="Volume" fill="#7b68ee" stroke="#7b68ee" fillOpacity={0.3} label={{ position: 'top', ...labelStyle }} />
+                            <Area type="monotone" dataKey={areaKey} name="Volume" fill="var(--accent-text)" stroke="#7b68ee" fillOpacity={0.3} label={{ position: 'top', ...labelStyle }} />
                             {data[0]?.neutrals !== undefined && <Bar dataKey="neutrals" name="Neutrals" barSize={20} fill="#f59e0b" label={{ position: 'top', ...labelStyle }} />}
                             {data[0]?.detractors !== undefined && <Line type="monotone" dataKey="detractors" name="Detractors" stroke="#ef4444" strokeWidth={3} dot={{ r: 6 }} label={{ position: 'top', ...labelStyle }} />}
                         </ComposedChart>
@@ -116,9 +90,9 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                     <ResponsiveContainer width="100%" height={500}>
                         <LineChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                            <XAxis dataKey="name" tick={{ fill: '#aaa', fontSize: 10 }} angle={-15} textAnchor="end" height={80} />
-                            <YAxis tick={{ fill: '#aaa' }} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: 8 }} />
+                            <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} angle={-15} textAnchor="end" height={80} />
+                            <YAxis tick={{ fill: 'var(--text-secondary)' }} />
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8 }} />
                             <Legend wrapperStyle={{ paddingTop: 10 }} />
                             <Line type="monotone" dataKey={lineKey} name="Volume" stroke="#7b68ee" strokeWidth={4} dot={{ r: 6 }} label={{ position: 'top', ...labelStyle }} />
                             {data[0]?.detractors !== undefined && <Line type="monotone" dataKey="detractors" name="Detractors" stroke="#ef4444" strokeWidth={3} dot={{ r: 6 }} label={{ position: 'top', ...labelStyle }} />}
@@ -149,7 +123,7 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                                     <Cell key={`cell-${index}`} fill={entry.color || colors[index % colors.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: 8 }} />
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8 }} />
                             <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: 20 }} />
                         </PieChart>
                     </ResponsiveContainer>
@@ -171,26 +145,26 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                             <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={!isMatrix} vertical={isMatrix} />
                             {isMatrix ? (
                                 <>
-                                    <XAxis type="number" tick={{ fill: '#aaa' }} />
-                                    <YAxis dataKey="name" type="category" tick={{ fill: '#aaa', fontSize: 10 }} width={110} />
+                                    <XAxis type="number" tick={{ fill: 'var(--text-secondary)' }} />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} width={110} />
                                 </>
                             ) : (
                                 <>
-                                    <XAxis dataKey="name" tick={{ fill: '#aaa', fontSize: 10 }} angle={-15} textAnchor="end" height={80} />
-                                    <YAxis tick={{ fill: '#aaa' }} />
+                                    <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} angle={-15} textAnchor="end" height={80} />
+                                    <YAxis tick={{ fill: 'var(--text-secondary)' }} />
                                 </>
                             )}
-                            <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: 8 }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8 }} cursor={{ fill: 'var(--overlay-subtle)' }} />
                             <Legend wrapperStyle={{ paddingTop: 10 }} />
                             {isMatrix ? (
                                 stackKeys.map((key, i) => (
-                                    <Bar key={key} dataKey={(d) => d[key] || 0} name={key} stackId="a" fill={colors[i % colors.length]} label={{ position: 'center', fill: '#fff', fontSize: 9 }} />
+                                    <Bar key={key} dataKey={(d) => d[key] || 0} name={key} stackId="a" fill={colors[i % colors.length]} label={{ position: 'center', fill: 'var(--text)', fontSize: 9 }} />
                                 ))
                             ) : (
                                 <>
-                                    {hasCases && <Bar dataKey="cases" name="Total Volume" fill="#7b68ee" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
-                                    {!hasCases && hasValue && <Bar dataKey="value" name="Value" fill="#7b68ee" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
-                                    {!hasCases && !hasValue && hasTotal && <Bar dataKey="total" name="Total" fill="#7b68ee" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
+                                    {hasCases && <Bar dataKey="cases" name="Total Volume" fill="var(--accent-text)" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
+                                    {!hasCases && hasValue && <Bar dataKey="value" name="Value" fill="var(--accent-text)" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
+                                    {!hasCases && !hasValue && hasTotal && <Bar dataKey="total" name="Total" fill="var(--accent-text)" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
                                     {hasNeutrals && <Bar dataKey="neutrals" name="Neutrals" fill="#f59e0b" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
                                     {hasDetractors && <Bar dataKey="detractors" name="Detractors" fill="#ef4444" radius={[4, 4, 0, 0]} label={{ position: 'top', ...labelStyle }} />}
                                 </>
@@ -218,17 +192,17 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
             TransitionComponent={Transition}
             PaperProps={{
                 sx: {
-                    bgcolor: '#121212',
+                    bgcolor: 'var(--bg)',
                     backgroundImage: 'none',
-                    border: '1px solid #333',
+                    border: '1px solid var(--border)',
                     boxShadow: '0 0 50px rgba(0,0,0,0.8)',
                     minHeight: '80vh'
                 }
             }}
         >
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', py: 2 }}>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', py: 2 }}>
                 <Box>
-                    <Typography variant="h5" sx={{ color: '#7b68ee', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <Typography variant="h5" sx={{ color: 'var(--accent-text)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
                         {title} <span style={{ color: alpha('#fff', 0.5), fontSize: '0.9rem' }}>Analytics Insight</span>
                     </Typography>
                     <Typography variant="caption" sx={{ color: alpha('#fff', 0.3), fontWeight: 600 }}>
@@ -236,7 +210,7 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ display: 'flex', bgcolor: alpha('#fff', 0.05), p: 0.5, borderRadius: '12px', border: '1px solid #444' }}>
+                    <Box sx={{ display: 'flex', bgcolor: alpha('#fff', 0.05), p: 0.5, borderRadius: '12px', border: '1px solid var(--border)' }}>
                         {chartOptions.map((opt) => (
                             <MuiTooltip key={opt.type} title={`${opt.label} View`}>
                                 <IconButton
@@ -255,14 +229,14 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                             </MuiTooltip>
                         ))}
                     </Box>
-                    <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                    <IconButton onClick={onClose} sx={{ color: 'var(--text)' }}>
                         <MdClose />
                     </IconButton>
                 </Box>
             </DialogTitle>
             <DialogContent sx={{ p: 4 }}>
                 <Box sx={{ mb: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800 }}>
+                    <Typography variant="h6" sx={{ color: 'var(--text)', fontWeight: 800 }}>
                         {title} Performance Overview
                     </Typography>
                     <Typography variant="body2" sx={{ color: alpha('#fff', 0.4) }}>
@@ -274,8 +248,8 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                     {renderChart()}
                 </Box>
             </DialogContent>
-            <DialogActions sx={{ p: 3, borderTop: '1px solid #333' }}>
-                <Button onClick={onClose} variant="contained" sx={{ bgcolor: '#7b68ee', '&:hover': { bgcolor: alpha('#7b68ee', 0.8) }, fontWeight: 800, px: 4 }}>
+            <DialogActions sx={{ p: 3, borderTop: '1px solid var(--border)' }}>
+                <Button onClick={onClose} variant="contained" sx={{ bgcolor: 'var(--accent)', '&:hover': { bgcolor: alpha('#7b68ee', 0.8) }, fontWeight: 800, px: 4 }}>
                     Done with Analysis
                 </Button>
             </DialogActions>
@@ -590,22 +564,22 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
     const SectionHeader = ({ title, onSearchChange, searchValue, onExport, dataToExport, chartType = 'area', stackKeys = [] }) => (
         <Box sx={{
             bgcolor: alpha('#7b68ee', 0.05),
-            color: '#fff',
+            color: 'var(--text)',
             p: 2,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 2,
-            borderBottom: '1px solid #333'
+            borderBottom: '1px solid var(--border)'
         }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: 4, height: 20, bgcolor: '#7b68ee', borderRadius: 4 }} />
+                <Box sx={{ width: 4, height: 20, bgcolor: 'var(--accent)', borderRadius: 4 }} />
                 <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: alpha('#fff', 0.9) }}>
                         {title}
                     </Typography>
                     {periodLabel && (
-                        <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, display: 'block', mt: -0.5, fontSize: '0.65rem' }}>
+                        <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 700, display: 'block', mt: -0.5, fontSize: '0.65rem' }}>
                             PERIOD: {periodLabel}
                         </Typography>
                     )}
@@ -623,17 +597,17 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                             '& .MuiInputBase-root': {
                                 height: 32,
                                 fontSize: '0.8rem',
-                                bgcolor: 'rgba(255,255,255,0.05)',
-                                color: 'white',
+                                bgcolor: 'var(--overlay-subtle)',
+                                color: 'var(--text)',
                                 borderRadius: '8px',
-                                '& fieldset': { border: '1px solid #444' },
-                                '&:hover fieldset': { borderColor: '#7b68ee' }
+                                '& fieldset': { border: '1px solid var(--border)' },
+                                '&:hover fieldset': { borderColor: 'var(--accent)' }
                             }
                         }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
-                                    <MdSearch color="#7b68ee" size={18} />
+                                    <MdSearch color="var(--accent-text)" size={18} />
                                 </InputAdornment>
                             )
                         }}
@@ -643,7 +617,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                     <IconButton
                         size="small"
                         onClick={() => setChartDialog({ open: true, title, data: dataToExport, type: chartType, stackKeys })}
-                        sx={{ color: '#7b68ee', bgcolor: alpha('#7b68ee', 0.1), '&:hover': { bgcolor: alpha('#7b68ee', 0.2) } }}
+                        sx={{ color: 'var(--accent-text)', bgcolor: alpha('#7b68ee', 0.1), '&:hover': { bgcolor: alpha('#7b68ee', 0.2) } }}
                     >
                         <MdInsights size={20} />
                     </IconButton>
@@ -667,7 +641,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
             sx={{
                 py: 1.5,
                 px: 2,
-                borderBottom: '1px solid #2d2d2d',
+                borderBottom: '1px solid var(--border)',
                 fontSize: '0.85rem',
                 color: alpha('#fff', 0.8),
                 transition: 'all 0.2s',
@@ -683,11 +657,11 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
             sx={{
                 py: 1.5,
                 px: 2,
-                bgcolor: '#1a1a1a',
-                borderBottom: '2px solid #333',
+                bgcolor: 'var(--bg)',
+                borderBottom: '2px solid var(--border)',
                 fontWeight: 700,
                 fontSize: '0.8rem',
-                color: '#7b68ee',
+                color: 'var(--accent-text)',
                 textTransform: 'uppercase',
                 letterSpacing: 1,
                 position: 'sticky',
@@ -708,7 +682,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
             })}
             sx={{
                 color: 'inherit !important',
-                '& .MuiTableSortLabel-icon': { color: '#7b68ee !important' }
+                '& .MuiTableSortLabel-icon': { color: 'var(--accent-text) !important' }
             }}
         >
             {children}
@@ -721,26 +695,26 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
         <Box sx={{ mt: 4 }}>
             {/* --- UNIFIED DETAILED REPORT CARD --- */}
             <Paper sx={{
-                bgcolor: '#121212',
+                bgcolor: 'var(--bg)',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                border: '1px solid #333',
+                border: '1px solid var(--border)',
                 boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
                 display: 'flex',
                 flexDirection: 'column'
             }}>
                 {/* TOP BAR / TITLE */}
-                <Box sx={{ p: 4, pb: 2, borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ p: 4, pb: 2, borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5, letterSpacing: -0.5 }}>
-                            Deep Dive Analytics <span style={{ color: '#7b68ee' }}>Report</span>
+                        <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--text)', mb: 0.5, letterSpacing: -0.5 }}>
+                            Deep Dive Analytics <span style={{ color: 'var(--accent-text)' }}>Report</span>
                         </Typography>
                         <Typography variant="body2" sx={{ color: alpha('#fff', 0.5), fontWeight: 500 }}>
                             Advanced performance, segmentation, and contribution analysis generated from {tasks.length} cases.
                         </Typography>
                     </Box>
                     {/* <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 900, fontSize: '0.75rem' }}>
+                        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 900, fontSize: '0.75rem' }}>
                             Nokia Quality B2B Platform
                         </Typography>
                         <Typography variant="caption" sx={{ display: 'block', color: alpha('#fff', 0.3) }}>
@@ -753,7 +727,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                 <Box sx={{ p: 3 }}>
                     <Grid container spacing={4}>
                         <Grid item xs={12} md={7}>
-                            <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                            <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                                 <SectionHeader title="Segmentation Data" onExport={exportToExcel} dataToExport={segmentationData} chartType="pie" />
                                 <TableContainer>
                                     <Table size="small">
@@ -785,13 +759,13 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                             </Box>
                         </Grid>
                         <Grid item xs={12} md={5}>
-                            <Box sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid #2d2d2d', borderRadius: '8px', bgcolor: alpha('#fff', 0.02) }}>
+                            <Box sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', border: '1px solid var(--border)', borderRadius: '8px', bgcolor: alpha('#fff', 0.02) }}>
                                 <ResponsiveContainer width="100%" height={260}>
                                     <PieChart>
                                         <Pie data={segmentationData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={8} dataKey="value">
                                             {segmentationData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                         </Pie>
-                                        <Tooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: 8 }} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8 }} />
                                         <Legend />
                                     </PieChart>
                                 </ResponsiveContainer>
@@ -800,11 +774,11 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                     </Grid>
                 </Box>
 
-                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+                <Divider sx={{ borderColor: 'var(--border)', mx: 3 }} />
 
                 {/* 2. OWNER PERFORMANCE SECTION */}
                 <Box sx={{ p: 3 }}>
-                    <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                    <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                         <SectionHeader title="Owner Performance Matrix" onSearchChange={setOwnerSearch} searchValue={ownerSearch} onExport={exportToExcel} dataToExport={ownerPerformance} chartType="radar" />
                         <TableContainer sx={{ maxHeight: 500 }}>
                             <Table size="small" stickyHeader>
@@ -827,13 +801,13 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                             onClick={() => onDrillDown && onDrillDown({ responsible: row.name }, `Owner Performance: ${row.name}`)}
                                             sx={{ cursor: 'pointer' }}
                                         >
-                                            <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
+                                            <StyledTableCell sx={{ fontWeight: 800, color: 'var(--text)' }}>{row.name}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ bgcolor: alpha('#7b68ee', 0.1), fontWeight: 700 }}>{row.cases}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ fontWeight: 900, bgcolor: getHeatmapColor(row.percentageValue, 0, 50, 'blue') }}>{row.percentageLabel}%</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ color: '#f59e0b', fontWeight: 600 }}>{row.neutrals}</StyledTableCell>
-                                            <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.neutralPctValue, 0, 40, 'orange'), color: '#fff' }}>{row.neutralPctValue.toFixed(1)}%</StyledTableCell>
+                                            <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.neutralPctValue, 0, 40, 'orange'), color: 'var(--text)' }}>{row.neutralPctValue.toFixed(1)}%</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ color: '#ef4444', fontWeight: 600 }}>{row.detractors}</StyledTableCell>
-                                            <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.detractorPctValue, 0, 40, 'red'), color: '#fff' }}>{row.detractorPctValue.toFixed(1)}%</StyledTableCell>
+                                            <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.detractorPctValue, 0, 40, 'red'), color: 'var(--text)' }}>{row.detractorPctValue.toFixed(1)}%</StyledTableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -842,11 +816,11 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                     </Box>
                 </Box>
 
-                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+                <Divider sx={{ borderColor: 'var(--border)', mx: 3 }} />
 
                 {/* 3. REASON ANALYSIS SECTION */}
                 <Box sx={{ p: 3 }}>
-                    <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                    <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                         <SectionHeader title="Deep Reason Analysis" onSearchChange={setReasonSearch} searchValue={reasonSearch} onExport={exportToExcel} dataToExport={reasonAnalysis} chartType="area" />
                         <TableContainer sx={{ maxHeight: 500 }}>
                             <Table size="small" stickyHeader>
@@ -869,7 +843,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                             onClick={() => onDrillDown && onDrillDown({ reason: row.name }, `Reason Analysis: ${row.name}`)}
                                             sx={{ cursor: 'pointer' }}
                                         >
-                                            <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
+                                            <StyledTableCell sx={{ fontWeight: 800, color: 'var(--text)' }}>{row.name}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), fontWeight: 700 }}>{row.cases}</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ fontWeight: 900, bgcolor: getHeatmapColor(row.percentageValue, 0, 40, 'green') }}>{row.percentageLabel}%</StyledTableCell>
                                             <StyledTableCell align="center" sx={{ color: '#f59e0b' }}>{row.neutrals}</StyledTableCell>
@@ -884,13 +858,13 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                     </Box>
                 </Box>
 
-                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+                <Divider sx={{ borderColor: 'var(--border)', mx: 3 }} />
 
                 {/* 5. ITN & SUBSCRIPTION IMPACT SECTION (NEW) */}
                 <Box sx={{ p: 3 }}>
                     <Grid container spacing={3}>
                         <Grid item xs={12} md={6}>
-                            <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                            <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                                 <SectionHeader title="ITN Impact Analysis" onExport={exportToExcel} dataToExport={itnAnalysis} chartType="bar" />
                                 <TableContainer sx={{ maxHeight: 400 }}>
                                     <Table size="small" stickyHeader>
@@ -910,7 +884,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                                     onClick={() => onDrillDown && onDrillDown({ itnRelated: row.name }, `ITN Impact: ${row.name}`)}
                                                     sx={{ cursor: 'pointer' }}
                                                 >
-                                                    <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
+                                                    <StyledTableCell sx={{ fontWeight: 800, color: 'var(--text)' }}>{row.name}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: alpha('#7b68ee', 0.1) }}>{row.cases}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.neutralPctValue, 0, 40, 'orange') }}>{row.neutralPctValue.toFixed(1)}%</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.detractorPctValue, 0, 40, 'red') }}>{row.detractorPctValue.toFixed(1)}%</StyledTableCell>
@@ -922,7 +896,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                             </Box>
                         </Grid>
                         <Grid item xs={12} md={6}>
-                            <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                            <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                                 <SectionHeader title="Subscription Correlation" onExport={exportToExcel} dataToExport={subscriptionAnalysis} chartType="pie" />
                                 <TableContainer sx={{ maxHeight: 400 }}>
                                     <Table size="small" stickyHeader>
@@ -937,7 +911,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                         <TableBody>
                                             {subscriptionAnalysis.map((row) => (
                                                 <TableRow key={row.name}>
-                                                    <StyledTableCell sx={{ fontWeight: 800, color: '#fff' }}>{row.name}</StyledTableCell>
+                                                    <StyledTableCell sx={{ fontWeight: 800, color: 'var(--text)' }}>{row.name}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1) }}>{row.cases}</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ fontWeight: 900 }}>{row.percentageLabel}%</StyledTableCell>
                                                     <StyledTableCell align="center" sx={{ bgcolor: getHeatmapColor(row.detractorPctValue, 0, 40, 'red') }}>{row.detractorPctValue.toFixed(1)}%</StyledTableCell>
@@ -951,11 +925,11 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                     </Grid>
                 </Box>
 
-                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+                <Divider sx={{ borderColor: 'var(--border)', mx: 3 }} />
 
                 {/* 4. CONTRIBUTION MATRIX SECTION */}
                 <Box sx={{ p: 3 }}>
-                    <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                    <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                         <SectionHeader
                             title="Owner-Reason Impact Matrix"
                             onExport={exportToExcel}
@@ -967,23 +941,23 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                             <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
                                 <TableHead>
                                     <TableRow>
-                                        <HeaderCell sx={{ top: 0, zIndex: 12, borderRight: '2px solid #333' }}>Reason</HeaderCell>
+                                        <HeaderCell sx={{ top: 0, zIndex: 12, borderRight: '2px solid var(--border)' }}>Reason</HeaderCell>
                                         {contributionMatrix.topOwners.map(owner => (
-                                            <HeaderCell key={owner} align="center" colSpan={2} sx={{ bgcolor: alpha('#7b68ee', 0.05), borderLeft: '1px solid #333', top: 0 }}>
+                                            <HeaderCell key={owner} align="center" colSpan={2} sx={{ bgcolor: alpha('#7b68ee', 0.05), borderLeft: '1px solid var(--border)', top: 0 }}>
                                                 {owner}
                                             </HeaderCell>
                                         ))}
-                                        <HeaderCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), top: 0, borderLeft: '2px solid #333' }}>Total Impact</HeaderCell>
+                                        <HeaderCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), top: 0, borderLeft: '2px solid var(--border)' }}>Total Impact</HeaderCell>
                                     </TableRow>
                                     <TableRow>
-                                        <HeaderCell sx={{ top: 48, zIndex: 12, borderRight: '2px solid #333' }}></HeaderCell>
+                                        <HeaderCell sx={{ top: 48, zIndex: 12, borderRight: '2px solid var(--border)' }}></HeaderCell>
                                         {contributionMatrix.topOwners.map(owner => (
                                             <React.Fragment key={`${owner}-sub`}>
-                                                <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', borderLeft: '1px solid #333' }}>Vol</HeaderCell>
+                                                <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', borderLeft: '1px solid var(--border)' }}>Vol</HeaderCell>
                                                 <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', color: alpha('#fff', 0.5) }}>Load %</HeaderCell>
                                             </React.Fragment>
                                         ))}
-                                        <HeaderCell align="center" sx={{ top: 48, borderLeft: '2px solid #333' }}>Cases</HeaderCell>
+                                        <HeaderCell align="center" sx={{ top: 48, borderLeft: '2px solid var(--border)' }}>Cases</HeaderCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -993,7 +967,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                             <TableRow key={reason}>
                                                 <StyledTableCell
                                                     onClick={() => onDrillDown && onDrillDown({ reason: reason }, `Tasks for Reason: ${reason}`)}
-                                                    sx={{ position: 'sticky', left: 0, bgcolor: '#121212', zIndex: 5, borderRight: '2px solid #333', fontWeight: 900, color: '#fff', cursor: 'pointer', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}
+                                                    sx={{ position: 'sticky', left: 0, bgcolor: 'var(--bg)', zIndex: 5, borderRight: '2px solid var(--border)', fontWeight: 900, color: 'var(--text)', cursor: 'pointer', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}
                                                 >
                                                     {reason}
                                                 </StyledTableCell>
@@ -1006,7 +980,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                                             <StyledTableCell
                                                                 align="center"
                                                                 onClick={() => count > 0 && onDrillDown && onDrillDown({ reason: reason, responsible: owner }, `Tasks for ${owner} (${reason})`)}
-                                                                sx={{ borderLeft: '1px solid #2d2d2d', fontWeight: 700, cursor: count > 0 ? 'pointer' : 'default', '&:hover': { bgcolor: count > 0 ? alpha('#7b68ee', 0.1) : 'inherit' } }}
+                                                                sx={{ borderLeft: '1px solid var(--border)', fontWeight: 700, cursor: count > 0 ? 'pointer' : 'default', '&:hover': { bgcolor: count > 0 ? alpha('#7b68ee', 0.1) : 'inherit' } }}
                                                             >
                                                                 {count || '-'}
                                                             </StyledTableCell>
@@ -1019,7 +993,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                                 <StyledTableCell
                                                     align="center"
                                                     onClick={() => data.total > 0 && onDrillDown && onDrillDown({ reason: reason }, `Total Impact: ${reason}`)}
-                                                    sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: '#fff', borderLeft: '2px solid #333', cursor: 'pointer', '&:hover': { bgcolor: alpha('#10b981', 0.3) } }}
+                                                    sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: 'var(--text)', borderLeft: '2px solid var(--border)', cursor: 'pointer', '&:hover': { bgcolor: alpha('#10b981', 0.3) } }}
                                                 >
                                                     {data.total}
                                                 </StyledTableCell>
@@ -1032,11 +1006,11 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                     </Box>
                 </Box>
 
-                <Divider sx={{ borderColor: '#2d2d2d', mx: 3 }} />
+                <Divider sx={{ borderColor: 'var(--border)', mx: 3 }} />
 
                 {/* 6. ROOT CAUSE IMPACT MATRIX SECTION (NEW) */}
                 <Box sx={{ p: 3 }}>
-                    <Box sx={{ border: '1px solid #2d2d2d', borderRadius: '8px', overflow: 'hidden' }}>
+                    <Box sx={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                         <SectionHeader
                             title="Root Cause Impact Matrix"
                             onExport={exportToExcel}
@@ -1048,23 +1022,23 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                             <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
                                 <TableHead>
                                     <TableRow>
-                                        <HeaderCell sx={{ top: 0, zIndex: 12, borderRight: '2px solid #333' }}>Root Cause</HeaderCell>
+                                        <HeaderCell sx={{ top: 0, zIndex: 12, borderRight: '2px solid var(--border)' }}>Root Cause</HeaderCell>
                                         {rootCauseMatrix.topOwners.map(owner => (
-                                            <HeaderCell key={owner} align="center" colSpan={2} sx={{ bgcolor: alpha('#7b68ee', 0.05), borderLeft: '1px solid #333', top: 0 }}>
+                                            <HeaderCell key={owner} align="center" colSpan={2} sx={{ bgcolor: alpha('#7b68ee', 0.05), borderLeft: '1px solid var(--border)', top: 0 }}>
                                                 {owner}
                                             </HeaderCell>
                                         ))}
-                                        <HeaderCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), top: 0, borderLeft: '2px solid #333' }}>Total Impact</HeaderCell>
+                                        <HeaderCell align="center" sx={{ bgcolor: alpha('#10b981', 0.1), top: 0, borderLeft: '2px solid var(--border)' }}>Total Impact</HeaderCell>
                                     </TableRow>
                                     <TableRow>
-                                        <HeaderCell sx={{ top: 48, zIndex: 12, borderRight: '2px solid #333' }}></HeaderCell>
+                                        <HeaderCell sx={{ top: 48, zIndex: 12, borderRight: '2px solid var(--border)' }}></HeaderCell>
                                         {rootCauseMatrix.topOwners.map(owner => (
                                             <React.Fragment key={`${owner}-sub`}>
-                                                <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', borderLeft: '1px solid #333' }}>Vol</HeaderCell>
+                                                <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', borderLeft: '1px solid var(--border)' }}>Vol</HeaderCell>
                                                 <HeaderCell align="center" sx={{ top: 48, fontSize: '0.7rem', color: alpha('#fff', 0.5) }}>Load %</HeaderCell>
                                             </React.Fragment>
                                         ))}
-                                        <HeaderCell align="center" sx={{ top: 48, borderLeft: '2px solid #333' }}>Cases</HeaderCell>
+                                        <HeaderCell align="center" sx={{ top: 48, borderLeft: '2px solid var(--border)' }}>Cases</HeaderCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -1074,7 +1048,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                             <TableRow key={rc}>
                                                 <StyledTableCell
                                                     onClick={() => onDrillDown && onDrillDown({ rootCause: rc }, `Tasks for Root Cause: ${rc}`)}
-                                                    sx={{ position: 'sticky', left: 0, bgcolor: '#121212', zIndex: 5, borderRight: '2px solid #333', fontWeight: 900, color: '#fff', cursor: 'pointer', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}
+                                                    sx={{ position: 'sticky', left: 0, bgcolor: 'var(--bg)', zIndex: 5, borderRight: '2px solid var(--border)', fontWeight: 900, color: 'var(--text)', cursor: 'pointer', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}
                                                 >
                                                     {rc}
                                                 </StyledTableCell>
@@ -1087,7 +1061,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                                             <StyledTableCell
                                                                 align="center"
                                                                 onClick={() => count > 0 && onDrillDown && onDrillDown({ rootCause: rc, responsible: owner }, `Tasks for ${owner} (${rc})`)}
-                                                                sx={{ borderLeft: '1px solid #2d2d2d', fontWeight: 700, cursor: count > 0 ? 'pointer' : 'default', '&:hover': { bgcolor: count > 0 ? alpha('#7b68ee', 0.1) : 'inherit' } }}
+                                                                sx={{ borderLeft: '1px solid var(--border)', fontWeight: 700, cursor: count > 0 ? 'pointer' : 'default', '&:hover': { bgcolor: count > 0 ? alpha('#7b68ee', 0.1) : 'inherit' } }}
                                                             >
                                                                 {count || '-'}
                                                             </StyledTableCell>
@@ -1100,7 +1074,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                                                 <StyledTableCell
                                                     align="center"
                                                     onClick={() => data.total > 0 && onDrillDown && onDrillDown({ rootCause: rc }, `Total Impact: ${rc}`)}
-                                                    sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: '#fff', borderLeft: '2px solid #333', cursor: 'pointer', '&:hover': { bgcolor: alpha('#10b981', 0.3) } }}
+                                                    sx={{ fontWeight: 900, bgcolor: alpha('#10b981', 0.2), color: 'var(--text)', borderLeft: '2px solid var(--border)', cursor: 'pointer', '&:hover': { bgcolor: alpha('#10b981', 0.3) } }}
                                                 >
                                                     {data.total}
                                                 </StyledTableCell>
@@ -1114,7 +1088,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                 </Box>
 
                 {/* FOOTER */}
-                <Box sx={{ p: 3, bgcolor: '#0a0a0a', borderTop: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ p: 3, bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography sx={{ color: alpha('#fff', 0.3), fontSize: '0.7rem' }}>
                         © 2026 Reach Quality Task Management - Confidential Business Analysis
                     </Typography>
@@ -1124,7 +1098,7 @@ const AllTasksDeepDiveAnalytics = ({ tasks, periodLabel, onDrillDown }) => {
                             <Typography sx={{ color: alpha('#fff', 0.5), fontSize: '0.7rem' }}>Live Accuracy Validated</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#7b68ee' }} />
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'var(--accent)' }} />
                             <Typography sx={{ color: alpha('#fff', 0.5), fontSize: '0.7rem' }}>DeepEngine Active</Typography>
                         </Box>
                     </Box>

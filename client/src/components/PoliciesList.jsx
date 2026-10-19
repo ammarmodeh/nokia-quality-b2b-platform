@@ -74,15 +74,15 @@ const StatusIndicator = ({ status }) => {
       sx={{
         '&.MuiChip-colorSuccess': {
           backgroundColor: '#4caf50',
-          color: '#ffffff'
+          color: 'var(--text)'
         },
         '&.MuiChip-colorError': {
           backgroundColor: '#f44336',
-          color: '#ffffff'
+          color: 'var(--text)'
         },
         '&.MuiChip-colorWarning': {
           backgroundColor: '#ff9800',
-          color: '#ffffff'
+          color: 'var(--text)'
         }
       }}
     />
@@ -298,7 +298,7 @@ const PoliciesList = () => {
         mx: 'auto',
       }}>
         <Typography variant="h5" gutterBottom sx={{
-          color: '#7b68ee',
+          color: 'var(--accent-text)',
           fontWeight: 'bold',
           fontSize: isMobile ? '1.2rem' : '1.5rem',
           mb: 2
@@ -320,10 +320,10 @@ const PoliciesList = () => {
             justifyContent: isMobile ? 'flex-start' : 'space-between',
             gap: 2,
             alignItems: 'center',
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
             p: 2,
             borderRadius: '8px',
-            border: '1px solid #3d3d3d',
+            border: '1px solid var(--border)',
             width: '100%',
           }}>
             <TextField
@@ -335,7 +335,7 @@ const PoliciesList = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MdSearch style={{ color: '#b3b3b3' }} />
+                    <MdSearch style={{ color: 'var(--text-secondary)' }} />
                   </InputAdornment>
                 ),
                 endAdornment: searchTerm && (
@@ -344,9 +344,9 @@ const PoliciesList = () => {
                     onClick={() => setSearchTerm('')}
                     sx={{
                       visibility: searchTerm ? 'visible' : 'hidden',
-                      color: '#b3b3b3',
+                      color: 'var(--text-secondary)',
                       '&:hover': {
-                        backgroundColor: '#2a2a2a',
+                        backgroundColor: 'var(--surface)',
                       }
                     }}
                   >
@@ -355,15 +355,15 @@ const PoliciesList = () => {
                 ),
                 sx: {
                   borderRadius: '20px',
-                  backgroundColor: '#2d2d2d',
+                  backgroundColor: 'var(--surface)',
                   width: '100%',
                   '& fieldset': {
                     border: 'none',
                   },
                   '& input': {
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     '&::placeholder': {
-                      color: '#666',
+                      color: 'var(--text-muted)',
                       opacity: 1,
                     }
                   },
@@ -379,7 +379,7 @@ const PoliciesList = () => {
                     border: '1px solid #666 !important',
                   },
                   '&.Mui-focused fieldset': {
-                    border: '1px solid #7b68ee !important',
+                    border: '1px solid var(--accent) !important',
                   },
                 },
               }}
@@ -402,7 +402,7 @@ const PoliciesList = () => {
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
                     backgroundColor: '#1976d2',
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     '&:hover': {
                       backgroundColor: '#1565c0',
                     },
@@ -422,7 +422,7 @@ const PoliciesList = () => {
                 fullWidth={isMobile}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
-                  borderColor: '#3d3d3d',
+                  borderColor: 'var(--border)',
                   color: '#1976d2',
                   '&:hover': {
                     backgroundColor: 'rgba(25, 118, 210, 0.08)',
@@ -446,31 +446,31 @@ const PoliciesList = () => {
           flex: 1,
           width: "100%",
           border: 0,
-          color: "#ffffff",
+          color: "var(--text)",
           "&.MuiTableContainer-root": {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
           },
           "& .MuiTable-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
           },
           "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
-              color: "#b3b3b3",
+              color: "var(--text-secondary)",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text)",
             },
             "& .MuiTableRow-root": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "var(--surface)",
               },
             }
           },
@@ -524,7 +524,7 @@ const PoliciesList = () => {
                       <IconButton
                         size="small"
                         onClick={(e) => handleMenuOpen(e, policy)}
-                        sx={{ color: '#ffffff' }}
+                        sx={{ color: 'var(--text)' }}
                       >
                         <MdMoreVert />
                       </IconButton>
@@ -533,7 +533,7 @@ const PoliciesList = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ color: '#ffffff' }}>
+                  <TableCell colSpan={6} align="center" sx={{ color: 'var(--text)' }}>
                     {searchTerm ? 'No matching policies found' : 'No policies available'}
                   </TableCell>
                 </TableRow>
@@ -549,11 +549,11 @@ const PoliciesList = () => {
           onClose={handleMenuClose}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
               boxShadow: 'none',
               borderRadius: '8px',
-              border: '1px solid #3d3d3d',
+              border: '1px solid var(--border)',
               minWidth: '200px',
             },
             "& .MuiList-root": {
@@ -565,15 +565,15 @@ const PoliciesList = () => {
             onClick={handleViewClick}
             sx={{
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               },
               '&.MuiMenuItem-root': {
                 padding: '8px 16px',
               }
             }}
           >
-            <MdVisibility style={{ marginRight: 8, color: '#ffffff' }} />
-            <Typography variant="body1" color="#ffffff">View</Typography>
+            <MdVisibility style={{ marginRight: 8, color: 'var(--text)' }} />
+            <Typography variant="body1" color="var(--text)">View</Typography>
           </MenuItem>
 
           {(user?.isManager) && (
@@ -581,15 +581,15 @@ const PoliciesList = () => {
               onClick={handleEditClick}
               sx={{
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 },
                 '&.MuiMenuItem-root': {
                   padding: '8px 16px',
                 }
               }}
             >
-              <MdEdit style={{ marginRight: 8, color: '#ffffff' }} />
-              <Typography variant="body1" color="#ffffff">Edit</Typography>
+              <MdEdit style={{ marginRight: 8, color: 'var(--text)' }} />
+              <Typography variant="body1" color="var(--text)">Edit</Typography>
             </MenuItem>
           )}
 
@@ -598,7 +598,7 @@ const PoliciesList = () => {
               onClick={handleDeleteClick}
               sx={{
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 },
                 '&.MuiMenuItem-root': {
                   padding: '8px 16px',
@@ -621,16 +621,16 @@ const PoliciesList = () => {
           fullScreen={isMobile}
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
             }
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
             padding: '16px 24px',
           }}>
             <Typography variant="h6" component="div">
@@ -641,8 +641,8 @@ const PoliciesList = () => {
           <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
           <DialogContent dividers sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             padding: '20px 24px',
             '&.MuiDialogContent-root': {
               padding: isMobile ? '16px' : '20px 24px',
@@ -659,14 +659,14 @@ const PoliciesList = () => {
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   '& .MuiInputBase-root': {
-                    color: '#ffffff',
+                    color: 'var(--text)',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#b3b3b3',
+                    color: 'var(--text-secondary)',
                   },
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#3d3d3d',
+                      borderColor: 'var(--border)',
                     },
                     '&:hover fieldset': {
                       borderColor: '#666',
@@ -690,14 +690,14 @@ const PoliciesList = () => {
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   '& .MuiInputBase-root': {
-                    color: '#ffffff',
+                    color: 'var(--text)',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#b3b3b3',
+                    color: 'var(--text-secondary)',
                   },
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#3d3d3d',
+                      borderColor: 'var(--border)',
                     },
                     '&:hover fieldset': {
                       borderColor: '#666',
@@ -720,14 +720,14 @@ const PoliciesList = () => {
                   size={isMobile ? 'small' : 'medium'}
                   sx={{
                     '& .MuiInputBase-root': {
-                      color: '#ffffff',
+                      color: 'var(--text)',
                     },
                     '& .MuiInputLabel-root': {
-                      color: '#b3b3b3',
+                      color: 'var(--text-secondary)',
                     },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: '#3d3d3d',
+                        borderColor: 'var(--border)',
                       },
                       '&:hover fieldset': {
                         borderColor: '#666',
@@ -737,17 +737,17 @@ const PoliciesList = () => {
                       },
                     },
                     '& .MuiSvgIcon-root': {
-                      color: '#b3b3b3',
+                      color: 'var(--text-secondary)',
                     },
                   }}
                 >
-                  <MenuItem value="agree" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
+                  <MenuItem value="agree" sx={{ color: 'var(--text)', backgroundColor: 'var(--surface)' }}>
                     Agree
                   </MenuItem>
-                  <MenuItem value="disagree" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
+                  <MenuItem value="disagree" sx={{ color: 'var(--text)', backgroundColor: 'var(--surface)' }}>
                     Disagree
                   </MenuItem>
-                  <MenuItem value="pending" sx={{ color: '#ffffff', backgroundColor: '#2d2d2d' }}>
+                  <MenuItem value="pending" sx={{ color: 'var(--text)', backgroundColor: 'var(--surface)' }}>
                     Pending
                   </MenuItem>
                 </TextField>
@@ -764,14 +764,14 @@ const PoliciesList = () => {
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   '& .MuiInputBase-root': {
-                    color: '#ffffff',
+                    color: 'var(--text)',
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#b3b3b3',
+                    color: 'var(--text-secondary)',
                   },
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#3d3d3d',
+                      borderColor: 'var(--border)',
                     },
                     '&:hover fieldset': {
                       borderColor: '#666',
@@ -789,17 +789,17 @@ const PoliciesList = () => {
           <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
             padding: '12px 24px',
           }}>
             <Button
               onClick={() => openAddDialog ? setOpenAddDialog(false) : setOpenEditDialog(false)}
               size={isMobile ? 'small' : 'medium'}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -822,7 +822,7 @@ const PoliciesList = () => {
                 },
                 '&.Mui-disabled': {
                   backgroundColor: '#555',
-                  color: '#888',
+                  color: 'var(--text-muted)',
                 }
               }}
             >
@@ -840,16 +840,16 @@ const PoliciesList = () => {
           fullScreen={isMobile}
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
             }
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
             padding: '16px 24px',
           }}>
             <Typography variant="h6" component="div">
@@ -860,8 +860,8 @@ const PoliciesList = () => {
           <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
           <DialogContent dividers sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             padding: '20px 24px',
             '&.MuiDialogContent-root': {
               padding: isMobile ? '16px' : '20px 24px',
@@ -937,17 +937,17 @@ const PoliciesList = () => {
           <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
             padding: '12px 24px',
           }}>
             <Button
               onClick={() => setOpenViewDialog(false)}
               size={isMobile ? 'small' : 'medium'}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -963,16 +963,16 @@ const PoliciesList = () => {
           fullScreen={isMobile}
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               boxShadow: 'none',
               borderRadius: isMobile ? 0 : '8px',
             }
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
             padding: '16px 24px',
           }}>
             <Typography variant="h6" component="div">
@@ -981,8 +981,8 @@ const PoliciesList = () => {
           </DialogTitle>
 
           <DialogContent sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             padding: '20px 24px',
           }}>
             <Typography>
@@ -998,14 +998,14 @@ const PoliciesList = () => {
               sx={{
                 mt: 3,
                 '& .MuiInputBase-root': {
-                  color: '#ffffff',
+                  color: 'var(--text)',
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#b3b3b3',
+                  color: 'var(--text-secondary)',
                 },
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#3d3d3d',
+                    borderColor: 'var(--border)',
                   },
                   '&:hover fieldset': {
                     borderColor: '#666',
@@ -1021,17 +1021,17 @@ const PoliciesList = () => {
           <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
             padding: '12px 24px',
           }}>
             <Button
               onClick={() => setOpenDeleteDialog(false)}
               size={isMobile ? 'small' : 'medium'}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -1050,7 +1050,7 @@ const PoliciesList = () => {
                 },
                 '&.Mui-disabled': {
                   backgroundColor: '#555',
-                  color: '#888',
+                  color: 'var(--text-muted)',
                 }
               }}
             >
@@ -1071,7 +1071,7 @@ const PoliciesList = () => {
             sx={{
               width: '100%',
               backgroundColor: snackbarSeverity === 'error' ? '#f44336' : '#4caf50',
-              color: '#ffffff'
+              color: 'var(--text)'
             }}
           >
             {snackbarMessage}

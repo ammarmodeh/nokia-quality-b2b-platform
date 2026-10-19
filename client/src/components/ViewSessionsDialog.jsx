@@ -262,7 +262,7 @@ ${detailedSections}
     return (
       <List sx={{ padding: 0 }}>
         {sessionList.length === 0 ? (
-          <Typography variant="body1" color="#6b7280" sx={{ p: 2 }}>
+          <Typography variant="body1" color="var(--text-muted)" sx={{ p: 2 }}>
             No sessions found in this category.
           </Typography>
         ) : (
@@ -272,21 +272,21 @@ ${detailedSections}
                 padding: '12px',
                 alignItems: 'flex-start',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}>
                 <ListItemText
                   primary={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                      <Typography color="#ffffff" fontWeight="500">
+                      <Typography color="var(--text)" fontWeight="500">
                         {session.sessionTitle || (session.status === "Completed" ? "Training Session" : session.status)}
                       </Typography>
                       <Chip
                         label={new Date(session.sessionDate).toLocaleDateString()}
                         size="small"
                         sx={{
-                          backgroundColor: '#3a3a3a',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--surface-hover)',
+                          color: 'var(--text)',
                           fontSize: '0.7rem'
                         }}
                       />
@@ -303,8 +303,8 @@ ${detailedSections}
                           variant="outlined"
                           sx={{
                             fontSize: '0.7rem',
-                            color: '#9ca3af',
-                            borderColor: '#4b5563'
+                            color: 'var(--text-secondary)',
+                            borderColor: 'var(--border)'
                           }}
                         />
                       )}
@@ -322,19 +322,19 @@ ${detailedSections}
                   secondary={
                     <Box component="div">
                       <Stack direction="row" flexWrap="wrap" gap={2} sx={{ mt: 1 }}>
-                        <Typography variant="body2" color="#6b7280">
+                        <Typography variant="body2" color="var(--text-muted)">
                           <strong>Conducted by:</strong>{" "}
                           {Array.isArray(session.conductedBy)
                             ? session.conductedBy.join(", ")
                             : session.conductedBy}
                         </Typography>
                         {session.location && (
-                          <Typography variant="body2" color="#6b7280">
+                          <Typography variant="body2" color="var(--text-muted)">
                             <strong>Location:</strong> {session.location}
                           </Typography>
                         )}
                         {session.duration && (
-                          <Typography variant="body2" color="#6b7280">
+                          <Typography variant="body2" color="var(--text-muted)">
                             <strong>Duration:</strong> {session.duration}
                           </Typography>
                         )}
@@ -345,7 +345,7 @@ ${detailedSections}
                           <Typography
                             component="div"
                             variant="body2"
-                            color="#6b7280"
+                            color="var(--text-muted)"
                             sx={{ fontWeight: 'bold', mb: 0.5 }}
                           >
                             Training Outlines:
@@ -354,7 +354,7 @@ ${detailedSections}
                             <Typography
                               component="div"
                               variant="body2"
-                              color="#6b7280"
+                              color="var(--text-muted)"
                               sx={{ pl: 2 }}
                             >
                               {session.outlines}
@@ -365,7 +365,7 @@ ${detailedSections}
                                 <Box key={idx} sx={{ mb: 1 }}>
                                   <Typography
                                     variant="body2"
-                                    color="#ffffff"
+                                    color="var(--text)"
                                     sx={{ fontWeight: '500' }}
                                   >
                                     {idx + 1}. {outline.mainTopic}
@@ -376,7 +376,7 @@ ${detailedSections}
                                         <Typography
                                           key={subIdx}
                                           variant="body2"
-                                          color="#9ca3af"
+                                          color="var(--text-secondary)"
                                           sx={{ fontSize: '0.85rem' }}
                                         >
                                           • {subTopic}
@@ -394,7 +394,7 @@ ${detailedSections}
                         <Typography
                           component="div"
                           variant="body2"
-                          color="#6b7280"
+                          color="var(--text-muted)"
                           sx={{ mt: 1 }}
                         >
                           <strong>Notes:</strong> {session.notes}
@@ -404,7 +404,7 @@ ${detailedSections}
                         <Typography
                           component="div"
                           variant="body2"
-                          color="#6b7280"
+                          color="var(--text-muted)"
                           sx={{ mt: 1, fontStyle: 'italic' }}
                         >
                           <strong>Reason:</strong> {session.reason}
@@ -416,7 +416,7 @@ ${detailedSections}
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                   <IconButton
                     onClick={() => handleViewClick(session)}
-                    sx={{ color: '#7b68ee' }}
+                    sx={{ color: 'var(--accent-text)' }}
                     size="small"
                   >
                     <VisibilityIcon fontSize="small" />
@@ -464,16 +464,16 @@ ${detailedSections}
         fullScreen={fullScreen}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
             boxShadow: 'none',
             borderRadius: fullScreen ? '0px' : '8px',
           }
         }}
       >
         <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
           padding: '16px 24px',
           display: 'flex',
           justifyContent: 'space-between',
@@ -481,7 +481,7 @@ ${detailedSections}
         }}>
           <Box>
             Training Session History
-            <Typography variant="body2" color="#6b7280">
+            <Typography variant="body2" color="var(--text-muted)">
               {completedSessions.length} completed session(s) | {missedOrCanceledSessions.length} missed/canceled
             </Typography>
           </Box>
@@ -523,13 +523,13 @@ ${detailedSections}
 
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: '#2d2d2d' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: 'var(--surface)' }}>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
             sx={{
               '& .MuiTabs-indicator': {
-                backgroundColor: '#7b68ee',
+                backgroundColor: 'var(--accent)',
               },
             }}
           >
@@ -555,8 +555,8 @@ ${detailedSections}
         </Box>
 
         <DialogContent sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
           '&.MuiDialogContent-root': {
             padding: '0',
           },
@@ -573,16 +573,16 @@ ${detailedSections}
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
           padding: '12px 24px',
         }}>
           <Button
             onClick={onClose}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               }
             }}
           >

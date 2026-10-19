@@ -177,10 +177,10 @@ const Profile = () => {
 
   const textFieldStyles = {
     '& .MuiInputBase-root': {
-      color: '#ffffff',
+      color: 'var(--text)',
     },
     '& .MuiInputLabel-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
@@ -196,28 +196,28 @@ const Profile = () => {
       borderRadius: '4px',
     },
     '& .MuiFormHelperText-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
     '& .Mui-disabled': {
-      WebkitTextFillColor: '#ffffff !important',
+      WebkitTextFillColor: 'var(--text) !important',
     }
   };
 
   const buttonStyles = {
     backgroundColor: '#1976d2',
-    color: '#ffffff',
+    color: 'var(--text)',
     fontWeight: 'bold',
     '&:hover': {
       backgroundColor: '#1565c0',
     },
     '&:disabled': {
       backgroundColor: '#555',
-      color: '#999'
+      color: 'var(--text-muted)'
     }
   };
 
   const cancelButtonStyles = {
-    color: '#ffffff',
+    color: 'var(--text)',
     backgroundColor: '#555',
     fontWeight: 'bold',
     '&:hover': {
@@ -263,7 +263,7 @@ const Profile = () => {
           width: '100%',
           height: isMobile ? '100vh' : 'auto',
           maxWidth: isMobile ? '100%' : '600px',
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           borderRadius: isMobile ? 0 : '8px',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
           border: isMobile ? 'none' : '1px solid #f3f4f6',
@@ -282,7 +282,7 @@ const Profile = () => {
             <MuiButton
               startIcon={<ArrowBackIcon />}
               onClick={handleBackClick}
-              sx={{ color: '#ffffff' }}
+              sx={{ color: 'var(--text)' }}
             >
               {isMobile ? '' : 'Back'}
             </MuiButton>
@@ -333,10 +333,10 @@ const Profile = () => {
             >
               {getInitials(user?.name)}
             </Avatar>
-            <Typography variant={isMobile ? 'h6' : 'h5'} component="h1" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+            <Typography variant={isMobile ? 'h6' : 'h5'} component="h1" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
               {user?.name}
             </Typography>
-            <Typography variant={isMobile ? 'body2' : 'body1'} sx={{ color: '#b3b3b3' }}>
+            <Typography variant={isMobile ? 'body2' : 'body1'} sx={{ color: 'var(--text-secondary)' }}>
               {user?.title}
             </Typography>
           </Box>
@@ -365,7 +365,7 @@ const Profile = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <PersonIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -390,7 +390,7 @@ const Profile = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <EmailIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -415,7 +415,7 @@ const Profile = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <PhoneIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -434,7 +434,7 @@ const Profile = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <WorkIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -454,7 +454,7 @@ const Profile = () => {
                 size={isMobile ? 'small' : 'medium'}
                 InputProps={{
                   startAdornment: (
-                    <InputAdornment position="start" sx={{ color: '#666' }}>
+                    <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                       <CheckCircleIcon fontSize={isMobile ? 'small' : 'medium'} />
                     </InputAdornment>
                   ),
@@ -463,7 +463,7 @@ const Profile = () => {
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        sx={{ color: '#666' }}
+                        sx={{ color: 'var(--text-muted)' }}
                         size={isMobile ? 'small' : 'medium'}
                       >
                         {showPassword ? <VisibilityOffIcon fontSize={isMobile ? 'small' : 'medium'} /> : <VisibilityIcon fontSize={isMobile ? 'small' : 'medium'} />}
@@ -494,9 +494,9 @@ const Profile = () => {
           sx={{
             width: '100%',
             backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : '#1976d2',
-            color: '#ffffff',
+            color: 'var(--text)',
             '& .MuiAlert-icon': {
-              color: '#ffffff'
+              color: 'var(--text)'
             }
           }}
         >

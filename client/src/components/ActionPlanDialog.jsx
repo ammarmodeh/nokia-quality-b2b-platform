@@ -176,8 +176,8 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
         fullScreen
         PaperProps={{
           sx: {
-            background: 'linear-gradient(135deg, #141414 0%, #ffffff 100%)',
-            color: '#ffffff',
+            background: 'linear-gradient(135deg, var(--bg) 0%, #ffffff 100%)',
+            color: 'var(--text)',
             border: '1px solid #f3f4f6',
             boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           }
@@ -190,7 +190,7 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
                 <MdAssignment size={22} color="#00e5ff" />
                 {title || "Comprehensive Action Plan"}
               </Typography>
-              <IconButton onClick={onClose} sx={{ color: '#aaa', p: 0.5 }}>
+              <IconButton onClick={onClose} sx={{ color: 'var(--text-secondary)', p: 0.5 }}>
                 <MdClose size={20} />
               </IconButton>
             </Box>
@@ -232,7 +232,7 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
               >
                 <Box
                   sx={{
-                    backgroundColor: '#2d2d2d',
+                    backgroundColor: 'var(--surface)',
                     border: '1px solid #f3f4f6',
                     borderRadius: 1,
                     p: { xs: 1.5, sm: 2 },
@@ -241,11 +241,11 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
                     overflowY: 'auto',
                     fontSize: '0.9rem',
                     lineHeight: 1.6,
-                    '& h1, & h2, & h3': { color: '#00e5ff', mt: 2, mb: 1, fontWeight: 600, borderBottom: '1px dashed #e5e7eb', pb: 0.5 },
-                    '& strong': { color: '#ffffff', fontWeight: 700 },
+                    '& h1, & h2, & h3': { color: '#00e5ff', mt: 2, mb: 1, fontWeight: 600, borderBottom: '1px dashed var(--border)', pb: 0.5 },
+                    '& strong': { color: 'var(--text)', fontWeight: 700 },
                     '& table': { width: '100%', borderCollapse: 'collapse', my: 1.5 },
-                    '& th, & td': { border: '1px solid #3d3d3d', p: 1, textAlign: 'left' },
-                    '& th': { backgroundColor: '#2d2d2d' }
+                    '& th, & td': { border: '1px solid var(--border)', p: 1, textAlign: 'left' },
+                    '& th': { backgroundColor: 'var(--surface)' }
                   }}
                 >
                   <Typography component="div" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -267,7 +267,7 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
                 }}
               >
                 <Typography variant="subtitle1" color="#00e5ff" mb={1} fontWeight={600}>Action Plan Q&A</Typography>
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 1, p: 1, background: '#2d2d2d', borderRadius: 1, border: '1px solid #3d3d3d' }}>
+                <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 1, p: 1, background: 'var(--surface)', borderRadius: 1, border: '1px solid var(--border)' }}>
                   {chatHistory.map((msg, idx) => (
                     <Box key={idx} sx={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start', mb: 0.5 }}>
                       <Box sx={{ maxWidth: '80%', p: 0.8, borderRadius: 1, bgcolor: msg.sender === 'user' ? '#00e5ff20' : '#414142ff', color: msg.sender === 'user' ? '#fff' : '#ccc', fontSize: '0.8rem' }}>
@@ -279,7 +279,7 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
                   <div ref={messagesEndRef} />
                 </Box>
                 <form onSubmit={handleSendMessage} style={{ display: 'flex', width: '100%' }}>
-                  <TextField fullWidth value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask about the plan..." size="small" sx={{ mr: 1, '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: '#555' } } }} disabled={chatLoading} />
+                  <TextField fullWidth value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask about the plan..." size="small" sx={{ mr: 1, '& .MuiOutlinedInput-root': { color: 'var(--text)', '& fieldset': { borderColor: 'var(--border)' } } }} disabled={chatLoading} />
                   <Button type="submit" variant="contained" size="small" sx={{ bgcolor: '#00e5ff', '&:hover': { bgcolor: '#00c3d9' } }}>Send</Button>
                 </form>
               </Box>
@@ -289,13 +289,13 @@ const ActionPlanDialog = ({ open, onClose, plan, title, onRegenerate, metadata }
 
         <Box sx={{ mx: 'auto', width: '100%' }}>
           <DialogActions sx={{ borderTop: '1px solid #f3f4f6', py: 1.5, px: 3, flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5 }}>
-            <Typography variant="caption" color="#777" flexGrow={1}>Powered by Gemini 2.5 Flash</Typography>
+            <Typography variant="caption" color="var(--text-muted)" flexGrow={1}>Powered by Gemini 2.5 Flash</Typography>
             <Stack direction="row" spacing={1}>
               <Button size="small" startIcon={<MdPictureAsPdf size={16} />} onClick={() => handleDownload('pdf')} variant="contained" sx={{ bgcolor: '#dc3545', color: '#fff' }} disabled={!plan}>PDF</Button>
               <Button size="small" startIcon={<MdAssignment size={16} />} onClick={() => handleDownload('docx')} variant="contained" sx={{ bgcolor: '#007bff', color: '#fff' }} disabled={!plan}>Word</Button>
-              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: '#3d3d3d' }}>Copy</Button>
+              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: 'var(--border)' }}>Copy</Button>
               <Button size="small" startIcon={<FaWhatsapp size={16} />} onClick={handleShareWhatsApp} variant="contained" sx={{ bgcolor: '#25D366', color: '#fff' }}>Share</Button>
-              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: '#3d3d3d' }}>Regenerate</Button>
+              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: 'var(--border)' }}>Regenerate</Button>
               <Button onClick={onClose} variant="contained" color="primary" size="small">Close</Button>
             </Stack>
           </DialogActions>

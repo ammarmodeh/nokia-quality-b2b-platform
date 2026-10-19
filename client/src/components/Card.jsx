@@ -317,8 +317,8 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
 
   const FullStatsDialog = ({ open, onClose, title, data = [] }) => {
     return (
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: { bgcolor: '#1a1a1a', color: 'white' } }}>
-        <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: { bgcolor: 'var(--bg)', color: 'var(--text)' } }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">{title}</Typography>
           <IconButton onClick={onClose} size="small" sx={{ color: 'gray' }}><MdClose /></IconButton>
         </DialogTitle>
@@ -335,7 +335,7 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
             )) : <Typography variant="body2" sx={{ color: 'gray', textAlign: 'center', py: 4 }}>No data available</Typography>}
           </div>
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #333', p: 2 }}>
+        <DialogActions sx={{ borderTop: '1px solid var(--border)', p: 2 }}>
           <Button onClick={onClose} sx={{ color: 'gray' }}>Close</Button>
         </DialogActions>
       </Dialog>
@@ -352,11 +352,11 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
             <span className="text-sm font-bold text-white/80 tracking-wider uppercase mb-1">
               {label}
             </span>
-            <span className="text-4xl font-black text-white">
+            <span className="text-4xl font-black text-[var(--text)]">
               {count}
             </span>
           </div>
-          <div className="p-3 bg-white/20 rounded-xl text-white text-2xl backdrop-blur-md group-hover:rotate-12 transition-transform duration-300">
+          <div className="p-3 bg-white/20 rounded-xl text-[var(--text)] text-2xl backdrop-blur-md group-hover:rotate-12 transition-transform duration-300">
             {icon}
           </div>
         </div>
@@ -385,7 +385,7 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
                   {stat.allData && stat.allData.length > 3 && (
                     <button
                       onClick={() => onShowAll(stat.label, stat.allData)}
-                      className="text-[9px] text-white/40 hover:text-white transition-colors uppercase font-bold"
+                      className="text-[9px] text-white/40 hover:text-[var(--text)] transition-colors uppercase font-bold"
                     >
                       Show All
                     </button>
@@ -393,7 +393,7 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {stat.values.length > 0 ? stat.values.map((v, i) => (
-                    <span key={i} className="text-[9px] bg-white/10 text-white leading-tight px-2 py-0.5 rounded-full whitespace-nowrap flex items-center gap-1">
+                    <span key={i} className="text-[9px] bg-white/10 text-[var(--text)] leading-tight px-2 py-0.5 rounded-full whitespace-nowrap flex items-center gap-1">
                       {v.name} ({v.count}) <span className="opacity-60 text-[8px]">{v.percentage}%</span>
                     </span>
                   )) : <span className="text-[9px] text-white/30 italic">No data</span>}
@@ -414,7 +414,7 @@ const Card = ({ tasks = [], samplesData = [], setUpdateTasksList }) => {
         </Typography>
         <Tooltip title="Refresh Stats">
           <IconButton onClick={handleRefresh} size="small" sx={{ bgcolor: 'white', '&:hover': { bgcolor: '#f1f5f9' }, boxShadow: 1 }}>
-            <FaSyncAlt size={14} color="#64748b" />
+            <FaSyncAlt size={14} color="var(--text-muted)" />
           </IconButton>
         </Tooltip>
       </Stack>

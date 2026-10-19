@@ -1,3 +1,4 @@
+import { alpha } from "../theme/colorFns";
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
@@ -45,7 +46,7 @@ import LoadingSpinner from './common/LoadingSpinner';
 import RecordTicketDialog from './task/RecordTicketDialog';
 import AdvancedSearch from './common/AdvancedSearch';
 import { MdHistory, MdEmail, MdSearch, MdClose, MdFilterList, MdMoreVert, MdEdit, MdDelete, MdAdd, MdVisibility, MdFileDownload, MdViewList, MdViewModule, MdBarChart, MdRefresh, MdTerminal, MdNewReleases, MdAccessTime } from 'react-icons/md';
-import { alpha } from '@mui/material/styles';
+
 import api from '../api/api';
 import CustomerIssueDialog from './CustomerIssueDialog';
 import GaiaStepsDialog from './task/GaiaStepsDialog';
@@ -99,7 +100,7 @@ const TruncatedCell = ({ value, label, theme }) => {
               sx={{
                 ml: 0.5,
                 p: 0.25,
-                color: '#7b68ee',
+                color: 'var(--accent-text)',
                 '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.1)' }
               }}
             >
@@ -115,27 +116,27 @@ const TruncatedCell = ({ value, label, theme }) => {
         onClick={(e) => e.stopPropagation()}
         PaperProps={{
           sx: {
-            bgcolor: '#2d2d2d',
-            color: '#ffffff',
-            border: '1px solid #3d3d3d',
+            bgcolor: 'var(--surface)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
             maxWidth: '500px',
             width: '100%'
           }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #3d3d3d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ color: '#7b68ee', fontWeight: 'bold' }}>{label}</Typography>
-          <IconButton onClick={() => setOpen(false)} sx={{ color: '#b3b3b3' }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ color: 'var(--accent-text)', fontWeight: 'bold' }}>{label}</Typography>
+          <IconButton onClick={() => setOpen(false)} sx={{ color: 'var(--text-secondary)' }}>
             <MdClose size={20} />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: '#ffffff' }}>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: 'var(--text)' }}>
             {value}
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #3d3d3d', p: 2 }}>
-          <Button onClick={() => setOpen(false)} sx={{ color: '#7b68ee' }}>Close</Button>
+        <DialogActions sx={{ borderTop: '1px solid var(--border)', p: 2 }}>
+          <Button onClick={() => setOpen(false)} sx={{ color: 'var(--accent-text)' }}>Close</Button>
         </DialogActions>
       </Dialog>
     </>
@@ -850,9 +851,9 @@ const CustomerIssuesList = () => {
           sx={{
             '& .MuiInput-root': {
               fontSize: '0.65rem',
-              color: '#ffffff',
-              '&:before': { borderBottomColor: 'rgba(255,255,255,0.1)' },
-              '&:after': { borderBottomColor: '#7b68ee' },
+              color: 'var(--text)',
+              '&:before': { borderBottomColor: 'var(--border)' },
+              '&:after': { borderBottomColor: 'var(--accent)' },
             },
             '& .MuiInput-input': {
               padding: '2px 0 2px 0 !important',
@@ -863,8 +864,8 @@ const CustomerIssuesList = () => {
       )}
       PaperProps={{
         sx: {
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
           fontSize: '0.75rem',
           '& .MuiAutocomplete-option': {
             padding: '4px 8px',
@@ -910,7 +911,7 @@ const CustomerIssuesList = () => {
         mb: 3
       }}>
         <Typography variant="h5" sx={{
-          color: '#7b68ee',
+          color: 'var(--accent-text)',
           fontWeight: 'bold',
           fontSize: isMobile ? '1.2rem' : '1.75rem',
         }}>
@@ -941,7 +942,7 @@ const CustomerIssuesList = () => {
             startIcon={<MdFileDownload />}
             size={isMobile ? 'small' : 'medium'}
             sx={{
-              borderColor: '#3d3d3d',
+              borderColor: 'var(--border)',
               color: '#4caf50',
               '&:hover': { borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.05)' },
               textTransform: 'none',
@@ -957,7 +958,7 @@ const CustomerIssuesList = () => {
             startIcon={<FaFilePdf />}
             size={isMobile ? 'small' : 'medium'}
             sx={{
-              borderColor: '#3d3d3d',
+              borderColor: 'var(--border)',
               color: '#f44336',
               '&:hover': { borderColor: '#f44336', backgroundColor: 'rgba(244, 67, 54, 0.05)' },
               textTransform: 'none',
@@ -997,16 +998,16 @@ const CustomerIssuesList = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#7b68ee'
+                color: 'var(--accent-text)'
               }}
             >
               <MdNewReleases size={24} />
             </Box>
             <Box>
-              <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <Typography variant="subtitle2" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Latest Issue Reported
               </Typography>
-              <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
+              <Typography variant="body1" sx={{ color: 'var(--text)', fontWeight: 500 }}>
                 {latestIssue.slid} <span style={{ opacity: 0.6, margin: '0 8px' }}>•</span> {new Date(latestIssue.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
               </Typography>
             </Box>
@@ -1014,12 +1015,12 @@ const CustomerIssuesList = () => {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
             <Box>
-              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Reporter</Typography>
-              <Typography variant="body2" sx={{ color: '#ffffff' }}>{latestIssue.reporter}</Typography>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block' }}>Reporter</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--text)' }}>{latestIssue.reporter}</Typography>
             </Box>
             <Box>
-              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Category</Typography>
-              <Typography variant="body2" sx={{ color: '#ffffff' }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block' }}>Category</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                 {latestIssue.issues && latestIssue.issues.length > 0
                   ? latestIssue.issues[0].category
                   : (latestIssue.issueCategory || 'N/A')}
@@ -1033,11 +1034,11 @@ const CustomerIssuesList = () => {
                 setOpenViewDialog(true);
               }}
               sx={{
-                borderColor: '#7b68ee',
-                color: '#7b68ee',
+                borderColor: 'var(--accent)',
+                color: 'var(--accent-text)',
                 '&:hover': {
                   backgroundColor: 'rgba(123, 104, 238, 0.1)',
-                  borderColor: '#7b68ee'
+                  borderColor: 'var(--accent)'
                 },
                 textTransform: 'none',
                 borderRadius: '6px'
@@ -1084,7 +1085,7 @@ const CustomerIssuesList = () => {
               <Typography variant="subtitle2" sx={{ color: '#2196f3', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Latest Issue Created
               </Typography>
-              <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
+              <Typography variant="body1" sx={{ color: 'var(--text)', fontWeight: 500 }}>
                 {latestCreatedIssue.slid} <span style={{ opacity: 0.6, margin: '0 8px' }}>•</span> {new Date(latestCreatedIssue.createdAt).toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </Typography>
             </Box>
@@ -1092,12 +1093,12 @@ const CustomerIssuesList = () => {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
             <Box>
-              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Reporter</Typography>
-              <Typography variant="body2" sx={{ color: '#ffffff' }}>{latestCreatedIssue.reporter}</Typography>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block' }}>Reporter</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--text)' }}>{latestCreatedIssue.reporter}</Typography>
             </Box>
             <Box>
-              <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Category</Typography>
-              <Typography variant="body2" sx={{ color: '#ffffff' }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block' }}>Category</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                 {latestCreatedIssue.issues && latestCreatedIssue.issues.length > 0
                   ? latestCreatedIssue.issues[0].category
                   : (latestCreatedIssue.issueCategory || 'N/A')}
@@ -1128,15 +1129,15 @@ const CustomerIssuesList = () => {
       )}
 
       <Box sx={{
-        backgroundColor: '#2d2d2d',
+        backgroundColor: 'var(--surface)',
         p: 2,
         borderRadius: '12px',
-        border: '1px solid #3d3d3d',
+        border: '1px solid var(--border)',
         mb: 3,
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}>
         {/* Source Tabs */}
-        <Box sx={{ mb: 2, borderBottom: 1, borderColor: '#3d3d3d' }}>
+        <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'var(--border)' }}>
           <Tabs
             value={sourceFilter}
             onChange={(e, val) => { setSourceFilter(val); setPage(0); }}
@@ -1144,13 +1145,13 @@ const CustomerIssuesList = () => {
             scrollButtons="auto"
             allowScrollButtonsMobile
             sx={{
-              '& .MuiTabs-indicator': { backgroundColor: '#7b68ee' },
+              '& .MuiTabs-indicator': { backgroundColor: 'var(--accent)' },
               '& .MuiTab-root': {
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 textTransform: 'none',
                 fontWeight: 500,
                 fontSize: '1rem',
-                '&.Mui-selected': { color: '#7b68ee' }
+                '&.Mui-selected': { color: 'var(--accent-text)' }
               }
             }}
           >
@@ -1174,7 +1175,7 @@ const CustomerIssuesList = () => {
             sx={{
               borderColor: activeAdvSearch ? '#7b68ee' : '#3d3d3d',
               color: activeAdvSearch ? '#7b68ee' : '#b3b3b3',
-              '&:hover': { borderColor: '#7b68ee', backgroundColor: 'rgba(123, 104, 238, 0.05)' },
+              '&:hover': { borderColor: 'var(--accent)', backgroundColor: 'rgba(123, 104, 238, 0.05)' },
               textTransform: 'none',
               borderRadius: '8px',
               px: 2,
@@ -1207,11 +1208,11 @@ const CustomerIssuesList = () => {
             sx={{
               width: isMobile ? '100%' : '300px',
               '& .MuiOutlinedInput-root': {
-                backgroundColor: '#1e1e1e',
+                backgroundColor: 'var(--surface)',
                 borderRadius: '8px',
-                '& fieldset': { borderColor: '#3d3d3d' },
-                '&:hover fieldset': { borderColor: '#7b68ee' },
-                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                '& fieldset': { borderColor: 'var(--border)' },
+                '&:hover fieldset': { borderColor: 'var(--accent)' },
+                '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
               }
             }}
           />
@@ -1236,10 +1237,10 @@ const CustomerIssuesList = () => {
 
           <Box sx={{
             display: 'flex',
-            backgroundColor: '#1e1e1e',
+            backgroundColor: 'var(--surface)',
             borderRadius: '8px',
             p: 0.5,
-            border: '1px solid #3d3d3d'
+            border: '1px solid var(--border)'
           }}>
             {[
               { id: 'list', icon: <MdViewList />, label: 'List' },
@@ -1270,7 +1271,7 @@ const CustomerIssuesList = () => {
           </Box>
         </Box>
 
-        <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
+        <Divider sx={{ mb: 2, borderColor: 'var(--border)' }} />
 
         <Box sx={{
           display: 'flex',
@@ -1279,7 +1280,7 @@ const CustomerIssuesList = () => {
           mb: 2,
           alignItems: isMobile ? 'stretch' : 'center'
         }}>
-          <Typography variant="body2" sx={{ color: '#b3b3b3', minWidth: 'fit-content' }}>Filter by Date:</Typography>
+          <Typography variant="body2" sx={{ color: 'var(--text-secondary)', minWidth: 'fit-content' }}>Filter by Date:</Typography>
 
           {/* Month Filter Controls */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -1288,14 +1289,14 @@ const CustomerIssuesList = () => {
                 value={dateTypeFilter}
                 onChange={(e) => setDateTypeFilter(e.target.value)}
                 sx={{
-                  backgroundColor: '#1e1e1e',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                   fontSize: '0.875rem',
                   height: '40px',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                  '& .MuiSvgIcon-root': { color: '#b3b3b3' }
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent)' },
+                  '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                 }}
               >
                 <MenuItem value="reported">Reported Date</MenuItem>
@@ -1314,10 +1315,10 @@ const CustomerIssuesList = () => {
               size="small"
               sx={{
                 width: 160,
-                '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e', height: '40px' },
-                '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
-                '&:hover fieldset': { borderColor: '#7b68ee' },
-                '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                '& .MuiInputBase-root': { color: 'var(--text)', backgroundColor: 'var(--surface)', height: '40px' },
+                '& .MuiOutlinedInput-root fieldset': { borderColor: 'var(--border)' },
+                '&:hover fieldset': { borderColor: 'var(--accent)' },
+                '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
               }}
             />
             {monthFilter && (
@@ -1331,7 +1332,7 @@ const CustomerIssuesList = () => {
             )}
           </Box>
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d' }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'var(--border)' }} />
 
           <TextField
             type="date"
@@ -1345,9 +1346,9 @@ const CustomerIssuesList = () => {
             size="small"
             sx={{
               maxWidth: isMobile ? 'none' : '160px',
-              '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
-              '& .MuiInputLabel-root': { color: '#b3b3b3' },
-              '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+              '& .MuiInputBase-root': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
+              '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+              '& .MuiOutlinedInput-root fieldset': { borderColor: 'var(--border)' },
               '&:hover fieldset': { borderColor: '#666' },
             }}
           />
@@ -1360,9 +1361,9 @@ const CustomerIssuesList = () => {
             size="small"
             sx={{
               maxWidth: isMobile ? 'none' : '200px',
-              '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
-              '& .MuiInputLabel-root': { color: '#b3b3b3' },
-              '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+              '& .MuiInputBase-root': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
+              '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+              '& .MuiOutlinedInput-root fieldset': { borderColor: 'var(--border)' },
               '&:hover fieldset': { borderColor: '#666' },
             }}
           />
@@ -1376,21 +1377,21 @@ const CustomerIssuesList = () => {
             </Button>
           )}
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d', display: isMobile ? 'none' : 'block' }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'var(--border)', display: isMobile ? 'none' : 'block' }} />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-            <Typography variant="body2" sx={{ color: '#b3b3b3', minWidth: 'fit-content' }}>Supervisor:</Typography>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', minWidth: 'fit-content' }}>Supervisor:</Typography>
             <FormControl size="small" sx={{ minWidth: 200, flex: isMobile ? 1 : 0 }}>
               <Select
                 value={supervisorFilter}
                 onChange={(e) => { setSupervisorFilter(e.target.value); setPage(0); }}
                 sx={{
-                  backgroundColor: '#1e1e1e',
-                  color: '#ffffff',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                  '& .MuiSvgIcon-root': { color: '#b3b3b3' }
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent)' },
+                  '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                 }}
               >
                 {availableSupervisors.map(sup => (
@@ -1403,7 +1404,7 @@ const CustomerIssuesList = () => {
           </Box>
         </Box>
 
-        <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
+        <Divider sx={{ mb: 2, borderColor: 'var(--border)' }} />
 
         <Tabs
           value={statusFilter}
@@ -1413,18 +1414,18 @@ const CustomerIssuesList = () => {
           allowScrollButtonsMobile
           sx={{
             '& .MuiTabs-indicator': {
-              backgroundColor: '#7b68ee',
+              backgroundColor: 'var(--accent)',
               height: 3,
               borderRadius: '3px 3px 0 0'
             },
             '& .MuiTab-root': {
-              color: '#b3b3b3',
+              color: 'var(--text-secondary)',
               textTransform: 'none',
               fontWeight: 500,
               fontSize: '0.9rem',
               minWidth: 100,
               '&.Mui-selected': {
-                color: '#ffffff',
+                color: 'var(--text)',
               }
             }
           }}
@@ -1447,15 +1448,15 @@ const CustomerIssuesList = () => {
             overflowX: 'auto',
             flex: 1,
             width: "100%",
-            border: "1px solid #3d3d3d",
+            border: "1px solid var(--border)",
             borderRadius: "12px",
-            color: "#ffffff",
+            color: "var(--text)",
             maxHeight: "calc(100vh - 350px)", // Advanced sticky scroll
             "&.MuiTableContainer-root": {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: 'var(--surface)',
             },
             "& .MuiTable-root": {
-              backgroundColor: "#1e1e1e",
+              backgroundColor: "var(--surface)",
               borderCollapse: 'separate',
               borderSpacing: 0,
             },
@@ -1464,12 +1465,12 @@ const CustomerIssuesList = () => {
               top: 0,
               zIndex: 3,
               "& .MuiTableCell-root": {
-                color: "#b3b3b3",
+                color: "var(--text-secondary)",
                 fontSize: "0.72rem",
                 fontWeight: "800",
                 textTransform: 'uppercase',
                 letterSpacing: '0.8px',
-                borderBottom: "2px solid #3d3d3d",
+                borderBottom: "2px solid var(--border)",
                 whiteSpace: "nowrap",
                 padding: "10px 14px",
                 backgroundColor: "rgba(30, 30, 30, 0.95)", // Glassmorphism base
@@ -1478,8 +1479,8 @@ const CustomerIssuesList = () => {
             },
             "& .MuiTableBody-root": {
               "& .MuiTableCell-root": {
-                borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                color: "#ffffff",
+                borderBottom: "1px solid var(--border)",
+                color: "var(--text)",
                 fontSize: "0.8rem",
                 padding: "6px 12px", // Compact padding
                 maxWidth: "180px",
@@ -1490,7 +1491,7 @@ const CustomerIssuesList = () => {
                   backgroundColor: "rgba(123, 104, 238, 0.08)",
                 },
                 "&:nth-of-type(even)": {
-                  backgroundColor: "rgba(255, 255, 255, 0.01)",
+                  backgroundColor: "var(--overlay-subtle)",
                 }
               }
             },
@@ -1504,7 +1505,7 @@ const CustomerIssuesList = () => {
               height: "6px",
             },
             "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "#3d3d3d",
+              backgroundColor: "var(--surface-hover)",
               borderRadius: "10px",
               "&:hover": { backgroundColor: "#4d4d4d" }
             },
@@ -1549,7 +1550,7 @@ const CustomerIssuesList = () => {
                       position: 'sticky',
                       right: 0,
                       zIndex: 10,
-                      backgroundColor: "#111111 !important",
+                      backgroundColor: "var(--bg) !important",
                       boxShadow: "-4px 0 12px rgba(0,0,0,0.5)",
                       "&::before": {
                         content: '""',
@@ -1558,7 +1559,7 @@ const CustomerIssuesList = () => {
                         top: 0,
                         bottom: 0,
                         width: '1px',
-                        backgroundColor: 'rgba(255,255,255,0.1)'
+                        backgroundColor: 'var(--overlay-subtle)'
                       }
                     }}
                   >
@@ -1599,7 +1600,7 @@ const CustomerIssuesList = () => {
                       position: 'sticky',
                       right: 0,
                       zIndex: 10,
-                      backgroundColor: "#111111 !important",
+                      backgroundColor: "var(--bg) !important",
                       boxShadow: "-4px 0 12px rgba(0,0,0,0.5)",
                     }}
                   ></TableCell>
@@ -1624,7 +1625,7 @@ const CustomerIssuesList = () => {
                       <TableCell sx={{ fontSize: '0.85rem' }}>
                         {issue.date ? new Date(issue.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 500, color: '#7b68ee !important' }}>{issue.slid}</TableCell>
+                      <TableCell sx={{ fontWeight: 500, color: 'var(--accent-text) !important' }}>{issue.slid}</TableCell>
                       <TableCell>
                         <TruncatedCell value={issue.customerName} label="Customer Name" theme={theme} />
                       </TableCell>
@@ -1666,18 +1667,18 @@ const CustomerIssuesList = () => {
                                   fontSize: '0.65rem',
                                   fontWeight: 700,
                                   backgroundColor: 'rgba(123, 104, 238, 0.08)',
-                                  color: '#7b68ee',
+                                  color: 'var(--accent-text)',
                                   border: '1px solid rgba(123, 104, 238, 0.2)',
                                   '&:hover': {
                                     backgroundColor: 'rgba(123, 104, 238, 0.15)',
-                                    borderColor: '#7b68ee'
+                                    borderColor: 'var(--accent)'
                                   }
                                 }}
                               />
                             ))}
                           </Box>
                         ) : (
-                          <Typography variant="body2" sx={{ fontSize: '0.85rem', color: '#666' }}>No Category</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No Category</Typography>
                         )}
                       </TableCell>
                       <TableCell>
@@ -1718,7 +1719,7 @@ const CustomerIssuesList = () => {
                             fontSize: '0.65rem',
                             fontWeight: 700,
                             textTransform: 'none',
-                            color: '#7b68ee',
+                            color: 'var(--accent-text)',
                             padding: '2px 8px',
                             minWidth: 'auto',
                             '&:hover': {
@@ -1778,8 +1779,8 @@ const CustomerIssuesList = () => {
                           position: 'sticky',
                           right: 0,
                           zIndex: 5,
-                          backgroundColor: "#111111 !important",
-                          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                          backgroundColor: "var(--bg) !important",
+                          borderBottom: "1px solid var(--border)",
                           boxShadow: "-4px 0 12px rgba(0,0,0,0.5)",
                           "&::before": {
                             content: '""',
@@ -1788,7 +1789,7 @@ const CustomerIssuesList = () => {
                             top: 0,
                             bottom: 0,
                             width: '1px',
-                            backgroundColor: 'rgba(255,255,255,0.1)'
+                            backgroundColor: 'var(--overlay-subtle)'
                           }
                         }}
                       >
@@ -1830,8 +1831,8 @@ const CustomerIssuesList = () => {
                               handleMenuOpen(e, issue);
                             }}
                             sx={{
-                              color: '#b3b3b3',
-                              '&:hover': { color: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)' }
+                              color: 'var(--text-secondary)',
+                              '&:hover': { color: '#ffffff', backgroundColor: 'var(--overlay-subtle)' }
                             }}
                           >
                             <MdMoreVert />
@@ -1842,7 +1843,7 @@ const CustomerIssuesList = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={isMobile ? 6 : 12} align="center" sx={{ color: '#ffffff' }}>
+                    <TableCell colSpan={isMobile ? 6 : 12} align="center" sx={{ color: 'var(--text)' }}>
                       {searchTerm ? 'No matching issues found' : 'No issues available'}
                     </TableCell>
                   </TableRow>
@@ -1859,15 +1860,15 @@ const CustomerIssuesList = () => {
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
             sx={{
-              color: '#b3b3b3',
-              borderTop: '1px solid #3d3d3d',
-              backgroundColor: '#1e1e1e',
+              color: 'var(--text-secondary)',
+              borderTop: '1px solid var(--border)',
+              backgroundColor: 'var(--surface)',
               borderBottomLeftRadius: '12px',
               borderBottomRightRadius: '12px',
-              '& .MuiTablePagination-selectIcon': { color: '#ffffff' },
-              '& .MuiTablePagination-actions': { color: '#ffffff' },
-              '& .MuiTablePagination-select': { color: '#ffffff' },
-              '& .MuiTablePagination-displayedRows': { color: '#ffffff', fontWeight: 600 }
+              '& .MuiTablePagination-selectIcon': { color: 'var(--text)' },
+              '& .MuiTablePagination-actions': { color: 'var(--text)' },
+              '& .MuiTablePagination-select': { color: 'var(--text)' },
+              '& .MuiTablePagination-displayedRows': { color: 'var(--text)', fontWeight: 600 }
             }}
           />
         </>
@@ -1881,10 +1882,10 @@ const CustomerIssuesList = () => {
                   key={issue._id}
                   sx={{
                     p: 2,
-                    bgcolor: '#2d2d2d',
-                    color: '#fff',
+                    bgcolor: 'var(--surface)',
+                    color: 'var(--text)',
                     borderRadius: 2,
-                    border: '1px solid #3d3d3d',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.5,
@@ -1892,25 +1893,25 @@ const CustomerIssuesList = () => {
                   }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#7b68ee', fontSize: '1rem' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'var(--accent-text)', fontSize: '1rem' }}>
                       {issue.slid}
                     </Typography>
                     <IconButton
                       size="small"
                       onClick={(e) => handleMenuOpen(e, issue)}
-                      sx={{ color: '#ffffff', mt: -1, mr: -1 }}
+                      sx={{ color: 'var(--text)', mt: -1, mr: -1 }}
                     >
                       <MdMoreVert />
                     </IconButton>
                   </Box>
 
                   <Box>
-                    <Typography variant="caption" color="#b3b3b3">From</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">From</Typography>
                     <Typography variant="body2">{issue.from}</Typography>
                   </Box>
 
                   <Box>
-                    <Typography variant="caption" color="#b3b3b3">Issue</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Issue</Typography>
                     {issue.issues && issue.issues.length > 0 ? (
                       <Stack spacing={0.5}>
                         {issue.issues.map((i, idx) => (
@@ -1925,7 +1926,7 @@ const CustomerIssuesList = () => {
                   </Box>
 
                   <Box>
-                    <Typography variant="caption" color="#b3b3b3">Assigned To</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Assigned To</Typography>
                     <Typography variant="body2">{issue.assignedTo}</Typography>
                   </Box>
 
@@ -1935,23 +1936,23 @@ const CustomerIssuesList = () => {
                       color={issue.solved === 'yes' ? 'success' : 'error'}
                       size="small"
                       sx={{
-                        color: "#ffffff",
+                        color: "var(--text)",
                         '&.MuiChip-colorSuccess': { backgroundColor: '#4caf50' },
                         '&.MuiChip-colorError': { backgroundColor: '#f44336' }
                       }}
                     />
                   </Stack>
 
-                  <Divider sx={{ bgcolor: '#3d3d3d' }} />
+                  <Divider sx={{ bgcolor: 'var(--surface-hover)' }} />
 
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#b3b3b3' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                     <span>Reported: {new Date(issue.date).toLocaleDateString()}</span>
                     {issue.resolveDate && <span>Resolved: {new Date(issue.resolveDate).toLocaleDateString()}</span>}
                   </Box>
                 </Paper>
               ))
             ) : (
-              <Typography sx={{ color: '#ffffff', gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
+              <Typography sx={{ color: 'var(--text)', gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
                 {searchTerm ? 'No matching issues found' : 'No issues available'}
               </Typography>
             )}
@@ -1961,7 +1962,7 @@ const CustomerIssuesList = () => {
             page={page + 1}
             onChange={(e, p) => setPage(p - 1)}
             color="primary"
-            sx={{ alignSelf: 'center', '& .MuiPaginationItem-root': { color: '#ffffff' } }}
+            sx={{ alignSelf: 'center', '& .MuiPaginationItem-root': { color: 'var(--text)' } }}
           />
         </Box>
       )}
@@ -1973,11 +1974,11 @@ const CustomerIssuesList = () => {
         onClose={handleMenuClose}
         sx={{
           "& .MuiPaper-root": {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             boxShadow: 'none',
             borderRadius: '8px',
-            border: '1px solid #3d3d3d',
+            border: '1px solid var(--border)',
             minWidth: '200px',
           },
           "& .MuiList-root": {
@@ -1989,15 +1990,15 @@ const CustomerIssuesList = () => {
           onClick={() => { setOpenViewDialog(true); handleMenuClose(); }}
           sx={{
             '&:hover': {
-              backgroundColor: '#2a2a2a',
+              backgroundColor: 'var(--surface)',
             },
             '&.MuiMenuItem-root': {
               padding: '8px 16px',
             }
           }}
         >
-          <MdVisibility style={{ marginRight: 8, color: '#ffffff' }} />
-          <Typography variant="body1" color="#ffffff">View</Typography>
+          <MdVisibility style={{ marginRight: 8, color: 'var(--text)' }} />
+          <Typography variant="body1" color="var(--text)">View</Typography>
         </MenuItem>
 
         {user && user.role === 'Admin' && [
@@ -2006,15 +2007,15 @@ const CustomerIssuesList = () => {
             onClick={handleEditClick}
             sx={{
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               },
               '&.MuiMenuItem-root': {
                 padding: '8px 16px',
               }
             }}
           >
-            <MdEdit style={{ marginRight: 8, color: '#ffffff' }} />
-            <Typography variant="body1" color="#ffffff">Edit</Typography>
+            <MdEdit style={{ marginRight: 8, color: 'var(--text)' }} />
+            <Typography variant="body1" color="var(--text)">Edit</Typography>
           </MenuItem>,
 
           <MenuItem
@@ -2022,7 +2023,7 @@ const CustomerIssuesList = () => {
             onClick={handleDeleteClick}
             sx={{
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               },
               '&.MuiMenuItem-root': {
                 padding: '8px 16px',
@@ -2034,7 +2035,7 @@ const CustomerIssuesList = () => {
             <Typography variant="body1" color="#f44336">Delete</Typography>
           </MenuItem>,
 
-          <Divider key="div" sx={{ my: 1, borderColor: '#3d3d3d' }} />,
+          <Divider key="div" sx={{ my: 1, borderColor: 'var(--border)' }} />,
 
           <MenuItem
             key="record"

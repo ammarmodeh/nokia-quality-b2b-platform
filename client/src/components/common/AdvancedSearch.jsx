@@ -1,17 +1,5 @@
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Stack,
-    Typography,
-    Grid,
-    TextField,
-    IconButton,
-    Button,
-    Box,
-    alpha
-} from '@mui/material';
+import { alpha } from "../../theme/colorFns";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Stack, Typography, Grid, TextField, IconButton, Button, Box } from '@mui/material';
 import { MdSearch, MdClose } from 'react-icons/md';
 
 const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear }) => {
@@ -24,30 +12,30 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
             PaperProps={{
                 sx: {
                     borderRadius: 3,
-                    bgcolor: '#1c1c1c',
-                    border: '1px solid #3d3d3d',
+                    bgcolor: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
                 }
             }}
         >
             <DialogTitle sx={{
-                borderBottom: '1px solid #3d3d3d',
+                borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 bgcolor: alpha('#7b68ee', 0.05)
             }}>
                 <Stack direction="row" spacing={1} alignItems="center">
-                    <MdSearch color="#7b68ee" size={24} />
+                    <MdSearch color="var(--accent-text)" size={24} />
                     <Typography variant="h6" fontWeight={900}>Advanced Audit Engine</Typography>
                 </Stack>
-                <IconButton onClick={onClose} size="small" sx={{ color: '#aaa' }}>
+                <IconButton onClick={onClose} size="small" sx={{ color: 'var(--text-secondary)' }}>
                     <MdClose />
                 </IconButton>
             </DialogTitle>
             <DialogContent sx={{ mt: 2 }}>
                 <Stack spacing={3} sx={{ mt: 1 }}>
-                    <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
                         Search Parameters
                     </Typography>
                     <Grid container spacing={2}>
@@ -62,10 +50,10 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#fff',
-                                        '& fieldset': { borderColor: '#3d3d3d' },
+                                        color: 'var(--text)',
+                                        '& fieldset': { borderColor: 'var(--border)' },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#aaa' }
+                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
                                 }}
                             />
                         </Grid>
@@ -80,10 +68,10 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#fff',
-                                        '& fieldset': { borderColor: '#3d3d3d' },
+                                        color: 'var(--text)',
+                                        '& fieldset': { borderColor: 'var(--border)' },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#aaa' }
+                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
                                 }}
                             />
                         </Grid>
@@ -98,10 +86,10 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#fff',
-                                        '& fieldset': { borderColor: '#3d3d3d' },
+                                        color: 'var(--text)',
+                                        '& fieldset': { borderColor: 'var(--border)' },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#aaa' }
+                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
                                 }}
                             />
                         </Grid>
@@ -116,10 +104,10 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#fff',
-                                        '& fieldset': { borderColor: '#3d3d3d' },
+                                        color: 'var(--text)',
+                                        '& fieldset': { borderColor: 'var(--border)' },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#aaa' }
+                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
                                 }}
                             />
                         </Grid>
@@ -134,10 +122,10 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#fff',
-                                        '& fieldset': { borderColor: '#3d3d3d' },
+                                        color: 'var(--text)',
+                                        '& fieldset': { borderColor: 'var(--border)' },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#aaa' }
+                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
                                 }}
                             />
                         </Grid>
@@ -152,20 +140,20 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#fff',
-                                        '& fieldset': { borderColor: '#3d3d3d' },
+                                        color: 'var(--text)',
+                                        '& fieldset': { borderColor: 'var(--border)' },
                                     },
-                                    '& .MuiInputLabel-root': { color: '#aaa' }
+                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
                                 }}
                             />
                         </Grid>
                     </Grid>
                 </Stack>
             </DialogContent>
-            <DialogActions sx={{ p: 3, borderTop: '1px solid #3d3d3d', bgcolor: alpha('#000', 0.2) }}>
+            <DialogActions sx={{ p: 3, borderTop: '1px solid var(--border)', bgcolor: alpha('#000', 0.2) }}>
                 <Button
                     onClick={onClear}
-                    sx={{ color: '#aaa', fontWeight: 900 }}
+                    sx={{ color: 'var(--text-secondary)', fontWeight: 900 }}
                 >
                     CLEAR ENGINE
                 </Button>
@@ -174,7 +162,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                     variant="contained"
                     onClick={onInitiate}
                     sx={{
-                        bgcolor: '#7b68ee',
+                        bgcolor: 'var(--accent)',
                         fontWeight: 900,
                         px: 4,
                         '&:hover': { bgcolor: '#6854d9' }

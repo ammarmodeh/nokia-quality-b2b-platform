@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Divider, Rating, Grid, List, ListItem, ListItemText, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
@@ -6,10 +7,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
 const colors = {
-  background: '#2d2d2d',
+  background: tok('--surface'),
   surface: '#ffffff',
   surfaceElevated: '#252525',
-  border: '#e5e7eb',
+  border: tok('--border'),
   primary: '#7b68ee',
   primaryHover: 'rgba(62, 166, 255, 0.08)',
   textPrimary: '#ffffff',

@@ -103,7 +103,7 @@ export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
         <span className={`text-[8px] uppercase tracking-tighter font-black leading-none mb-1 ${timeLeft < 60 ? 'text-black' : 'text-white/60'}`}>
           Time Remaining
         </span>
-        <span className={`text-xl font-black font-mono tracking-tighter leading-none ${timeLeft < 60 ? 'text-black underline' : 'text-white'}`}>
+        <span className={`text-xl font-black font-mono tracking-tighter leading-none ${timeLeft < 60 ? 'text-black underline' : 'text-[var(--text)]'}`}>
           {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
         </span>
       </div>

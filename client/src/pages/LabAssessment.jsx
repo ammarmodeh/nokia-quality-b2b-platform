@@ -680,9 +680,9 @@ const LabAssessment = () => {
   const [settings, setSettings] = useState(null);
 
   const colors = {
-    background: "#1a1a1a",
+    background: "var(--bg)",
     surface: "#252525",
-    border: "#3d3d3d",
+    border: "var(--border)",
     primary: "#7b68ee",
     textPrimary: "#ffffff",
     textSecondary: "#b3b3b3",
@@ -1522,7 +1522,7 @@ const LabAssessment = () => {
                 <Paper
                   sx={{
                     p: 3,
-                    bgcolor: "rgba(255,255,255,0.02)",
+                    bgcolor: "var(--overlay-subtle)",
                     border: `1px solid ${colors.border}`,
                     borderRadius: "16px",
                   }}
@@ -1753,7 +1753,7 @@ const LabAssessment = () => {
                 </Paper>
 
                 {/* SECTION: Tools & Equipment Readiness Check */}
-                <Paper sx={{ p: 3, bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
+                <Paper sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1.5 }}>
                     <Box>
                       <Typography variant="h6" sx={{ color: colors.info, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
@@ -1780,7 +1780,7 @@ const LabAssessment = () => {
                         size="small"
                         sx={{
                           bgcolor: equipmentStats.isPass ? "#4caf50" : "#f44336",
-                          color: "#ffffff",
+                          color: "var(--text)",
                           fontWeight: 800,
                           fontSize: "0.75rem",
                           px: 0.5,
@@ -1792,7 +1792,7 @@ const LabAssessment = () => {
                   <TableContainer component={Paper} sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
                     <Table size="small">
                       <TableHead>
-                        <TableRow sx={{ bgcolor: "rgba(255,255,255,0.03)" }}>
+                        <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
                           <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "35%" }}>Tool / Equipment Item</TableCell>
                           <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, width: "35%" }}>Assessment Status</TableCell>
                           <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "30%" }}>Assessor Observations / Notes</TableCell>
@@ -1885,7 +1885,7 @@ const LabAssessment = () => {
                     <TableContainer component={Paper} sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "rgba(255,255,255,0.03)" }}>
+                          <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
                             <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "50%" }}>Checkpoint & Criteria</TableCell>
                             <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, width: "25%" }}>Result</TableCell>
                             <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "25%" }}>Assessor Remarks</TableCell>
@@ -1893,7 +1893,7 @@ const LabAssessment = () => {
                         </TableHead>
                         <TableBody>
                           {checkpointsWithIndices.map(({ cp, cpIdx }) => (
-                            <TableRow key={cp.id || cpIdx} sx={{ borderBottom: `1px solid ${colors.border}`, "&:hover": { bgcolor: "rgba(255,255,255,0.01)" } }}>
+                            <TableRow key={cp.id || cpIdx} sx={{ borderBottom: `1px solid ${colors.border}`, "&:hover": { bgcolor: "var(--overlay-subtle)" } }}>
                               <TableCell sx={{ color: colors.textPrimary, py: 1.5 }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>{cp.name}</Typography>
                                 {cp.subSection && (
@@ -2067,7 +2067,7 @@ const LabAssessment = () => {
                   ];
 
                   return (
-                    <Paper key={sec.sectionId} sx={{ p: 3, bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
+                    <Paper key={sec.sectionId} sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1.5 }}>
                         <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 700 }}>
                           {sec.sectionTitle}
@@ -2107,7 +2107,7 @@ const LabAssessment = () => {
                                 size="small"
                                 sx={{
                                   bgcolor: secStats.isPass ? "#4caf50" : "#f44336",
-                                  color: "#ffffff",
+                                  color: "var(--text)",
                                   fontWeight: 800,
                                   fontSize: "0.75rem",
                                   px: 0.5,
@@ -2139,8 +2139,8 @@ const LabAssessment = () => {
                                 key={group.key}
                                 sx={{
                                   p: 2.5,
-                                  bgcolor: "rgba(255,255,255,0.015)",
-                                  border: `1px solid rgba(255,255,255,0.08)`,
+                                  bgcolor: "var(--overlay-subtle)",
+                                  border: `1px solid var(--border)`,
                                   borderRadius: "14px",
                                   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                                 }}
@@ -2177,8 +2177,8 @@ const LabAssessment = () => {
                                 key={group.key}
                                 sx={{
                                   p: 2.5,
-                                  bgcolor: "rgba(255,255,255,0.015)",
-                                  border: `1px solid rgba(255,255,255,0.08)`,
+                                  bgcolor: "var(--overlay-subtle)",
+                                  border: `1px solid var(--border)`,
                                   borderRadius: "14px",
                                   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                                 }}
@@ -2206,7 +2206,7 @@ const LabAssessment = () => {
                 })}
 
                 {/* Feedback & Recommendations */}
-                <Paper sx={{ p: 3, bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
+                <Paper sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
                   <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, mb: 1 }}>
                     Assessor Overall Synthesis & Recommendations
                   </Typography>
@@ -2239,7 +2239,7 @@ const LabAssessment = () => {
                     disabled={!selectedTeam}
                     sx={{
                       bgcolor: colors.primary,
-                      "&:hover": { bgcolor: "#6a5acd" },
+                      "&:hover": { bgcolor: "var(--accent-hover)" },
                       borderRadius: "12px",
                       px: 6,
                       py: 1.5,
@@ -2321,7 +2321,7 @@ const LabAssessment = () => {
                 sx={{
                   bgcolor: "#2e7d32",
                   "&:hover": { bgcolor: "#1b5e20" },
-                  color: "#fff",
+                  color: "var(--text)",
                   fontWeight: 700,
                   borderRadius: "10px",
                   px: 2.5,
@@ -2577,7 +2577,7 @@ const LabAssessment = () => {
               sx={{
                 bgcolor: "#2e7d32",
                 "&:hover": { bgcolor: "#1b5e20" },
-                color: "#fff",
+                color: "var(--text)",
                 fontWeight: 800,
                 borderRadius: "12px",
                 px: 3.5,
@@ -2723,7 +2723,7 @@ const LabAssessment = () => {
                   <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
                     <TrendingUpIcon sx={{ color: colors.primary }} /> Practical Lab Assessment Score Trajectory
                   </Typography>
-                  <Chip label={`Last ${stats.scoreTrend.length} Tests`} size="small" sx={{ bgcolor: "rgba(255,255,255,0.05)", color: colors.textSecondary }} />
+                  <Chip label={`Last ${stats.scoreTrend.length} Tests`} size="small" sx={{ bgcolor: "var(--overlay-subtle)", color: colors.textSecondary }} />
                 </Box>
                 <Box sx={{ height: 320, width: "100%" }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -2738,7 +2738,7 @@ const LabAssessment = () => {
                       <XAxis dataKey="date" stroke={colors.textSecondary} fontSize={12} tickLine={false} />
                       <YAxis domain={[0, 100]} stroke={colors.textSecondary} fontSize={12} tickLine={false} />
                       <RechartsTooltip
-                        contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", color: "#fff" }}
+                        contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", color: "var(--text)" }}
                         formatter={(value, name, item) => [`${value}% (${getAssessmentStatus(value).label.split("(")[0].trim()})`, item?.payload?.team || "Team"]}
                       />
                       <Area type="monotone" dataKey="score" stroke={colors.primary} strokeWidth={3} fill="url(#scoreColor)" />
@@ -2785,8 +2785,8 @@ const LabAssessment = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" horizontal={false} />
                       <XAxis type="number" domain={[0, 100]} stroke={colors.textSecondary} fontSize={12} />
                       <YAxis type="category" dataKey="section" stroke={colors.textSecondary} fontSize={11} width={130} />
-                      <RechartsTooltip contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", color: "#fff" }} />
-                      <Bar dataKey="avg" fill="#7b68ee" radius={[0, 6, 6, 0]} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", color: "var(--text)" }} />
+                      <Bar dataKey="avg" fill="var(--accent-text)" radius={[0, 6, 6, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </Box>
@@ -2863,7 +2863,7 @@ const LabAssessment = () => {
                 const pct = assessments.length > 0 ? Math.round((count / assessments.length) * 100) : 0;
                 return (
                   <Grid item xs={12} sm={6} md={2} key={cert.key}>
-                    <Paper sx={{ p: 2, bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors.border}`, borderRadius: "14px" }}>
+                    <Paper sx={{ p: 2, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "14px" }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
                         <Chip label={cert.code} size="small" sx={{ bgcolor: "rgba(123, 104, 238, 0.2)", color: colors.primary, fontWeight: 800 }} />
                         <Typography variant="subtitle2" sx={{ fontWeight: 800, color: pct >= 80 ? "#4caf50" : "#ff9800" }}>
@@ -3045,7 +3045,7 @@ const LabAssessment = () => {
               {assessmentToDelete?.fieldTeamName || assessmentToDelete?.fieldTeamId?.teamName || "Selected Team"}
             </span>.
           </Typography>
-          <Paper sx={{ p: 2, bgcolor: "rgba(255, 255, 255, 0.03)", borderRadius: "12px", border: `1px solid ${colors.border}`, mb: 2 }}>
+          <Paper sx={{ p: 2, bgcolor: "var(--overlay-subtle)", borderRadius: "12px", border: `1px solid ${colors.border}`, mb: 2 }}>
             <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mb: 0.5 }}>
               Assessment Date: <strong>{assessmentToDelete?.assessmentDate ? new Date(assessmentToDelete.assessmentDate).toLocaleDateString() : (assessmentToDelete?.createdAt ? new Date(assessmentToDelete.createdAt).toLocaleDateString() : "-")}</strong>
             </Typography>

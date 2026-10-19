@@ -26,9 +26,9 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
     success: "#4caf50", // Matching dashboard chip success
     warning: "#ff9800",
     error: "#f44336",
-    bg: "#1e1e1e", // Dark background
+    bg: "var(--surface)", // Dark background
     card: "#2d2d2d", // Matching dashboard sections
-    border: "#3d3d3d", // Matching dashboard borders
+    border: "var(--border)", // Matching dashboard borders
     textPrimary: "#ffffff",
     textSecondary: "#b3b3b3",
   };
@@ -486,7 +486,7 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
         }}
       >
         <Box sx={{
-          backgroundColor: "#2d2d2d",
+          backgroundColor: "var(--surface)",
           px: 2,
           py: 1.5,
           display: "flex",
@@ -494,23 +494,23 @@ const DetailedSubtaskDialog = ({ open, onClose, task, setUpdateTasksList }) => {
           alignItems: "center",
         }}>
           <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#ffffff" }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "var(--text)" }}>
               Task Audit & Quality Review
             </Typography>
             <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-              <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
-                ID: <span style={{ color: '#fff' }}>{task?.requestNumber || "N/A"}</span>
+              <Typography variant="caption" sx={{ color: "var(--text-secondary)" }}>
+                ID: <span style={{ color: 'var(--text)' }}>{task?.requestNumber || "N/A"}</span>
               </Typography>
-              <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
-                SLID: <span style={{ color: '#fff' }}>{task?.slid}</span>
+              <Typography variant="caption" sx={{ color: "var(--text-secondary)" }}>
+                SLID: <span style={{ color: 'var(--text)' }}>{task?.slid}</span>
               </Typography>
-              <Typography variant="caption" sx={{ color: "#b3b3b3" }}>
+              <Typography variant="caption" sx={{ color: "var(--text-secondary)" }}>
                 Status: <span style={{ color: currentStatus === 'Closed' ? colors.success : colors.warning }}>{currentStatus}</span>
               </Typography>
             </Stack>
           </Box>
 
-          <IconButton onClick={onClose} sx={{ color: "#ffffff", p: 0.5 }}>
+          <IconButton onClick={onClose} sx={{ color: "var(--text)", p: 0.5 }}>
             <MdClose />
           </IconButton>
         </Box>

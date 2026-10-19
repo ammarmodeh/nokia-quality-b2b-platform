@@ -155,7 +155,7 @@ const Trash = () => {
         mx: 'auto',
       }}>
         <Typography variant="h5" gutterBottom sx={{
-          color: '#7b68ee',
+          color: 'var(--accent-text)',
           fontWeight: 'bold',
           mb: 2
         }}>
@@ -165,25 +165,25 @@ const Trash = () => {
         {/* Trash Table */}
         <TableContainer component={Paper} sx={{
           mt: 2,
-          backgroundColor: '#2d2d2d',
-          border: '1px solid #3d3d3d',
+          backgroundColor: 'var(--surface)',
+          border: '1px solid var(--border)',
           "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
-              color: "#b3b3b3",
+              color: "var(--text-secondary)",
               fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text)",
             },
             "& .MuiTableRow-root": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "var(--surface)",
               },
             }
           },
@@ -235,7 +235,7 @@ const Trash = () => {
                               size="small"
                               color="info"
                               onClick={() => restoreTask(trash._id)}
-                              sx={{ color: '#7b68ee' }}
+                              sx={{ color: 'var(--accent-text)' }}
                             >
                               <FaUndoAlt />
                             </IconButton>
@@ -256,7 +256,7 @@ const Trash = () => {
                   ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'var(--text)' }}>
                     No trash items found
                   </TableCell>
                 </TableRow>
@@ -271,7 +271,7 @@ const Trash = () => {
           justifyContent: 'center',
           mt: 2,
           '& .MuiTablePagination-root': {
-            color: '#ffffff',
+            color: 'var(--text)',
           }
         }}>
           <TablePagination
@@ -292,14 +292,14 @@ const Trash = () => {
           onClose={handleMenuClose}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
             }
           }}
         >
           <MenuItem onClick={() => currentTask && restoreTask(currentTask._id)}>
             <ListItemIcon>
-              <FaUndoAlt fontSize="small" style={{ color: '#7b68ee' }} />
+              <FaUndoAlt fontSize="small" style={{ color: 'var(--accent-text)' }} />
             </ListItemIcon>
             <ListItemText>Restore</ListItemText>
           </MenuItem>

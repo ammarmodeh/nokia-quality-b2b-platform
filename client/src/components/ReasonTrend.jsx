@@ -53,7 +53,7 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
       headerName: 'Root Cause Reason',
       flex: 1,
       renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontWeight: 600, color: '#e0e0e0' }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
           {params.value}
         </Typography>
       )
@@ -68,7 +68,7 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
         <Chip
           label={params.value}
           size="small"
-          sx={{ bgcolor: '#7b68ee22', color: '#7b68ee', fontWeight: 700, border: '1px solid #7b68ee44' }}
+          sx={{ bgcolor: '#7b68ee22', color: 'var(--accent-text)', fontWeight: 700, border: '1px solid #7b68ee44' }}
         />
       )
     },
@@ -96,7 +96,7 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
 
   if (!currentTrend) return (
     <Box p={4} textAlign="center">
-      <Typography color="#b3b3b3">No data available for the selected week.</Typography>
+      <Typography color="var(--text-secondary)">No data available for the selected week.</Typography>
     </Box>
   );
 
@@ -105,7 +105,7 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
     error: "#f44336",
     success: "#4caf50",
     textSecondary: "#b3b3b3",
-    border: "#3d3d3d",
+    border: "var(--border)",
     surface: "#252525"
   };
 
@@ -130,7 +130,7 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
                   tickLine={false}
                 />
                 <RechartsTooltip
-                  contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, color: '#fff' }}
+                  contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, color: 'var(--text)' }}
                   itemStyle={{ color: colors.primary }}
                   cursor={{ fill: 'rgba(123, 104, 238, 0.1)' }}
                 />
@@ -169,7 +169,7 @@ const ReasonTrend = ({ tasks, selectedWeek, settings = {} }) => {
                 '& .MuiDataGrid-row:hover': {
                   bgcolor: 'rgba(123, 104, 238, 0.05)'
                 },
-                color: '#fff'
+                color: 'var(--text)'
               }}
             />
           </Box>

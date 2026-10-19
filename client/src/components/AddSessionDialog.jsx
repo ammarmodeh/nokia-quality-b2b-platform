@@ -240,20 +240,20 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
       fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           boxShadow: 'none',
           borderRadius: fullScreen ? '0px' : '8px',
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
-        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
+        borderBottom: '1px solid var(--border)',
         padding: '16px 24px',
       }}>
         Add Training Session for{" "}
-        <Typography component="span" sx={{ fontWeight: "bold", color: '#7b68ee' }}>
+        <Typography component="span" sx={{ fontWeight: "bold", color: 'var(--accent-text)' }}>
           {teamName}
         </Typography>
       </DialogTitle>
@@ -261,8 +261,8 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
       <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogContent sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
         padding: '20px 24px',
         '&.MuiDialogContent-root': {
           padding: '20px 24px',
@@ -281,23 +281,23 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
                 label="Quick Fill: Load from Past Sessions"
                 placeholder="Search past sessions..."
                 sx={{
-                  '& .MuiInputBase-root': { color: '#ffffff' },
-                  '& .MuiInputLabel-root': { color: '#6b7280' },
-                  '& .MuiOutlinedInput-root fieldset': { borderColor: '#e5e7eb' },
+                  '& .MuiInputBase-root': { color: 'var(--text)' },
+                  '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
+                  '& .MuiOutlinedInput-root fieldset': { borderColor: 'var(--border)' },
                   '& .MuiOutlinedInput-root:hover fieldset': { borderColor: '#666' },
-                  '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 }}
               />
             )}
             sx={{
-              '& .MuiAutocomplete-endAdornment .MuiIconButton-root': { color: '#6b7280' },
+              '& .MuiAutocomplete-endAdornment .MuiIconButton-root': { color: 'var(--text-muted)' },
             }}
             componentsProps={{
               paper: {
                 sx: {
-                  backgroundColor: '#1e1e1e',
-                  color: '#ffffff',
-                  border: '1px solid #444',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
                   '& .MuiAutocomplete-option': {
                     fontSize: '0.85rem',
                     '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.15)' },
@@ -307,7 +307,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               }
             }}
           />
-          <Typography variant="caption" sx={{ color: '#6b7280', mt: 1, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'var(--text-muted)', mt: 1, display: 'block' }}>
             Select a previous session to automatically fill the form fields below.
           </Typography>
         </Box>
@@ -327,7 +327,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               value={sessionDate}
               onChange={handleFieldChange('sessionDate')}
               sx={{
-                '& .MuiInputBase-root': { color: '#ffffff' },
+                '& .MuiInputBase-root': { color: 'var(--text)' },
                 '& .MuiOutlinedInput-root fieldset': { borderColor: errors.sessionDate ? '#f44336' : '#e5e7eb' },
                 '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.sessionDate ? '#f44336' : '#666' },
                 '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: errors.sessionDate ? '#f44336' : '#7b68ee' },
@@ -352,7 +352,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               onChange={handleFieldChange('location')}
               placeholder="e.g. Conference Room A, Site 101"
               sx={{
-                '& .MuiInputBase-root': { color: '#ffffff' },
+                '& .MuiInputBase-root': { color: 'var(--text)' },
                 '& .MuiOutlinedInput-root fieldset': { borderColor: errors.location ? '#f44336' : '#e5e7eb' },
                 '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.location ? '#f44336' : '#666' },
                 '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: errors.location ? '#f44336' : '#7b68ee' },
@@ -386,13 +386,13 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
           sx={{
             mt: 2,
             mb: 1,
-            '& .MuiInputBase-root': { color: '#ffffff' },
+            '& .MuiInputBase-root': { color: 'var(--text)' },
             '& .MuiOutlinedInput-root fieldset': { borderColor: errors.conductedBy ? '#f44336' : '#e5e7eb' },
             '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.conductedBy ? '#f44336' : '#666' },
             '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: errors.conductedBy ? '#f44336' : '#7b68ee' },
             '& .MuiChip-root': {
-              color: '#ffffff',
-              borderColor: '#7b68ee',
+              color: 'var(--text)',
+              borderColor: 'var(--accent)',
               '& .MuiChip-deleteIcon': { color: '#f44336' }
             }
           }}
@@ -403,8 +403,8 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
                 label={option}
                 {...getTagProps({ index })}
                 sx={{
-                  color: '#ffffff',
-                  borderColor: '#7b68ee',
+                  color: 'var(--text)',
+                  borderColor: 'var(--accent)',
                   '& .MuiChip-deleteIcon': { color: '#f44336' }
                 }}
               />
@@ -434,7 +434,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               sx={{
                 mt: 2,
                 mb: 1,
-                '& .MuiInputBase-root': { color: '#ffffff' },
+                '& .MuiInputBase-root': { color: 'var(--text)' },
                 '& .MuiOutlinedInput-root fieldset': { borderColor: errors.sessionType ? '#f44336' : '#e5e7eb' },
                 '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.sessionType ? '#f44336' : '#666' },
                 '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: errors.sessionType ? '#f44336' : '#7b68ee' },
@@ -464,7 +464,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
                   if (errors.duration) setErrors({ ...errors, duration: false });
                 }}
                 sx={{
-                  '& .MuiInputBase-root': { color: '#ffffff' },
+                  '& .MuiInputBase-root': { color: 'var(--text)' },
                   '& .MuiInputLabel-root': { color: errors.duration ? '#f44336' : '#6b7280' },
                   '& .MuiOutlinedInput-root fieldset': { borderColor: errors.duration ? '#f44336' : '#e5e7eb' },
                   '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.duration ? '#f44336' : '#666' },
@@ -484,7 +484,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
                   if (errors.duration) setErrors({ ...errors, duration: false });
                 }}
                 sx={{
-                  '& .MuiInputBase-root': { color: '#ffffff' },
+                  '& .MuiInputBase-root': { color: 'var(--text)' },
                   '& .MuiInputLabel-root': { color: errors.duration ? '#f44336' : '#6b7280' },
                   '& .MuiOutlinedInput-root fieldset': { borderColor: errors.duration ? '#f44336' : '#e5e7eb' },
                   '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.duration ? '#f44336' : '#666' },
@@ -509,7 +509,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
           value={sessionTitle}
           onChange={handleFieldChange('sessionTitle')}
           sx={{
-            '& .MuiInputBase-root': { color: '#ffffff' },
+            '& .MuiInputBase-root': { color: 'var(--text)' },
             '& .MuiInputLabel-root': { color: errors.sessionTitle ? '#f44336' : '#6b7280' },
             '& .MuiOutlinedInput-root fieldset': { borderColor: errors.sessionTitle ? '#f44336' : '#e5e7eb' },
             '& .MuiOutlinedInput-root:hover fieldset': { borderColor: errors.sessionTitle ? '#f44336' : '#666' },
@@ -525,7 +525,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
         {/* Training Outlines Section */}
         <Box sx={{ mt: 3 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ color: '#6b7280', fontWeight: 500 }}>
+            <Typography variant="subtitle1" sx={{ color: 'var(--text-muted)', fontWeight: 500 }}>
               Training Outlines *
             </Typography>
             <Button
@@ -533,7 +533,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               onClick={addMainTopic}
               size="small"
               sx={{
-                color: '#7b68ee',
+                color: 'var(--accent-text)',
                 textTransform: 'none',
                 '&:hover': {
                   backgroundColor: 'rgba(123, 104, 238, 0.1)',
@@ -551,8 +551,8 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               sx={{
                 p: 2,
                 mb: 2,
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #3d3d3d',
+                backgroundColor: 'var(--bg)',
+                border: '1px solid var(--border)',
                 borderRadius: 2
               }}
             >
@@ -565,18 +565,18 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
                   onChange={(e) => updateMainTopic(mainIndex, e.target.value)}
                   sx={{
                     '& .MuiInputBase-root': {
-                      color: '#ffffff',
-                      backgroundColor: '#2d2d2d',
+                      color: 'var(--text)',
+                      backgroundColor: 'var(--surface)',
                     },
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: '#e5e7eb',
+                        borderColor: 'var(--border)',
                       },
                       '&:hover fieldset': {
                         borderColor: '#666',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#7b68ee',
+                        borderColor: 'var(--accent)',
                       },
                     },
                   }}
@@ -598,7 +598,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               {/* Subtopics */}
               <Box sx={{ pl: 3 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                     Subtopics
                   </Typography>
                   <Button
@@ -620,7 +620,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
 
                 {outline.subTopics.map((subTopic, subIndex) => (
                   <Stack key={subIndex} direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                    <Typography sx={{ color: '#9ca3af', minWidth: '20px' }}>•</Typography>
+                    <Typography sx={{ color: 'var(--text-secondary)', minWidth: '20px' }}>•</Typography>
                     <TextField
                       fullWidth
                       size="small"
@@ -629,12 +629,12 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
                       onChange={(e) => updateSubTopic(mainIndex, subIndex, e.target.value)}
                       sx={{
                         '& .MuiInputBase-root': {
-                          color: '#ffffff',
-                          backgroundColor: '#2d2d2d',
+                          color: 'var(--text)',
+                          backgroundColor: 'var(--surface)',
                         },
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': {
-                            borderColor: '#4b5563',
+                            borderColor: 'var(--border)',
                           },
                           '&:hover fieldset': {
                             borderColor: '#666',
@@ -675,8 +675,8 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
       <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
       <DialogActions sx={{
-        backgroundColor: '#2d2d2d',
-        borderTop: '1px solid #e5e7eb',
+        backgroundColor: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
         padding: '12px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -689,9 +689,9 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
               alignItems: 'center',
               gap: 1,
               cursor: 'pointer',
-              color: '#9ca3af',
+              color: 'var(--text-secondary)',
               fontSize: '0.875rem',
-              '&:hover': { color: '#ffffff' }
+              '&:hover': { color: 'var(--text)' }
             }}
           >
             <input
@@ -711,9 +711,9 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
         <Button
           onClick={handleClose}
           sx={{
-            color: '#ffffff',
+            color: 'var(--text)',
             '&:hover': {
-              backgroundColor: '#2a2a2a',
+              backgroundColor: 'var(--surface)',
             }
           }}
         >
@@ -724,7 +724,7 @@ const AddSessionDialog = ({ open, onClose, onSave, teamName }) => {
           variant="contained"
           sx={{
             backgroundColor: '#1976d2',
-            color: '#ffffff',
+            color: 'var(--text)',
             '&:hover': {
               backgroundColor: '#1565c0',
             }

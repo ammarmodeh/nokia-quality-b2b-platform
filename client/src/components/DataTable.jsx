@@ -58,7 +58,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
         if (diff > 0) return <TrendingUpIcon sx={{ fontSize: 16, color: '#10b981' }} />;
         if (diff < 0) return <TrendingDownIcon sx={{ fontSize: 16, color: '#ef4444' }} />;
       }
-      return <TrendingFlatIcon sx={{ fontSize: 16, color: '#94a3b8' }} />;
+      return <TrendingFlatIcon sx={{ fontSize: 16, color: 'var(--text-secondary)' }} />;
     };
 
     const getChangeValue = (currentValue, previousValue) => {
@@ -115,7 +115,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
-        <Typography variant="body2" fontWeight="700" color="#e0e0e0">
+        <Typography variant="body2" fontWeight="700" color="var(--text-secondary)">
           {params.value}
         </Typography>
       )
@@ -152,7 +152,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
           </Typography>
           {params.row.npsTrend}
           {params.row.npsChange && (
-            <Typography variant="caption" color="#94a3b8" sx={{ ml: 0.5 }}>
+            <Typography variant="caption" color="var(--text-secondary)" sx={{ ml: 0.5 }}>
               ({params.row.npsChange})
             </Typography>
           )}
@@ -192,7 +192,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
           </Typography>
           {params.row.promotersTrend}
           {params.row.promotersChange && (
-            <Typography variant="caption" color="#94a3b8">
+            <Typography variant="caption" color="var(--text-secondary)">
               ({params.row.promotersChange})
             </Typography>
           )}
@@ -232,7 +232,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
           </Typography>
           {params.row.detractorsTrend}
           {params.row.detractorsChange && (
-            <Typography variant="caption" color="#94a3b8">
+            <Typography variant="caption" color="var(--text-secondary)">
               ({params.row.detractorsChange})
             </Typography>
           )}
@@ -272,7 +272,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
           </Typography>
           {params.row.neutralsTrend}
           {params.row.neutralsChange && (
-            <Typography variant="caption" color="#94a3b8">
+            <Typography variant="caption" color="var(--text-secondary)">
               ({params.row.neutralsChange})
             </Typography>
           )}
@@ -286,13 +286,13 @@ export const DataTable = ({ groupedData, settings = {} }) => {
       <Paper sx={{
         minHeight: 400,
         width: "100%",
-        backgroundColor: "#1e1e1e",
+        backgroundColor: "var(--surface)",
         overflow: "hidden",
-        border: '1px solid rgba(255,255,255,0.05)',
+        border: '1px solid var(--border)',
         borderRadius: 3
       }}>
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <Typography variant="subtitle2" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid var(--border)' }}>
+          <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
             {(rows[0] && rows[0].period.includes('Month')) ? 'Monthly' : 'Weekly'} Performance Details
           </Typography>
         </Box>
@@ -307,7 +307,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
           disableVirtualization={true}
           sx={{
             border: 0,
-            color: '#ffffff',
+            color: 'var(--text)',
             '& .MuiDataGrid-container--top [role="row"]': {
               background: 'none',
             },
@@ -320,7 +320,7 @@ export const DataTable = ({ groupedData, settings = {} }) => {
               background: 'none'
             },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: 'var(--surface)',
               fontSize: '0.75rem',
               fontWeight: 700,
               overflow: 'hidden',
@@ -331,14 +331,14 @@ export const DataTable = ({ groupedData, settings = {} }) => {
               backgroundColor: 'rgba(59, 130, 246, 0.05)',
             },
             '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid rgba(255,255,255,0.03)',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
             },
             '& .MuiDataGrid-footerContainer': {
               minHeight: '64px',
-              backgroundColor: '#1e1e1e',
-              borderTop: '1px solid rgba(255,255,255,0.05)',
+              backgroundColor: 'var(--surface)',
+              borderTop: '1px solid var(--border)',
             },
             '& .MuiDataGrid-virtualScroller': {
               overflow: 'auto',
@@ -351,11 +351,11 @@ export const DataTable = ({ groupedData, settings = {} }) => {
                 borderRadius: '4px',
               },
               '&::-webkit-scrollbar-track': {
-                backgroundColor: 'rgba(255,255,255,0.05)',
+                backgroundColor: 'var(--overlay-subtle)',
               },
             },
             '& .MuiDataGrid-scrollbarFiller': {
-              backgroundColor: '#1e1e1e',
+              backgroundColor: 'var(--surface)',
             },
           }}
         />

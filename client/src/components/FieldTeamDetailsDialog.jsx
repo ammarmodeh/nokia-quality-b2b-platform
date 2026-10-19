@@ -43,10 +43,10 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
 
   const DetailItem = ({ icon, label, value, fullWidth = false }) => (
     <Box sx={{ mb: 2, width: fullWidth ? '100%' : 'auto' }}>
-      <Typography variant="caption" sx={{ color: '#888', fontWeight: 600, textTransform: 'uppercase', mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-        {React.cloneElement(icon, { sx: { fontSize: 16, color: '#7b68ee' } })} {label}
+      <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+        {React.cloneElement(icon, { sx: { fontSize: 16, color: 'var(--accent-text)' } })} {label}
       </Typography>
-      <Typography variant="body1" sx={{ color: '#fff', fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
+      <Typography variant="body1" sx={{ color: 'var(--text)', fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
         {value || 'N/A'}
       </Typography>
     </Box>
@@ -56,16 +56,16 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
     <Paper
       elevation={0}
       sx={{
-        bgcolor: '#111',
-        border: '1px solid #333',
+        bgcolor: 'var(--bg)',
+        border: '1px solid var(--border)',
         borderRadius: 2,
         height: '100%',
         overflow: 'hidden'
       }}
     >
       <Box sx={{ p: 2, borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        {React.cloneElement(icon, { sx: { color: '#7b68ee' } })}
-        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, letterSpacing: 0.5 }}>
+        {React.cloneElement(icon, { sx: { color: 'var(--accent-text)' } })}
+        <Typography variant="subtitle1" sx={{ color: 'var(--text)', fontWeight: 700, letterSpacing: 0.5 }}>
           {title}
         </Typography>
       </Box>
@@ -109,7 +109,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
         sx: {
           bgcolor: '#000',
           backgroundImage: 'linear-gradient(180deg, #1a1a1a 0%, #000 100%)',
-          border: '1px solid #333',
+          border: '1px solid var(--border)',
           borderRadius: isMobile ? 0 : 3,
           boxShadow: '0 24px 48px rgba(0,0,0,0.8)',
         }
@@ -119,7 +119,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
       <DialogTitle sx={{ p: 0 }}>
         <Box sx={{
           p: 3,
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'flex-start' : 'center',
@@ -136,7 +136,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
             width: 150,
             height: 150,
             borderRadius: '50%',
-            bgcolor: '#7b68ee',
+            bgcolor: 'var(--accent)',
             opacity: 0.1,
             filter: 'blur(40px)',
             zIndex: 0
@@ -147,13 +147,13 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
               width: 64,
               height: 64,
               bgcolor: 'rgba(123, 104, 238, 0.2)',
-              border: '2px solid #7b68ee',
-              color: '#7b68ee'
+              border: '2px solid var(--accent)',
+              color: 'var(--accent-text)'
             }}>
               <Badge sx={{ fontSize: 32 }} />
             </Avatar>
             <Box>
-              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>
+              <Typography variant="h5" sx={{ color: 'var(--text)', fontWeight: 800, mb: 0.5 }}>
                 {team.teamName}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
@@ -178,10 +178,10 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                   sx={{
                     height: 24,
                     fontSize: '0.7rem',
-                    bgcolor: '#222',
-                    color: '#aaa',
-                    border: '1px solid #333',
-                    '& .MuiChip-icon': { color: '#777' }
+                    bgcolor: 'var(--surface)',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border)',
+                    '& .MuiChip-icon': { color: 'var(--text-muted)' }
                   }}
                 />
               </Stack>
@@ -191,10 +191,10 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
             onClick={onClose}
             variant="outlined"
             sx={{
-              borderColor: '#444',
-              color: '#888',
+              borderColor: 'var(--border)',
+              color: 'var(--text-muted)',
               zIndex: 1,
-              '&:hover': { borderColor: '#fff', color: '#fff', bgcolor: 'rgba(255,255,255,0.05)' }
+              '&:hover': { borderColor: '#fff', color: '#fff', bgcolor: 'var(--overlay-subtle)' }
             }}
           >
             Close
@@ -210,14 +210,14 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
               {/* Performance Score Card */}
               <Paper sx={{
                 p: 3,
-                bgcolor: '#111',
-                border: '1px solid #333',
+                bgcolor: 'var(--bg)',
+                border: '1px solid var(--border)',
                 borderRadius: 2,
                 position: 'relative',
                 overflow: 'hidden'
               }}>
                 <Box sx={{ position: 'relative', zIndex: 1 }}>
-                  <Typography variant="subtitle2" sx={{ color: '#888', fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: 'var(--text-muted)', fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <School fontSize="small" color="primary" /> EVALUATION SCORE
                   </Typography>
 
@@ -237,7 +237,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                     sx={{
                       height: 8,
                       borderRadius: 4,
-                      bgcolor: '#222',
+                      bgcolor: 'var(--surface)',
                       mb: 2,
                       '& .MuiLinearProgress-bar': {
                         bgcolor: score >= 90 ? '#4caf50' : score >= 70 ? '#ff9800' : '#f44336'
@@ -246,13 +246,13 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                   />
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" sx={{ color: '#666' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
                       Status: <span style={{ color: isEvaluated ? '#fff' : '#888', fontWeight: isEvaluated ? 600 : 400 }}>
                         {isEvaluated ? 'Evaluated' : 'Pending'}
                       </span>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#666' }}>
-                      Date: <span style={{ color: '#fff' }}>{lastAssessmentDate ? new Date(lastAssessmentDate).toLocaleDateString() : 'N/A'}</span>
+                    <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
+                      Date: <span style={{ color: 'var(--text)' }}>{lastAssessmentDate ? new Date(lastAssessmentDate).toLocaleDateString() : 'N/A'}</span>
                     </Typography>
                   </Box>
                 </Box>
@@ -346,7 +346,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
               {/* Safety & Compliance Certifications Matrix */}
               <SectionCard title="Safety & Compliance Certifications" icon={<VerifiedUser sx={{ color: '#00d2ff' }} />}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <Typography variant="caption" sx={{ color: '#888', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-muted)', mb: 0.5 }}>
                     Mandatory field technician safety clearances & verified site credentials:
                   </Typography>
                   <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 1.5 }}>
@@ -382,10 +382,10 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                                   fontWeight: 800,
                                   fontSize: '0.65rem',
                                   bgcolor: isCertified ? '#4caf50' : '#333',
-                                  color: '#fff',
+                                  color: 'var(--text)',
                                 }}
                               />
-                              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+                              <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 700, fontSize: '0.85rem' }}>
                                 {c.title}
                               </Typography>
                             </Box>
@@ -402,7 +402,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                               }}
                             />
                           </Box>
-                          <Typography variant="caption" sx={{ color: '#888', fontSize: '0.72rem', pl: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '0.72rem', pl: 0.5 }}>
                             {c.desc}
                           </Typography>
                         </Box>
@@ -417,7 +417,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                   {(!team.isNewToInstallation && !team.isNewToActivation) ? (
                     <Box sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                       <VerifiedUser sx={{ color: '#4caf50' }} />
-                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
+                      <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 600 }}>
                         Identified as a Rich Expert in all roles.
                       </Typography>
                     </Box>
@@ -488,7 +488,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
 
       <DialogActions sx={{
         bgcolor: '#000',
-        borderTop: '1px solid #333',
+        borderTop: '1px solid var(--border)',
         p: 3,
         justifyContent: 'center'
       }}>
@@ -497,12 +497,12 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
           variant="contained"
           size="large"
           sx={{
-            bgcolor: '#222',
-            color: '#fff',
+            bgcolor: 'var(--surface)',
+            color: 'var(--text)',
             minWidth: 200,
             textTransform: 'none',
             fontWeight: 600,
-            '&:hover': { bgcolor: '#333' }
+            '&:hover': { bgcolor: 'var(--surface-hover)' }
           }}
         >
           Close View

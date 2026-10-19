@@ -127,7 +127,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
       fullScreen={isMobile}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
         }
@@ -139,9 +139,9 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
             padding: isMobile ? '12px 16px' : '16px 24px',
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -150,7 +150,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                 size={isMobile ? "small" : "medium"}
                 sx={{
                   mr: 1,
-                  color: '#7b68ee',
+                  color: 'var(--accent-text)',
                   '&:hover': {
                     backgroundColor: 'rgba(62, 166, 255, 0.1)',
                   }
@@ -159,7 +159,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                 <FaArrowLeft fontSize={isMobile ? "14px" : "16px"} />
               </IconButton>
               <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FaLightbulb color="#7b68ee" size={isMobile ? 16 : 20} />
+                <FaLightbulb color="var(--accent-text)" size={isMobile ? 16 : 20} />
                 <Box component="span">Suggestion Details</Box>
               </Typography>
             </Box>
@@ -169,7 +169,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                   onClick={copyToClipboard}
                   size={isMobile ? "small" : "medium"}
                   sx={{
-                    color: '#7b68ee',
+                    color: 'var(--accent-text)',
                     '&:hover': {
                       backgroundColor: 'rgba(62, 166, 255, 0.1)',
                     },
@@ -197,8 +197,8 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
           </DialogTitle>
 
           <DialogContent dividers sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             padding: isMobile ? '12px 16px' : '20px 24px',
             '&::-webkit-scrollbar': {
               width: '4px',
@@ -211,8 +211,8 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
             <Stack spacing={isMobile ? 2 : 3}>
               {/* Title */}
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Title</Typography>
-                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>Title</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: 'var(--text)' }}>
                   {submittedData?.title}
                 </Typography>
               </Box>
@@ -220,26 +220,26 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
               {/* Category and Status */}
               <Box sx={{ display: 'flex', gap: isMobile ? 2 : 3, flexWrap: 'wrap' }}>
                 <Box>
-                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Category</Typography>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>Category</Typography>
                   <Chip
                     label={formatCategory(submittedData?.category)}
                     size={isMobile ? "small" : "medium"}
                     sx={{
-                      backgroundColor: '#2d2d2d',
-                      color: '#ffffff',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text)',
                       fontWeight: 500,
-                      border: '1px solid #7b68ee'
+                      border: '1px solid var(--accent)'
                     }}
                   />
                 </Box>
                 <Box>
-                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Status</Typography>
+                  <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>Status</Typography>
                   <Chip
                     label="Pending"
                     size={isMobile ? "small" : "medium"}
                     sx={{
                       backgroundColor: '#1976d2',
-                      color: '#ffffff',
+                      color: 'var(--text)',
                       fontWeight: 500
                     }}
                   />
@@ -250,14 +250,14 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
 
               {/* Description */}
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Description</Typography>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>Description</Typography>
                 <Box sx={{
-                  backgroundColor: '#2d2d2d',
+                  backgroundColor: 'var(--surface)',
                   p: isMobile ? 1.5 : 2,
                   borderRadius: 1,
-                  border: '1px solid #3d3d3d'
+                  border: '1px solid var(--border)'
                 }}>
-                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff', whiteSpace: 'pre-line' }}>
+                  <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: 'var(--text)', whiteSpace: 'pre-line' }}>
                     {submittedData?.description}
                   </Typography>
                 </Box>
@@ -265,8 +265,8 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
 
               {/* Submission Date */}
               <Box>
-                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: '#b3b3b3', mb: 0.5 }}>Submitted On</Typography>
-                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: '#ffffff' }}>
+                <Typography variant={isMobile ? "caption" : "subtitle2"} component="div" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>Submitted On</Typography>
+                <Typography variant={isMobile ? "body2" : "body1"} component="div" sx={{ color: 'var(--text)' }}>
                   {newFormatDate(new Date(), 'MMM dd, yyyy')}
                 </Typography>
               </Box>
@@ -274,16 +274,16 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
           </DialogContent>
 
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
             padding: isMobile ? '8px 16px' : '12px 24px',
           }}>
             <Button
               onClick={onClose}
               size={isMobile ? "small" : "medium"}
               sx={{
-                color: '#ffffff',
-                backgroundColor: '#2d2d2d',
+                color: 'var(--text)',
+                backgroundColor: 'var(--surface)',
                 '&:hover': {
                   backgroundColor: '#e5e7eb',
                 }
@@ -298,20 +298,20 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
           <DialogTitle sx={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
             padding: isMobile ? '12px 16px' : '16px 24px',
           }}>
-            <FaLightbulb color="#7b68ee" size={isMobile ? 16 : 20} />
+            <FaLightbulb color="var(--accent-text)" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ ml: 1, fontWeight: 500 }}>
               User Experience Feedback
             </Typography>
           </DialogTitle>
 
           <DialogContent dividers sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             padding: isMobile ? '12px 16px' : '20px 24px',
             flex: isMobile ? 1 : undefined,
             '&::-webkit-scrollbar': {
@@ -328,7 +328,7 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                 <Typography variant="h6" component="div" sx={{ color: '#4caf50', mt: 2 }}>
                   Thank you for your suggestion!
                 </Typography>
-                <Typography variant="body1" component="div" sx={{ color: '#b3b3b3', mt: 1 }}>
+                <Typography variant="body1" component="div" sx={{ color: 'var(--text-secondary)', mt: 1 }}>
                   We&apos;ll review it soon.
                 </Typography>
                 <Button
@@ -336,12 +336,12 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                   variant="outlined"
                   size="medium"
                   sx={{
-                    color: '#7b68ee',
-                    borderColor: '#7b68ee',
+                    color: 'var(--accent-text)',
+                    borderColor: 'var(--accent)',
                     mt: 3,
                     '&:hover': {
                       backgroundColor: 'rgba(62, 166, 255, 0.1)',
-                      borderColor: '#7b68ee',
+                      borderColor: 'var(--accent)',
                     }
                   }}
                 >
@@ -359,41 +359,41 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                     error={!!errors.title}
                     helperText={errors.title?.message}
                     sx={{
-                      '& .MuiInputBase-root': { color: '#ffffff' },
-                      '& .MuiInputLabel-root': { color: '#b3b3b3' },
+                      '& .MuiInputBase-root': { color: 'var(--text)' },
+                      '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
                       '& .MuiOutlinedInput-root': {
-                        '& fieldset': { borderColor: '#3d3d3d' },
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#666' },
                         '&.Mui-focused fieldset': { borderColor: '#1976d2' },
                       },
-                      '& .MuiFormHelperText-root': { color: '#b3b3b3' },
+                      '& .MuiFormHelperText-root': { color: 'var(--text-secondary)' },
                     }}
                   />
 
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: '#b3b3b3' }}>Category</InputLabel>
+                    <InputLabel sx={{ color: 'var(--text-secondary)' }}>Category</InputLabel>
                     <Select
                       label="Category"
                       variant="outlined"
                       {...register("category", { required: "Category is required" })}
                       error={!!errors.category}
                       sx={{
-                        color: '#ffffff',
-                        '& .MuiSelect-icon': { color: '#b3b3b3' },
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+                        color: 'var(--text)',
+                        '& .MuiSelect-icon': { color: 'var(--text-secondary)' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
                         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666' },
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' },
                       }}
                       MenuProps={{
                         PaperProps: {
                           sx: {
-                            backgroundColor: '#2d2d2d',
-                            color: '#ffffff',
-                            border: '1px solid #3d3d3d',
+                            backgroundColor: 'var(--surface)',
+                            color: 'var(--text)',
+                            border: '1px solid var(--border)',
                             '& .MuiMenuItem-root': {
-                              color: '#ffffff',
-                              backgroundColor: '#2d2d2d',
-                              '&:hover': { backgroundColor: '#2a2a2a' },
+                              color: 'var(--text)',
+                              backgroundColor: 'var(--surface)',
+                              '&:hover': { backgroundColor: 'var(--surface)' },
                               '&.Mui-selected': {
                                 backgroundColor: '#1976d2',
                                 '&:hover': { backgroundColor: '#1565c0' }
@@ -425,14 +425,14 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                     error={!!errors.description}
                     helperText={errors.description?.message}
                     sx={{
-                      '& .MuiInputBase-root': { color: '#ffffff' },
-                      '& .MuiInputLabel-root': { color: '#b3b3b3' },
+                      '& .MuiInputBase-root': { color: 'var(--text)' },
+                      '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
                       '& .MuiOutlinedInput-root': {
-                        '& fieldset': { borderColor: '#3d3d3d' },
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#666' },
                         '&.Mui-focused fieldset': { borderColor: '#1976d2' },
                       },
-                      '& .MuiFormHelperText-root': { color: '#b3b3b3' },
+                      '& .MuiFormHelperText-root': { color: 'var(--text-secondary)' },
                     }}
                   />
                 </Stack>
@@ -441,8 +441,8 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
           </DialogContent>
 
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
             padding: isMobile ? '8px 16px' : '12px 24px',
           }}>
             {!submitSuccess ? (
@@ -451,8 +451,8 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                   onClick={onClose}
                   size={isMobile ? "small" : "medium"}
                   sx={{
-                    color: '#ffffff',
-                    backgroundColor: '#2d2d2d',
+                    color: 'var(--text)',
+                    backgroundColor: 'var(--surface)',
                     '&:hover': {
                       backgroundColor: '#e5e7eb',
                     }
@@ -466,14 +466,14 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                   disabled={isSubmitting}
                   size={isMobile ? "small" : "medium"}
                   sx={{
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     backgroundColor: '#1976d2',
                     '&:hover': {
                       backgroundColor: '#1565c0',
                     },
                     '&:disabled': {
                       backgroundColor: '#555',
-                      color: '#999'
+                      color: 'var(--text-muted)'
                     }
                   }}
                 >
@@ -485,8 +485,8 @@ const SuggestionDialog = ({ open, onClose, userId }) => {
                 onClick={onClose}
                 size={isMobile ? "small" : "medium"}
                 sx={{
-                  color: '#ffffff',
-                  backgroundColor: '#2d2d2d',
+                  color: 'var(--text)',
+                  backgroundColor: 'var(--surface)',
                   '&:hover': {
                     backgroundColor: '#e5e7eb',
                   }
@@ -516,13 +516,13 @@ const UserAvatar = () => {
 
   const menuStyles = {
     '& .MuiPaper-root': {
-      backgroundColor: '#2d2d2d',
-      color: '#b3b3b3',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text-secondary)',
       width: '280px',
       borderRadius: '12px',
       border: `1px solid ${theme.palette.divider}`,
       padding: '8px 0',
-      borderColor: '#3d3d3d',
+      borderColor: 'var(--border)',
     },
     '& .MuiMenuItem-root': {
       padding: '8px 4px',
@@ -530,8 +530,8 @@ const UserAvatar = () => {
       fontSize: '14px',
       m: 1,
       '&:hover': {
-        backgroundColor: '#FFFFFF0F',
-        color: '#ffffff',
+        backgroundColor: 'var(--overlay-subtle)',
+        color: 'var(--text)',
       },
       '& .MuiSvgIcon-root': {
         marginRight: '16px',
@@ -611,7 +611,7 @@ const UserAvatar = () => {
       >
         <Box
           sx={{
-            color: "white",
+            color: "var(--text)",
             fontWeight: "bold",
             fontSize: "12px",
             width: "30px",
@@ -646,15 +646,15 @@ const UserAvatar = () => {
           px: 3,
           py: 1,
           borderBottom: `1px solid #FFFFFF24`,
-          backgroundColor: '#2d2d2d'
+          backgroundColor: 'var(--surface)'
         }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--text)' }}>
             {user?.name}
-            {user?.role === "Admin" && <Chip label="Admin" size="small" style={{ backgroundColor: '#2f29ffd1', color: '#ffffffde', marginLeft: 8 }} />}
-            {user?.title === "Manager" && <Chip label="Quality Manager" size="small" style={{ backgroundColor: '#009688a8', color: '#ffffffde', marginLeft: 8 }} />}
+            {user?.role === "Admin" && <Chip label="Admin" size="small" style={{ backgroundColor: '#2f29ffd1', color: 'var(--overlay-subtle)', marginLeft: 8 }} />}
+            {user?.title === "Manager" && <Chip label="Quality Manager" size="small" style={{ backgroundColor: '#009688a8', color: 'var(--overlay-subtle)', marginLeft: 8 }} />}
           </Typography>
           <Typography variant="body2" sx={{
-            color: '#b3b3b3',
+            color: 'var(--text-secondary)',
             mt: 0.5,
           }}>
             {user?.email}
@@ -665,7 +665,7 @@ const UserAvatar = () => {
 
         <Divider sx={{
           my: 1,
-          backgroundColor: '#FFFFFF24'
+          backgroundColor: 'var(--overlay-subtle)'
         }} />
 
         <MenuItem onClick={() => handleNavigation("/profile")}>
@@ -685,7 +685,7 @@ const UserAvatar = () => {
           <div>
             <Divider sx={{
               my: 1,
-              backgroundColor: '#FFFFFF24'
+              backgroundColor: 'var(--overlay-subtle)'
             }} />
             <MenuItem onClick={handleOpenSuggestionDialog}>
               <RiFeedbackLine style={{ fontSize: 18, marginRight: 8 }} />
@@ -698,7 +698,7 @@ const UserAvatar = () => {
 
         <Divider sx={{
           my: 1,
-          backgroundColor: '#FFFFFF24'
+          backgroundColor: 'var(--overlay-subtle)'
         }} />
 
         <MenuItem onClick={logoutHandler}>

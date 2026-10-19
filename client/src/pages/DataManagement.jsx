@@ -11,18 +11,18 @@ import { MenuItem } from '@mui/material';
 // --- Unsaved Changes Confirmation Dialog ---
 const UnsavedChangesDialog = ({ open, onClose, onConfirm }) => {
   return (
-    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'white' } }}>
+    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'var(--text)' } }}>
       <DialogTitle sx={{ color: '#ff9800' }}>⚠ Unsaved Changes</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" sx={{ color: '#ccc' }}>
+        <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
           You have unsaved data in the upload tab. Switching tabs will discard this data.
         </Typography>
-        <Typography variant="body2" sx={{ mt: 1, color: '#ffffff' }}>
+        <Typography variant="body2" sx={{ mt: 1, color: 'var(--text)' }}>
           Are you sure you want to leave?
         </Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel</Button>
+        <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
         <Button onClick={onConfirm} variant="contained" color="warning">
           Discard & Leave
         </Button>
@@ -103,7 +103,7 @@ const DataManagement = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '90vh' }}>
-      <Typography variant="h4" gutterBottom sx={{ color: 'white', mb: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ color: 'var(--text)', mb: 3 }}>
         Data Management Portal
       </Typography>
 
@@ -113,7 +113,7 @@ const DataManagement = () => {
         onConfirm={confirmTabSwitch}
       />
 
-      <Paper sx={{ color: 'white', mb: 3 }}>
+      <Paper sx={{ color: 'var(--text)', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange} textColor="inherit" indicatorColor="primary">
           <Tab label="New Upload" icon={<CloudUploadIcon />} iconPosition="start" />
           <Tab label="Manage History" icon={<HistoryIcon />} iconPosition="start" />
@@ -139,10 +139,10 @@ const DataManagement = () => {
 const CustomToolbar = ({ onAddColumn }) => {
   return (
     <GridToolbarContainer>
-      <GridToolbarColumnsButton style={{ color: 'white' }} />
-      <GridToolbarFilterButton style={{ color: 'white' }} />
-      <GridToolbarDensitySelector style={{ color: 'white' }} />
-      <GridToolbarExport style={{ color: 'white' }} />
+      <GridToolbarColumnsButton style={{ color: 'var(--text)' }} />
+      <GridToolbarFilterButton style={{ color: 'var(--text)' }} />
+      <GridToolbarDensitySelector style={{ color: 'var(--text)' }} />
+      <GridToolbarExport style={{ color: 'var(--text)' }} />
       <Button startIcon={<PostAddIcon />} onClick={onAddColumn} style={{ color: '#90caf9' }}>
         Add Column
       </Button>
@@ -208,28 +208,28 @@ const TeamEditInputCell = ({ id, value, field, api, options }) => {
           autoFocus
           sx={{
             '& .MuiInputBase-root': {
-              color: '#ffffff',
+              color: 'var(--text)',
 
             },
-            '& .MuiInputBase-input': { color: '#ffffff' },
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+            '& .MuiInputBase-input': { color: 'var(--text)' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
           }}
         />
       )}
       sx={{
         width: '100%',
-        '& .MuiAutocomplete-popupIndicator': { color: '#aaa' },
-        '& .MuiAutocomplete-clearIndicator': { color: '#aaa' },
+        '& .MuiAutocomplete-popupIndicator': { color: 'var(--text-secondary)' },
+        '& .MuiAutocomplete-clearIndicator': { color: 'var(--text-secondary)' },
       }}
       componentsProps={{
         paper: {
           sx: {
-            bgcolor: '#2a2a2a',
-            color: '#ffffff',
+            bgcolor: 'var(--surface)',
+            color: 'var(--text)',
             '& .MuiAutocomplete-option': {
-              color: '#ffffff',
-              '&:hover': { bgcolor: '#3a3a3a' },
-              '&[aria-selected="true"]': { bgcolor: '#7b68ee !important' },
+              color: 'var(--text)',
+              '&:hover': { bgcolor: 'var(--surface-hover)' },
+              '&[aria-selected="true"]': { bgcolor: 'var(--accent) !important' },
             },
           },
         },
@@ -252,7 +252,7 @@ const AddColumnDialog = ({ open, onClose, onConfirm }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'white' } }}>
+    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'var(--text)' } }}>
       <DialogTitle>Add New Column</DialogTitle>
       <DialogContent>
         <TextField
@@ -263,10 +263,10 @@ const AddColumnDialog = ({ open, onClose, onConfirm }) => {
           variant="outlined"
           value={colName}
           onChange={(e) => setColName(e.target.value)}
-          sx={{ input: { color: 'white' }, label: { color: '#aaa' }, fieldset: { borderColor: '#3d3d3d' } }}
+          sx={{ input: { color: 'var(--text)' }, label: { color: 'var(--text-secondary)' }, fieldset: { borderColor: 'var(--border)' } }}
         />
         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ color: '#aaa' }}>Suggested:</Typography>
+          <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>Suggested:</Typography>
           <Chip
             label="Team Name"
             onClick={() => setColName("Team Name")}
@@ -287,7 +287,7 @@ const AddColumnDialog = ({ open, onClose, onConfirm }) => {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel</Button>
+        <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
         <Button onClick={handleConfirm} variant="contained">Add</Button>
       </DialogActions>
     </Dialog>
@@ -310,10 +310,10 @@ const RenameColumnDialog = ({ open, onClose, onConfirm, currentName }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'white' } }}>
+    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'var(--text)' } }}>
       <DialogTitle>Rename Column</DialogTitle>
       <DialogContent>
-        <Typography variant="caption" sx={{ color: '#aaa', mb: 1, display: 'block' }}>
+        <Typography variant="caption" sx={{ color: 'var(--text-secondary)', mb: 1, display: 'block' }}>
           Original: {currentName}
         </Typography>
         <TextField
@@ -324,11 +324,11 @@ const RenameColumnDialog = ({ open, onClose, onConfirm, currentName }) => {
           variant="outlined"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          sx={{ input: { color: 'white' }, label: { color: '#aaa' }, fieldset: { borderColor: '#3d3d3d' } }}
+          sx={{ input: { color: 'var(--text)' }, label: { color: 'var(--text-secondary)' }, fieldset: { borderColor: 'var(--border)' } }}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel</Button>
+        <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
         <Button onClick={handleConfirm} variant="contained" color="primary">Rename</Button>
       </DialogActions>
     </Dialog>
@@ -380,7 +380,7 @@ const ConflictResolutionDialog = ({ open, onClose, conflicts, onResolve }) => {
     .filter(k => !['_id', '__v', 'fileName', 'uploadDate', 'createdAt', 'updatedAt'].includes(k));
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { color: 'white' } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { color: 'var(--text)' } }}>
       <DialogTitle>
         Resolve Duplicate Requests ({currentIndex + 1} / {total})
       </DialogTitle>
@@ -407,7 +407,7 @@ const ConflictResolutionDialog = ({ open, onClose, conflicts, onResolve }) => {
               <Typography variant="h6" color="primary" gutterBottom>Existing Record</Typography>
               {allKeys.map(key => (
                 <Box key={key} sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', bgcolor: currentConflict.existing[key] !== currentConflict.new[key] ? '#e5e7eb' : 'transparent', p: 0.5 }}>
-                  <Typography variant="caption" color="#aaa">{key}:</Typography>
+                  <Typography variant="caption" color="var(--text-secondary)">{key}:</Typography>
                   <Typography variant="body2">{String(currentConflict.existing[key] || "")}</Typography>
                 </Box>
               ))}
@@ -428,7 +428,7 @@ const ConflictResolutionDialog = ({ open, onClose, conflicts, onResolve }) => {
               <Typography variant="h6" color="success.main" gutterBottom>New Record</Typography>
               {allKeys.map(key => (
                 <Box key={key} sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', bgcolor: currentConflict.existing[key] !== currentConflict.new[key] ? '#e5e7eb' : 'transparent', p: 0.5 }}>
-                  <Typography variant="caption" color="#aaa">{key}:</Typography>
+                  <Typography variant="caption" color="var(--text-secondary)">{key}:</Typography>
                   <Typography variant="body2">{String(currentConflict.new[key] || "")}</Typography>
                 </Box>
               ))}
@@ -452,7 +452,7 @@ const ConflictResolutionDialog = ({ open, onClose, conflicts, onResolve }) => {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel Upload</Button>
+        <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Cancel Upload</Button>
         <Button onClick={handleFinish} variant="contained" disabled={resolvedCount === 0 && !confirm}>Finish Upload</Button>
       </DialogActions>
     </Dialog>
@@ -473,13 +473,13 @@ const DeleteBatchDialog = ({ open, onClose, onConfirm, batchName }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'white' } }}>
+    <Dialog open={open} onClose={onClose} PaperProps={{ sx: { color: 'var(--text)' } }}>
       <DialogTitle sx={{ color: '#f44336' }}>⚠ Delete Batch: {batchName}</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" sx={{ mb: 2, color: '#ccc' }}>
+        <Typography variant="body2" sx={{ mb: 2, color: 'var(--text-secondary)' }}>
           This will permanently delete all {batchName} records. This action cannot be undone.
         </Typography>
-        <Typography variant="body2" sx={{ mb: 1, color: '#ffffff' }}>
+        <Typography variant="body2" sx={{ mb: 1, color: 'var(--text)' }}>
           Type <strong>{batchName}</strong> to confirm:
         </Typography>
         <TextField
@@ -488,11 +488,11 @@ const DeleteBatchDialog = ({ open, onClose, onConfirm, batchName }) => {
           variant="outlined"
           value={confirmName}
           onChange={(e) => setConfirmName(e.target.value)}
-          sx={{ input: { color: 'white' }, fieldset: { borderColor: '#3d3d3d' } }}
+          sx={{ input: { color: 'var(--text)' }, fieldset: { borderColor: 'var(--border)' } }}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: '#aaa' }}>Cancel</Button>
+        <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
         <Button
           onClick={handleConfirm}
           variant="contained"
@@ -768,13 +768,13 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
         onResolve={handleConflictResolve}
       />
 
-      <Paper sx={{ p: 3, mb: 3, color: 'white' }}>
+      <Paper sx={{ p: 3, mb: 3, color: 'var(--text)' }}>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'stretch', sm: 'center' } }}>
           <Button component="label" variant="contained" startIcon={<CloudUploadIcon />} fullWidth={{ xs: true, sm: false }}>
             Select Excel
             <input type="file" hidden accept=".xlsx, .xls" onChange={handleFileChange} />
           </Button>
-          <Typography sx={{ color: '#aaa', textAlign: { xs: 'center', sm: 'left' } }}>{file ? file.name : "No file selected"}</Typography>
+          <Typography sx={{ color: 'var(--text-secondary)', textAlign: { xs: 'center', sm: 'left' } }}>{file ? file.name : "No file selected"}</Typography>
           {rows.length > 0 && (
             <Box sx={{ display: 'flex', gap: 2, ml: { xs: 0, sm: 'auto' }, flexDirection: { xs: 'column', sm: 'row' } }}>
               <Button
@@ -811,16 +811,16 @@ const UploadTab = ({ token, teamNames, dropdownOptions, existingBatches, onUploa
             }}
             disableColumnReorder={false}
             sx={{
-              color: 'white',
-              borderColor: '#3d3d3d',
-              '& .MuiDataGrid-cell': { borderColor: '#3d3d3d', color: '#ddd' },
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#f3f4f6', color: '#ffffff', borderBottom: '1px solid #555', fontWeight: 'bold' },
+              color: 'var(--text)',
+              borderColor: 'var(--border)',
+              '& .MuiDataGrid-cell': { borderColor: 'var(--border)', color: '#ddd' },
+              '& .MuiDataGrid-columnHeaders': { bgcolor: '#f3f4f6', color: '#ffffff', borderBottom: '1px solid var(--border)', fontWeight: 'bold' },
               '& .MuiDataGrid-columnHeader': { bgcolor: '#f3f4f6', color: '#ffffff' },
-              '& .MuiDataGrid-columnHeaderTitle': { color: '#ffffff' },
-              '& .MuiDataGrid-menuIcon': { color: '#ffffff' },
-              '& .MuiDataGrid-footerContainer': { borderColor: '#3d3d3d', color: '#ffffff' },
-              '& .MuiTablePagination-root': { color: '#ffffff' },
-              '& .MuiButtonBase-root': { color: '#ffffff' },
+              '& .MuiDataGrid-columnHeaderTitle': { color: 'var(--text)' },
+              '& .MuiDataGrid-menuIcon': { color: 'var(--text)' },
+              '& .MuiDataGrid-footerContainer': { borderColor: 'var(--border)', color: 'var(--text)' },
+              '& .MuiTablePagination-root': { color: 'var(--text)' },
+              '& .MuiButtonBase-root': { color: 'var(--text)' },
             }}
           />
         </Paper>
@@ -1031,21 +1031,21 @@ const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory
 
       {/* Sidebar List */}
       <Paper sx={{ width: { xs: '100%', md: 250 }, p: 2, overflowY: 'auto', maxHeight: { xs: '40vh', md: '80vh' } }}>
-        <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>Upload History</Typography>
+        <Typography variant="h6" sx={{ color: 'var(--text)', mb: 2 }}>Upload History</Typography>
         {batches.map((batch) => (
           <Card
             key={batch._id}
             sx={{
               mb: 1,
               bgcolor: selectedBatch === batch._id ? '#7b68ee' : '#f3f4f6',
-              color: 'white',
+              color: 'var(--text)',
               position: 'relative',
-              '&:hover': { bgcolor: '#7b68ee' }
+              '&:hover': { bgcolor: 'var(--accent)' }
             }}
           >
             <CardContent sx={{ p: '10px !important', cursor: 'pointer' }} onClick={() => loadBatch(batch._id)}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', width: '85%' }}>{batch._id}</Typography>
-              <Typography variant="caption" sx={{ color: '#ccc' }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                 {new Date(batch.uploadDate).toLocaleDateString()} • {batch.count} records
               </Typography>
             </CardContent>
@@ -1056,7 +1056,7 @@ const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory
                 setBatchToDelete(batch._id);
                 setDeleteBatchOpen(true);
               }}
-              sx={{ position: 'absolute', top: 5, right: 5, color: '#aaa', '&:hover': { color: '#f44336' } }}
+              sx={{ position: 'absolute', top: 5, right: 5, color: 'var(--text-secondary)', '&:hover': { color: '#f44336' } }}
             >
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -1069,7 +1069,7 @@ const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory
         {selectedBatch ? (
           <>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6" sx={{ color: 'white' }}>Editing: {selectedBatch}</Typography>
+              <Typography variant="h6" sx={{ color: 'var(--text)' }}>Editing: {selectedBatch}</Typography>
               <Box>
                 <Button startIcon={<RefreshIcon />} onClick={() => loadBatch(selectedBatch)} sx={{ mr: 1 }}>Refresh</Button>
               </Box>
@@ -1093,21 +1093,21 @@ const HistoryTab = ({ token, teamNames, dropdownOptions, batches, refreshHistory
               disableColumnReorder={false}
               loading={loading}
               sx={{
-                color: 'white',
-                borderColor: '#3d3d3d',
-                '& .MuiDataGrid-cell': { borderColor: '#3d3d3d', color: '#ddd' },
-                '& .MuiDataGrid-columnHeaders': { bgcolor: '#f3f4f6', color: '#ffffff', borderBottom: '1px solid #555', fontWeight: 'bold' },
+                color: 'var(--text)',
+                borderColor: 'var(--border)',
+                '& .MuiDataGrid-cell': { borderColor: 'var(--border)', color: '#ddd' },
+                '& .MuiDataGrid-columnHeaders': { bgcolor: '#f3f4f6', color: '#ffffff', borderBottom: '1px solid var(--border)', fontWeight: 'bold' },
                 '& .MuiDataGrid-columnHeader': { bgcolor: '#f3f4f6', color: '#ffffff' },
-                '& .MuiDataGrid-columnHeaderTitle': { color: '#ffffff' },
-                '& .MuiDataGrid-menuIcon': { color: '#ffffff' },
-                '& .MuiDataGrid-footerContainer': { borderColor: '#3d3d3d', color: '#ffffff' },
-                '& .MuiTablePagination-root': { color: '#ffffff' },
-                '& .MuiButtonBase-root': { color: '#ffffff' },
+                '& .MuiDataGrid-columnHeaderTitle': { color: 'var(--text)' },
+                '& .MuiDataGrid-menuIcon': { color: 'var(--text)' },
+                '& .MuiDataGrid-footerContainer': { borderColor: 'var(--border)', color: 'var(--text)' },
+                '& .MuiTablePagination-root': { color: 'var(--text)' },
+                '& .MuiButtonBase-root': { color: 'var(--text)' },
               }}
             />
           </>
         ) : (
-          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <Typography>Select a file from the left to manage data.</Typography>
           </Box>
         )}

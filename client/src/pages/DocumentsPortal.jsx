@@ -172,13 +172,13 @@ const DocumentsPortal = () => {
   );
 
   return (
-    <Box sx={{ p: isMobile ? 0 : 4, minHeight: '100vh', color: '#ffffff' }}>
+    <Box sx={{ p: isMobile ? 0 : 4, minHeight: '100vh', color: 'var(--text)' }}>
 
       {/* Header Section */}
       <Box sx={{ mb: 3 }}>
-        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2, color: '#b3b3b3' }}>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2, color: 'var(--text-secondary)' }}>
           <Typography color="inherit">Resources</Typography>
-          <Typography color="text.primary" sx={{ fontWeight: 'bold', color: '#7b68ee' }}>Documents Portal</Typography>
+          <Typography color="text.primary" sx={{ fontWeight: 'bold', color: 'var(--accent-text)' }}>Documents Portal</Typography>
         </Breadcrumbs>
 
         <Box sx={{
@@ -190,11 +190,11 @@ const DocumentsPortal = () => {
           mb: 3
         }}>
           <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ bgcolor: '#7b68ee', width: 56, height: 56 }}>
+            <Avatar sx={{ bgcolor: 'var(--accent)', width: 56, height: 56 }}>
               <MdFolder size={32} />
             </Avatar>
             <Box>
-              <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold', color: '#ffffff' }}>
+              <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 'bold', color: 'var(--text)' }}>
                 <span style={{ display: 'inline-flex' }}>
                   <span style={{ color: '#4285F4' }}>G</span>
                   <span style={{ color: '#EA4335' }}>o</span>
@@ -205,7 +205,7 @@ const DocumentsPortal = () => {
                 </span>
                 {' '}Drive Documents
               </Typography>
-              <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                 Manage and control your uploaded documents
               </Typography>
             </Box>
@@ -219,7 +219,7 @@ const DocumentsPortal = () => {
               setOpenUploadDialog(true);
             }}
             sx={{
-              backgroundColor: '#7b68ee',
+              backgroundColor: 'var(--accent)',
               '&:hover': { backgroundColor: '#6c5ce7' },
               textTransform: 'none',
               borderRadius: '8px',
@@ -232,7 +232,7 @@ const DocumentsPortal = () => {
         </Box>
 
         {/* Categories Tabs */}
-        <Paper square sx={{ bgcolor: '#2d2d2d', borderRadius: '12px 12px 0 0', borderBottom: '1px solid #3d3d3d' }}>
+        <Paper square sx={{ bgcolor: 'var(--surface)', borderRadius: '12px 12px 0 0', borderBottom: '1px solid var(--border)' }}>
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
@@ -242,14 +242,14 @@ const DocumentsPortal = () => {
             scrollButtons="auto"
             allowScrollButtonsMobile
             sx={{
-              '& .MuiTabs-indicator': { backgroundColor: '#7b68ee', height: 3 },
+              '& .MuiTabs-indicator': { backgroundColor: 'var(--accent)', height: 3 },
               '& .MuiTab-root': {
                 textTransform: 'none',
                 fontWeight: 600,
                 fontSize: '1rem',
                 minHeight: 56,
-                color: '#b3b3b3',
-                '&.Mui-selected': { color: '#ffffff' }
+                color: 'var(--text-secondary)',
+                '&.Mui-selected': { color: 'var(--text)' }
               }
             }}
           >
@@ -269,9 +269,9 @@ const DocumentsPortal = () => {
 
       {/* Documents Table */}
       <TableContainer component={Paper} sx={{
-        backgroundColor: '#2d2d2d',
+        backgroundColor: 'var(--surface)',
         borderRadius: '0 0 12px 12px',
-        border: '1px solid #3d3d3d',
+        border: '1px solid var(--border)',
         borderTop: 'none',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
       }}>
@@ -281,31 +281,31 @@ const DocumentsPortal = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>Name</TableCell>
-                {!isMobile && <TableCell sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>Type</TableCell>}
-                <TableCell sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>Added On</TableCell>
-                {!isMobile && <TableCell sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>Added By</TableCell>}
-                <TableCell align="right" sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>Actions</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Name</TableCell>
+                {!isMobile && <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Type</TableCell>}
+                <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Added On</TableCell>
+                {!isMobile && <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Added By</TableCell>}
+                <TableCell align="right" sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredDocuments.length > 0 ? (
                 filteredDocuments.map((doc) => (
-                  <TableRow key={doc._id} hover sx={{ '&:hover': { backgroundColor: '#333' } }}>
-                    <TableCell sx={{ color: '#ffffff', borderBottom: '1px solid #3d3d3d' }}>
+                  <TableRow key={doc._id} hover sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>
+                    <TableCell sx={{ color: 'var(--text)', borderBottom: '1px solid var(--border)' }}>
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <MdInsertDriveFile color="#7b68ee" size={20} />
+                        <MdInsertDriveFile color="var(--accent-text)" size={20} />
                         <MuiLink
                           onClick={() => handleDownloadClick(doc)}
                           underline="hover"
-                          sx={{ color: '#ffffff', fontWeight: 500, cursor: 'pointer' }}
+                          sx={{ color: 'var(--text)', fontWeight: 500, cursor: 'pointer' }}
                         >
                           {doc.name}
                         </MuiLink>
                       </Stack>
                     </TableCell>
                     {!isMobile && (
-                      <TableCell sx={{ color: '#ffffff', borderBottom: '1px solid #3d3d3d' }}>
+                      <TableCell sx={{ color: 'var(--text)', borderBottom: '1px solid var(--border)' }}>
                         <Chip
                           label={doc.type || 'LINK'}
                           size="small"
@@ -313,18 +313,18 @@ const DocumentsPortal = () => {
                             height: 20,
                             fontSize: '0.7rem',
                             bgcolor: 'rgba(123, 104, 238, 0.1)',
-                            color: '#7b68ee'
+                            color: 'var(--accent-text)'
                           }}
                         />
                       </TableCell>
                     )}
-                    <TableCell sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>
+                    <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>
                       {new Date(doc.createdAt || doc.date).toLocaleDateString()}
                     </TableCell>
                     {!isMobile && (
-                      <TableCell sx={{ color: '#b3b3b3', borderBottom: '1px solid #3d3d3d' }}>{doc.uploader}</TableCell>
+                      <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>{doc.uploader}</TableCell>
                     )}
-                    <TableCell align="right" sx={{ borderBottom: '1px solid #3d3d3d' }}>
+                    <TableCell align="right" sx={{ borderBottom: '1px solid var(--border)' }}>
                       <Stack direction="row" justifyContent="flex-end" spacing={1}>
                         <Tooltip title="Open Link">
                           <IconButton size="small" onClick={() => handleDownloadClick(doc)} sx={{ color: '#4caf50', '&:hover': { color: '#81c784' } }}>
@@ -332,7 +332,7 @@ const DocumentsPortal = () => {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Edit Details">
-                          <IconButton size="small" onClick={() => handleEditClick(doc)} sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}>
+                          <IconButton size="small" onClick={() => handleEditClick(doc)} sx={{ color: 'var(--text-secondary)', '&:hover': { color: 'var(--text)' } }}>
                             <MdEdit />
                           </IconButton>
                         </Tooltip>
@@ -347,7 +347,7 @@ const DocumentsPortal = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#b3b3b3', borderBottom: 'none' }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'var(--text-secondary)', borderBottom: 'none' }}>
                     No documents found in this section.
                   </TableCell>
                 </TableRow>
@@ -364,28 +364,28 @@ const DocumentsPortal = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { backgroundColor: '#2d2d2d', color: '#ffffff', backgroundImage: 'none' }
+          sx: { backgroundColor: 'var(--surface)', color: 'var(--text)', backgroundImage: 'none' }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #3d3d3d' }}>Add Document Link</DialogTitle>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)' }}>Add Document Link</DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Stack spacing={3} sx={{ mt: 1 }}>
 
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#b3b3b3', '&.Mui-focused': { color: '#7b68ee' } }}>Category</InputLabel>
+              <InputLabel sx={{ color: 'var(--text-secondary)', '&.Mui-focused': { color: 'var(--accent-text)' } }}>Category</InputLabel>
               <Select
                 value={uploadCategory}
                 label="Category"
                 onChange={(e) => setUploadCategory(e.target.value)}
                 sx={{
-                  color: '#ffffff',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
+                  color: 'var(--text)',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#b3b3b3' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                  '& .MuiSvgIcon-root': { color: '#b3b3b3' }
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent)' },
+                  '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                 }}
                 MenuProps={{
-                  PaperProps: { sx: { bgcolor: '#2d2d2d', color: '#ffffff' } }
+                  PaperProps: { sx: { bgcolor: 'var(--surface)', color: 'var(--text)' } }
                 }}
               >
                 <MenuItem value="field">Shared with Field Teams</MenuItem>
@@ -401,13 +401,13 @@ const DocumentsPortal = () => {
               variant="outlined"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  color: 'var(--text)',
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#b3b3b3' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
-                '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#7b68ee' }
+                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                '& .MuiInputLabel-root.Mui-focused': { color: 'var(--accent-text)' }
               }}
             />
 
@@ -420,21 +420,21 @@ const DocumentsPortal = () => {
               helperText="Paste the shared link here"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  color: 'var(--text)',
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#b3b3b3' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
-                '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#7b68ee' },
-                '& .MuiFormHelperText-root': { color: '#b3b3b3' }
+                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                '& .MuiInputLabel-root.Mui-focused': { color: 'var(--accent-text)' },
+                '& .MuiFormHelperText-root': { color: 'var(--text-secondary)' }
               }}
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid #3d3d3d' }}>
-          <Button onClick={() => setOpenUploadDialog(false)} sx={{ color: '#b3b3b3' }}>Cancel</Button>
-          <Button onClick={handleUpload} variant="contained" sx={{ bgcolor: '#7b68ee', '&:hover': { bgcolor: '#6c5ce7' } }}>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid var(--border)' }}>
+          <Button onClick={() => setOpenUploadDialog(false)} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
+          <Button onClick={handleUpload} variant="contained" sx={{ bgcolor: 'var(--accent)', '&:hover': { bgcolor: '#6c5ce7' } }}>
             Add Link
           </Button>
         </DialogActions>
@@ -448,7 +448,7 @@ const DocumentsPortal = () => {
         fullWidth={!isMobile}
         fullScreen={isMobile}
         PaperProps={{
-          sx: { backgroundColor: '#2d2d2d', color: '#ffffff' }
+          sx: { backgroundColor: 'var(--surface)', color: 'var(--text)' }
         }}
       >
         <DialogTitle>Edit Document Details</DialogTitle>
@@ -465,13 +465,13 @@ const DocumentsPortal = () => {
               variant="outlined"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  color: 'var(--text)',
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#b3b3b3' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
-                '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#7b68ee' }
+                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                '& .MuiInputLabel-root.Mui-focused': { color: 'var(--accent-text)' }
               }}
             />
             <TextField
@@ -484,20 +484,20 @@ const DocumentsPortal = () => {
               variant="outlined"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  color: '#ffffff',
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  color: 'var(--text)',
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#b3b3b3' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
-                '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#7b68ee' }
+                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                '& .MuiInputLabel-root.Mui-focused': { color: 'var(--accent-text)' }
               }}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenEditDialog(false)} sx={{ color: '#b3b3b3' }}>Cancel</Button>
-          <Button onClick={handleEditSubmit} variant="contained" sx={{ bgcolor: '#7b68ee', '&:hover': { bgcolor: '#6c5ce7' } }}>
+          <Button onClick={() => setOpenEditDialog(false)} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
+          <Button onClick={handleEditSubmit} variant="contained" sx={{ bgcolor: 'var(--accent)', '&:hover': { bgcolor: '#6c5ce7' } }}>
             Save Changes
           </Button>
         </DialogActions>
@@ -508,7 +508,7 @@ const DocumentsPortal = () => {
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         PaperProps={{
-          sx: { backgroundColor: '#2d2d2d', color: '#ffffff' }
+          sx: { backgroundColor: 'var(--surface)', color: 'var(--text)' }
         }}
       >
         <DialogTitle>Confirm Delete</DialogTitle>
@@ -516,7 +516,7 @@ const DocumentsPortal = () => {
           <Typography>Are you sure you want to delete <b>{currentDoc?.name}</b>?</Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenDeleteDialog(false)} sx={{ color: '#b3b3b3' }}>Cancel</Button>
+          <Button onClick={() => setOpenDeleteDialog(false)} sx={{ color: 'var(--text-secondary)' }}>Cancel</Button>
           <Button onClick={handleDeleteConfirm} variant="contained" color="error">
             Delete
           </Button>

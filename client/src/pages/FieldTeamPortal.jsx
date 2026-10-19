@@ -1,5 +1,7 @@
+import { alpha } from "../theme/colorFns";
+import { tok } from "../theme/tokens";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { alpha } from "@mui/material/styles";
+
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box, Typography, TextField, Paper, Table, TableBody, TableCell, TableContainer,
@@ -447,10 +449,10 @@ const StatCard = ({ title, count, total, color, icon, percentage, subtext, mainV
     <CardContent sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
         <Box>
-          <Typography variant="subtitle2" color="#94a3b8" fontWeight="600" gutterBottom>
+          <Typography variant="subtitle2" color={tok('--text-secondary')} fontWeight="600" gutterBottom>
             {title}
           </Typography>
-          <Typography variant="h4" fontWeight="800" color="#fff">
+          <Typography variant="h4" fontWeight="800" color={tok('--text')}>
             {count}
           </Typography>
         </Box>
@@ -486,7 +488,7 @@ const StatCard = ({ title, count, total, color, icon, percentage, subtext, mainV
           {percentage ? percentage.toFixed(0) : 0}%
         </Typography>
       </Box>
-      <Typography variant="caption" color="#64748b">
+      <Typography variant="caption" color={tok('--text-muted')}>
         {count} of {total} tasks
       </Typography>
     </CardContent>
@@ -500,22 +502,22 @@ const CompactDataTable = ({ data, total }) => (
     maxHeight: 200,
     overflowY: 'auto',
     '&::-webkit-scrollbar': { width: '4px' },
-    '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' }
+    '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' }
   }}>
     <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
       <TableHead>
         <TableRow>
-          <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Category Item</TableCell>
-          <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Count</TableCell>
-          <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+          <TableCell sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Category Item</TableCell>
+          <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Count</TableCell>
+          <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>%</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {data.map((row, i) => (
-          <TableRow key={i} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-            <TableCell sx={{ color: '#e2e8f0' }}>{row.name}</TableCell>
-            <TableCell align="right" sx={{ color: '#e2e8f0', fontWeight: 'bold' }}>{row.value}</TableCell>
-            <TableCell align="right" sx={{ color: '#94a3b8' }}>{((row.value / total) * 100).toFixed(1)}%</TableCell>
+          <TableRow key={i} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
+            <TableCell sx={{ color: tok('--text-secondary') }}>{row.name}</TableCell>
+            <TableCell align="right" sx={{ color: tok('--text-secondary'), fontWeight: 'bold' }}>{row.value}</TableCell>
+            <TableCell align="right" sx={{ color: tok('--text-secondary') }}>{((row.value / total) * 100).toFixed(1)}%</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -980,10 +982,10 @@ const FieldTeamPortal = () => {
 
   // Updated Premium Colors & Glassmorphism Theme
   const colors = {
-    background: '#121212', // Deep dark background
+    background: tok('--bg'), // Deep dark background
     surface: 'rgba(30, 30, 30, 0.6)', // Glassy surface
     surfaceElevated: 'rgba(255, 255, 255, 0.05)', // Lighter glass
-    border: 'rgba(255, 255, 255, 0.12)',
+    border: tok('--border'),
     primary: '#8b5cf6', // Vivid Violet
     primaryGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
     secondary: '#10b981', // Emerald
@@ -4635,25 +4637,25 @@ const FieldTeamPortal = () => {
     maintainAspectRatio: false,
     cutout: '70%',
     plugins: {
-      legend: { position: 'bottom', labels: { color: '#b3b3b3', usePointStyle: true, padding: 20 } }
+      legend: { position: 'bottom', labels: { color: tok('--text-secondary'), usePointStyle: true, padding: 20 } }
     }
   };
 
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { color: '#ffffff' } } },
+    plugins: { legend: { position: 'bottom', labels: { color: tok('--text') } } },
     scales: {
-      x: { ticks: { color: '#b3b3b3' }, grid: { color: '#3d3d3d' } },
-      y: { beginAtZero: true, ticks: { color: '#b3b3b3', stepSize: 1, precision: 0 }, grid: { color: '#3d3d3d' } }
+      x: { ticks: { color: tok('--text-secondary') }, grid: { color: '#3d3d3d' } },
+      y: { beginAtZero: true, ticks: { color: tok('--text-secondary'), stepSize: 1, precision: 0 }, grid: { color: '#3d3d3d' } }
     }
   };
 
   const MiniStatCard = ({ title, value, icon, color, subtext }) => (
-    <Card sx={{ bgcolor: '#2d2d2d', color: '#fff', height: '100%', border: '1px solid #3d3d3d' }}>
+    <Card sx={{ bgcolor: tok('--surface'), color: tok('--text'), height: '100%', border: '1px solid #3d3d3d' }}>
       <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
         <Box>
-          <Typography variant="body2" color="#b3b3b3" gutterBottom>{title}</Typography>
+          <Typography variant="body2" color={tok('--text-secondary')} gutterBottom>{title}</Typography>
           <Typography variant="h4" fontWeight="bold">{value}</Typography>
           {subtext && <Typography variant="caption" color={color}>{subtext}</Typography>}
         </Box>
@@ -5499,7 +5501,7 @@ ${data.map((a, i) => `
         />
         <RechartsTooltip
           contentStyle={{
-            backgroundColor: '#252525',
+            backgroundColor: tok('--surface'),
             border: `1px solid ${colors.border}`,
             borderRadius: '12px',
             boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
@@ -5535,7 +5537,7 @@ ${data.map((a, i) => `
         />
         <RechartsTooltip
           contentStyle={{
-            backgroundColor: '#252525',
+            backgroundColor: tok('--surface'),
             border: `1px solid ${colors.border}`,
             borderRadius: '12px',
             boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
@@ -6391,7 +6393,7 @@ ${data.map((a, i) => `
           borderRadius: '20px',
         }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-            <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="subtitle1" sx={{ color: tok('--text'), fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Shield sx={{ color: colors.primary, fontSize: '1.3rem' }} />
               Select Target Field Team
             </Typography>
@@ -6416,7 +6418,7 @@ ${data.map((a, i) => `
                   border: 'none',
                   '&.Mui-selected': {
                     bgcolor: `${colors.primary}33`,
-                    color: '#fff',
+                    color: tok('--text'),
                     borderColor: colors.primary
                   }
                 }
@@ -6453,7 +6455,7 @@ ${data.map((a, i) => `
                 <li {...props} key={option._id || option.teamName}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', py: 0.5 }}>
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                         {option.teamName} {option.teamCode ? `[${option.teamCode}]` : ''}
                       </Typography>
                       <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -6485,8 +6487,8 @@ ${data.map((a, i) => `
                   '& .MuiOutlinedInput-root': {
                     backgroundColor: 'rgba(0,0,0,0.2)',
                     borderRadius: '12px',
-                    color: '#fff',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                    color: tok('--text'),
+                    '& fieldset': { borderColor: tok('--border') },
                     '&:hover fieldset': { borderColor: colors.primary },
                     '&.Mui-focused fieldset': { borderColor: colors.primary, borderWidth: '2px' },
                   },
@@ -6496,7 +6498,7 @@ ${data.map((a, i) => `
               />
             )}
             PaperComponent={({ children }) => (
-              <Paper sx={{ ...colors.glass, bgcolor: '#1a1a1a', mt: 1 }}>{children}</Paper>
+              <Paper sx={{ ...colors.glass, bgcolor: tok('--bg'), mt: 1 }}>{children}</Paper>
             )}
           />
         </Paper>
@@ -6507,7 +6509,7 @@ ${data.map((a, i) => `
             <Box sx={{ animation: 'fadeIn 0.5s ease-in', mb: 6 }}>
               <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
-                  <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: -1 }}>
+                  <Typography variant="h4" sx={{ color: tok('--text'), fontWeight: 900, letterSpacing: -1 }}>
                     Team <span style={{ color: colors.primary }}>Leaderboard</span>
                   </Typography>
                   <Typography variant="body1" sx={{ color: colors.textSecondary }}>
@@ -6518,7 +6520,7 @@ ${data.map((a, i) => `
               </Box>
 
               {/* Global View Tabs */}
-              <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', mb: 3 }}>
+              <Box sx={{ borderBottom: 1, borderColor: tok('--border'), mb: 3 }}>
                 <Tabs
                   value={globalTab}
                   onChange={(e, v) => setGlobalTab(v)}
@@ -6559,7 +6561,7 @@ ${data.map((a, i) => `
                         px: 2,
                         py: 0.8,
                         borderRadius: '12px',
-                        bgcolor: 'rgba(255,255,255,0.04)',
+                        bgcolor: tok('--overlay-subtle'),
                         border: '1px solid rgba(255,255,255,0.1)'
                       }}>
                         <SearchIcon sx={{ color: colors.primary, mr: 1.5, fontSize: '1.2rem' }} />
@@ -6574,7 +6576,7 @@ ${data.map((a, i) => `
                           }}
                           InputProps={{
                             disableUnderline: true,
-                            sx: { color: '#fff', fontSize: '0.95rem' }
+                            sx: { color: tok('--text'), fontSize: '0.95rem' }
                           }}
                         />
                         {matrixSearchQuery && (
@@ -6585,7 +6587,7 @@ ${data.map((a, i) => `
                       </Box>
 
                       {/* Operational Status */}
-                      <FormControl size="small" sx={{ minWidth: 170, bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '12px' }}>
+                      <FormControl size="small" sx={{ minWidth: 170, bgcolor: tok('--overlay-subtle'), borderRadius: '12px' }}>
                         <Select
                           value={matrixStatusFilter}
                           onChange={(e) => {
@@ -6593,10 +6595,10 @@ ${data.map((a, i) => `
                             setMatrixPage(0);
                           }}
                           sx={{
-                            color: '#fff',
+                            color: tok('--text'),
                             fontSize: '0.9rem',
                             borderRadius: '12px',
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') },
                             '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.primary }
                           }}
                         >
@@ -6610,7 +6612,7 @@ ${data.map((a, i) => `
                       </FormControl>
 
                       {/* Company Filter */}
-                      <FormControl size="small" sx={{ minWidth: 170, bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '12px' }}>
+                      <FormControl size="small" sx={{ minWidth: 170, bgcolor: tok('--overlay-subtle'), borderRadius: '12px' }}>
                         <Select
                           value={matrixCompanyFilter}
                           onChange={(e) => {
@@ -6618,10 +6620,10 @@ ${data.map((a, i) => `
                             setMatrixPage(0);
                           }}
                           sx={{
-                            color: '#fff',
+                            color: tok('--text'),
                             fontSize: '0.9rem',
                             borderRadius: '12px',
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') },
                             '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: colors.primary }
                           }}
                         >
@@ -6640,7 +6642,7 @@ ${data.map((a, i) => `
                         sx={{
                           borderRadius: '12px',
                           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                          color: '#fff',
+                          color: tok('--text'),
                           fontWeight: 700,
                           textTransform: 'none',
                           px: 2.5,
@@ -6713,13 +6715,13 @@ ${data.map((a, i) => `
                               setMatrixPage(0);
                             }}
                             InputLabelProps={{ shrink: true, sx: { color: colors.textSecondary } }}
-                            inputProps={{ sx: { color: '#fff', fontSize: '0.85rem' } }}
+                            inputProps={{ sx: { color: tok('--text'), fontSize: '0.85rem' } }}
                             sx={{
                               width: 155,
                               '& .MuiOutlinedInput-root': {
-                                bgcolor: 'rgba(255,255,255,0.04)',
+                                bgcolor: tok('--overlay-subtle'),
                                 borderRadius: '10px',
-                                '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' }
+                                '& fieldset': { borderColor: tok('--border') }
                               }
                             }}
                           />
@@ -6734,13 +6736,13 @@ ${data.map((a, i) => `
                               setMatrixPage(0);
                             }}
                             InputLabelProps={{ shrink: true, sx: { color: colors.textSecondary } }}
-                            inputProps={{ sx: { color: '#fff', fontSize: '0.85rem' } }}
+                            inputProps={{ sx: { color: tok('--text'), fontSize: '0.85rem' } }}
                             sx={{
                               width: 155,
                               '& .MuiOutlinedInput-root': {
-                                bgcolor: 'rgba(255,255,255,0.04)',
+                                bgcolor: tok('--overlay-subtle'),
                                 borderRadius: '10px',
-                                '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' }
+                                '& fieldset': { borderColor: tok('--border') }
                               }
                             }}
                           />
@@ -6772,7 +6774,7 @@ ${data.map((a, i) => `
                           </Avatar>
                         </Box>
                         <Box>
-                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: tok('--text'), mb: 0.5 }}>
                             {matrixPortfolioTotals.totalOrig} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#a5b4fc' }}>Tokens</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
@@ -6803,7 +6805,7 @@ ${data.map((a, i) => `
                           </Avatar>
                         </Box>
                         <Box>
-                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: tok('--text'), mb: 0.5 }}>
                             {matrixPortfolioTotals.totalNonAcc} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fcd34d' }}>Tasks</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
@@ -6834,7 +6836,7 @@ ${data.map((a, i) => `
                           </Avatar>
                         </Box>
                         <Box>
-                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: tok('--text'), mb: 0.5 }}>
                             {matrixPortfolioTotals.totalAdj} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#7dd3fc' }}>Net Tokens</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)' }}>
@@ -6866,7 +6868,7 @@ ${data.map((a, i) => `
                         </Box>
                         <Box>
                           <Typography variant="h4" sx={{ fontWeight: 900, color: '#f87171', mb: 0.5 }}>
-                            {matrixPortfolioTotals.totalAcc} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Tasks</span>
+                            {matrixPortfolioTotals.totalAcc} <span style={{ fontSize: '1rem', fontWeight: 600, color: tok('--text') }}>Tasks</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                             <strong>{matrixPortfolioTotals.failRate}% Failure Rate</strong> on Net Tokens ({matrixPortfolioTotals.totalDet} Det / {matrixPortfolioTotals.totalNeu} Neu)
@@ -6897,7 +6899,7 @@ ${data.map((a, i) => `
                         </Box>
                         <Box>
                           <Typography variant="h4" sx={{ fontWeight: 900, color: '#34d399', mb: 0.5 }}>
-                            {matrixPortfolioTotals.totalPromoters} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Promoters</span>
+                            {matrixPortfolioTotals.totalPromoters} <span style={{ fontSize: '1rem', fontWeight: 600, color: tok('--text') }}>Promoters</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                             <strong>{matrixPortfolioTotals.proShare}% Promoter Share</strong> | Net ({matrixPortfolioTotals.totalAdj}) - Acc ({matrixPortfolioTotals.totalAcc})
@@ -6928,7 +6930,7 @@ ${data.map((a, i) => `
                         </Box>
                         <Box>
                           <Typography variant="h4" sx={{ fontWeight: 900, color: '#fb7185', mb: 0.5 }}>
-                            {matrixPortfolioTotals.totalDet} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Detractors</span>
+                            {matrixPortfolioTotals.totalDet} <span style={{ fontSize: '1rem', fontWeight: 600, color: tok('--text') }}>Detractors</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                             Score ≤ 6/10 ({matrixPortfolioTotals.detRate}% of Net Tokens)
@@ -6959,7 +6961,7 @@ ${data.map((a, i) => `
                         </Box>
                         <Box>
                           <Typography variant="h4" sx={{ fontWeight: 900, color: '#facc15', mb: 0.5 }}>
-                            {matrixPortfolioTotals.totalNeu} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>Neutrals</span>
+                            {matrixPortfolioTotals.totalNeu} <span style={{ fontSize: '1rem', fontWeight: 600, color: tok('--text') }}>Neutrals</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                             Score 7-8/10 ({matrixPortfolioTotals.neuRate}% of Net Tokens)
@@ -6989,7 +6991,7 @@ ${data.map((a, i) => `
                           </Avatar>
                         </Box>
                         <Box>
-                          <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 900, color: tok('--text'), mb: 0.5 }}>
                             {matrixPortfolioTotals.totalSnags} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#fdba74' }}>Snags</span>
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -7040,7 +7042,7 @@ ${data.map((a, i) => `
                     mb: 4
                   }}>
                     <Table sx={{ minWidth: 1200 }}>
-                      <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.04)' }}>
+                      <TableHead sx={{ bgcolor: tok('--overlay-subtle') }}>
                         <TableRow>
                           <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.8rem', py: 2 }}>#</TableCell>
                           
@@ -7274,7 +7276,7 @@ ${data.map((a, i) => `
                                   hover
                                   sx={{
                                     transition: 'all 0.2s',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                                    '&:hover': { bgcolor: tok('--overlay-subtle') },
                                     borderBottom: '1px solid rgba(255,255,255,0.05)'
                                   }}
                                 >
@@ -7293,7 +7295,7 @@ ${data.map((a, i) => `
                                         <Typography
                                           onClick={() => navigate(`/fieldTeams-portal/${row.teamId}`)}
                                           sx={{
-                                            color: '#fff',
+                                            color: tok('--text'),
                                             fontWeight: 700,
                                             fontSize: '0.92rem',
                                             cursor: 'pointer',
@@ -7469,8 +7471,8 @@ ${data.map((a, i) => `
                                         py: 0.4,
                                         px: 1.5,
                                         textTransform: 'none',
-                                        borderColor: 'rgba(255,255,255,0.15)',
-                                        color: '#fff',
+                                        borderColor: tok('--border'),
+                                        color: tok('--text'),
                                         '&:hover': { borderColor: colors.primary, bgcolor: alpha(colors.primary, 0.1) }
                                       }}
                                     >
@@ -7535,7 +7537,7 @@ ${data.map((a, i) => `
                           }}
                           InputProps={{
                             disableUnderline: true,
-                            sx: { color: '#fff', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
+                            sx: { color: tok('--text'), fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
                           }}
                         />
                         {leaderboardSearchQuery && (
@@ -7558,7 +7560,7 @@ ${data.map((a, i) => `
                           sx={{
                             height: '100%',
                             px: 2,
-                            color: '#fff',
+                            color: tok('--text'),
                             fontWeight: 300,
                             '& .MuiSelect-select': { py: 1.5 }
                           }}
@@ -7623,7 +7625,7 @@ ${data.map((a, i) => `
                               type="date"
                               fullWidth
                               variant="standard"
-                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              InputProps={{ disableUnderline: true, sx: { color: tok('--text'), fontWeight: 300 } }}
                               value={leaderboardDateFilter.start}
                               onChange={(e) => {
                                 setLeaderboardDateFilter({ ...leaderboardDateFilter, start: e.target.value });
@@ -7637,7 +7639,7 @@ ${data.map((a, i) => `
                               type="date"
                               fullWidth
                               variant="standard"
-                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              InputProps={{ disableUnderline: true, sx: { color: tok('--text'), fontWeight: 300 } }}
                               value={leaderboardDateFilter.end}
                               onChange={(e) => {
                                 setLeaderboardDateFilter({ ...leaderboardDateFilter, end: e.target.value });
@@ -7652,7 +7654,7 @@ ${data.map((a, i) => `
                               type="number"
                               fullWidth
                               variant="standard"
-                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              InputProps={{ disableUnderline: true, sx: { color: tok('--text'), fontWeight: 300 } }}
                               value={leaderboardThresholds.minIssues}
                               onChange={(e) => {
                                 setLeaderboardThresholds({ ...leaderboardThresholds, minIssues: e.target.value });
@@ -7667,7 +7669,7 @@ ${data.map((a, i) => `
                               type="number"
                               fullWidth
                               variant="standard"
-                              InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                              InputProps={{ disableUnderline: true, sx: { color: tok('--text'), fontWeight: 300 } }}
                               value={leaderboardThresholds.minSuccessRate}
                               onChange={(e) => {
                                 setLeaderboardThresholds({ ...leaderboardThresholds, minSuccessRate: e.target.value });
@@ -7699,7 +7701,7 @@ ${data.map((a, i) => `
                     border: '1px solid rgba(255,255,255,0.08)'
                   }}>
                     <Table size="small">
-                      <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                      <TableHead sx={{ bgcolor: tok('--overlay-subtle') }}>
                         <TableRow>
                           <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
                           <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
@@ -7724,7 +7726,7 @@ ${data.map((a, i) => `
                               key={team._id}
                               sx={{
                                 bgcolor: 'transparent',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                                '&:hover': { bgcolor: tok('--overlay-subtle') },
                                 transition: 'background 0.2s'
                               }}
                             >
@@ -7746,7 +7748,7 @@ ${data.map((a, i) => `
                               </TableCell>
                               <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
                                 <Box sx={{ cursor: 'pointer' }} onClick={() => handleTeamSelect(team)}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
+                                  <Typography sx={{ color: tok('--text'), fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
                                   <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
                                 </Box>
                               </TableCell>
@@ -7910,8 +7912,8 @@ ${data.map((a, i) => `
                       bgcolor: 'rgba(59, 130, 246, 0.1)',
                       border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}>
-                      <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#94a3b8' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: '#94a3b8' }}>Tasks</span>
+                      <Typography variant="body2" sx={{ color: tok('--text'), fontSize: '0.85rem' }}>
+                        <span style={{ color: tok('--text-secondary') }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: tok('--text-secondary') }}>Tasks</span>
                       </Typography>
                     </Box>
 
@@ -7947,8 +7949,8 @@ ${data.map((a, i) => `
                         sx={{
                           bgcolor: 'rgba(0,0,0,0.2)',
                           '& .MuiToggleButton-root': {
-                            color: '#94a3b8',
-                            borderColor: 'rgba(255,255,255,0.05)',
+                            color: tok('--text-secondary'),
+                            borderColor: tok('--border'),
                             px: 2,
                             py: 0.5,
                             fontSize: '0.75rem',
@@ -7989,8 +7991,8 @@ ${data.map((a, i) => `
                               onChange={(e) => setRecentDaysValue(Number(e.target.value))}
                               sx={{
                                 width: 80,
-                                '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                                '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                                '& .MuiOutlinedInput-root': { color: tok('--text'), fontSize: '0.8rem' },
+                                '& .MuiInputLabel-root': { color: tok('--text-secondary'), fontSize: '0.8rem' }
                               }}
                             />
                           </Stack>
@@ -8008,10 +8010,10 @@ ${data.map((a, i) => `
                             )}
                             sx={{
                               '& .MuiOutlinedInput-root': {
-                                color: '#fff', fontSize: '0.8rem',
-                                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                                color: tok('--text'), fontSize: '0.8rem',
+                                '& fieldset': { borderColor: tok('--border') }
                               },
-                              '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                              '& .MuiInputLabel-root': { color: tok('--text-secondary'), fontSize: '0.8rem' }
                             }}
                           />
                         )}
@@ -8029,10 +8031,10 @@ ${data.map((a, i) => `
                             )}
                             sx={{
                               '& .MuiOutlinedInput-root': {
-                                color: '#fff', fontSize: '0.8rem',
-                                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                                color: tok('--text'), fontSize: '0.8rem',
+                                '& fieldset': { borderColor: tok('--border') }
                               },
-                              '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                              '& .MuiInputLabel-root': { color: tok('--text-secondary'), fontSize: '0.8rem' }
                             }}
                           />
                         )}
@@ -8047,8 +8049,8 @@ ${data.map((a, i) => `
                               onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
                               InputLabelProps={{ shrink: true }}
                               sx={{
-                                '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                                '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                                '& .MuiOutlinedInput-root': { color: tok('--text'), fontSize: '0.8rem' },
+                                '& .MuiInputLabel-root': { color: tok('--text-secondary'), fontSize: '0.8rem' }
                               }}
                             />
                             <TextField
@@ -8059,8 +8061,8 @@ ${data.map((a, i) => `
                               onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
                               InputLabelProps={{ shrink: true }}
                               sx={{
-                                '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                                '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                                '& .MuiOutlinedInput-root': { color: tok('--text'), fontSize: '0.8rem' },
+                                '& .MuiInputLabel-root': { color: tok('--text-secondary'), fontSize: '0.8rem' }
                               }}
                             />
                           </Stack>
@@ -8083,7 +8085,7 @@ ${data.map((a, i) => `
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Box sx={{ width: 3, height: 20, bgcolor: '#8b5cf6', borderRadius: 4 }} />
-                            <Typography variant="h6" fontWeight="800" color="#fff" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
+                            <Typography variant="h6" fontWeight="800" color={tok('--text')} sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
                               Sentiment Segmentation <span style={{ color: alpha('#fff', 0.5), fontSize: '0.75rem' }}>Deep Analysis</span>
                             </Typography>
                           </Box>
@@ -8100,7 +8102,7 @@ ${data.map((a, i) => `
                         <TableContainer sx={{ maxHeight: 200, overflowY: 'auto' }}>
                           <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
                             <TableHead>
-                              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
+                              <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: tok('--overlay-subtle'), color: tok('--text-secondary'), fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
                                 <TableCell>Customer Sentiment</TableCell>
                                 <TableCell align="right">Hit Count</TableCell>
                                 <TableCell align="right">Matrix Share</TableCell>
@@ -8108,19 +8110,19 @@ ${data.map((a, i) => `
                             </TableHead>
                             <TableBody>
                               {globalAnalytics.sentimentData.map((row) => (
-                                <TableRow key={row.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                <TableRow key={row.name} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
                                   <TableCell sx={{ color: row.color, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.name}</TableCell>
-                                  <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.value}</TableCell>
+                                  <TableCell align="right" sx={{ color: tok('--text'), fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.value}</TableCell>
                                   <TableCell align="right" sx={{
                                     bgcolor: getHeatmapColor(parseFloat(row.percentage), 0, 100, row.name === 'Promoters' ? 'green' : row.name === 'Neutrals' ? 'orange' : 'red'),
-                                    color: '#fff', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                    color: tok('--text'), fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.05)'
                                   }}>
                                     {row.percentage}%
                                   </TableCell>
                                 </TableRow>
                               ))}
-                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', fontWeight: 'bold' }}>
-                                <TableCell sx={{ color: '#e2e8f0', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Total Audited</TableCell>
+                              <TableRow sx={{ bgcolor: tok('--overlay-subtle'), fontWeight: 'bold' }}>
+                                <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Total Audited</TableCell>
                                 <TableCell align="right" sx={{ color: '#3b82f6', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{globalAnalytics.totalSamplesTaken}</TableCell>
                                 <TableCell align="right" sx={{ color: '#3b82f6', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>100%</TableCell>
                               </TableRow>
@@ -8129,38 +8131,38 @@ ${data.map((a, i) => `
                         </TableContainer>
 
                         <Box sx={{ mt: 3, p: 2, borderRadius: 3, bgcolor: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                          <Typography variant="subtitle2" color={tok('--text-secondary')} sx={{ mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                             Total Audited Tasks
                           </Typography>
-                          <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>
+                          <Typography variant="h5" sx={{ color: tok('--text'), fontWeight: 800, mb: 0.5 }}>
                             {globalAnalytics.totalProcessed}
                           </Typography>
-                          <Typography variant="body2" color="#94a3b8">
+                          <Typography variant="body2" color={tok('--text-secondary')}>
                             {globalAnalytics.totalProcessed} Audited / {globalAnalytics.totalSamplesTarget} Target
                           </Typography>
                         </Box>
 
                         <Box sx={{ mt: 3 }}>
-                          <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                          <Typography variant="subtitle2" color={tok('--text-secondary')} sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                             Violation Cohorts
                           </Typography>
                           <TableContainer sx={{ maxHeight: 240, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
                             <Table stickyHeader size="small" sx={{ '& .MuiTableCell-root': { py: 1, fontSize: '0.75rem' } }}>
                               <TableHead>
                                 <TableRow>
-                                  <TableCell sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Cohort</TableCell>
-                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Teams</TableCell>
-                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Active / Inactive</TableCell>
-                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Trained %</TableCell>
-                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: '#94a3b8', fontWeight: 'bold' }}>Action</TableCell>
+                                  <TableCell sx={{ bgcolor: '#111827', color: tok('--text-secondary'), fontWeight: 'bold' }}>Cohort</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: tok('--text-secondary'), fontWeight: 'bold' }}>Teams</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: tok('--text-secondary'), fontWeight: 'bold' }}>Active / Inactive</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: tok('--text-secondary'), fontWeight: 'bold' }}>Trained %</TableCell>
+                                  <TableCell align="right" sx={{ bgcolor: '#111827', color: tok('--text-secondary'), fontWeight: 'bold' }}>Action</TableCell>
                                 </TableRow>
                               </TableHead>
                               <TableBody>
                                 {(globalAnalytics.fieldTeamCohorts || []).map((cohort) => (
-                                  <TableRow key={cohort.label} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                                    <TableCell sx={{ color: '#fff', fontWeight: 700 }}>{cohort.label}</TableCell>
-                                    <TableCell align="right" sx={{ color: '#fff', fontWeight: 700 }}>{cohort.teams}</TableCell>
-                                    <TableCell align="right" sx={{ color: '#fff', fontWeight: 700 }}>
+                                  <TableRow key={cohort.label} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
+                                    <TableCell sx={{ color: tok('--text'), fontWeight: 700 }}>{cohort.label}</TableCell>
+                                    <TableCell align="right" sx={{ color: tok('--text'), fontWeight: 700 }}>{cohort.teams}</TableCell>
+                                    <TableCell align="right" sx={{ color: tok('--text'), fontWeight: 700 }}>
                                       {cohort.activeTeams}/{cohort.inactiveTeams}
                                     </TableCell>
                                     <TableCell align="right" sx={{ color: cohort.trainedPercent >= 80 ? '#22c55e' : cohort.trainedPercent >= 50 ? '#f59e0b' : '#f43f5e', fontWeight: 700 }}>
@@ -8171,7 +8173,7 @@ ${data.map((a, i) => `
                                         size="small"
                                         variant="outlined"
                                         onClick={() => handleOpenCohortDialog(cohort.label)}
-                                        sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.15)', textTransform: 'none', fontSize: '0.7rem', px: 1.5 }}
+                                        sx={{ color: tok('--text'), borderColor: tok('--border'), textTransform: 'none', fontSize: '0.7rem', px: 1.5 }}
                                       >
                                         View teams
                                       </Button>
@@ -8200,7 +8202,7 @@ ${data.map((a, i) => `
                             >
                               {globalAnalytics.sentimentData.map((e, i) => <Cell key={i} fill={e.color} />)}
                             </RechartsPie>
-                            <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+                            <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 8 }} />
                             <RechartsLegend verticalAlign="bottom" height={30} />
                           </RechartsPieChart>
                         </ResponsiveContainer>
@@ -8212,9 +8214,9 @@ ${data.map((a, i) => `
 
 
                   <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                    <Divider sx={{ flex: 1, borderColor: tok('--border') }} />
                     <Typography variant="h6" sx={{ color: '#3b82f6', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>Advanced Analytics Charts & Tables</Typography>
-                    <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                    <Divider sx={{ flex: 1, borderColor: tok('--border') }} />
                   </Box>
 
                   {/* Advanced Analytics Charts & Tables */}
@@ -8222,7 +8224,7 @@ ${data.map((a, i) => `
                     {/* Owner Analysis */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59, 130, 246, 0.2)' }} elevation={0}>
-                        <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" fontWeight="700" mb={3} color={tok('--text')} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <SupportAgent sx={{ color: '#3b82f6' }} /> Owner Distribution
                         </Typography>
                         <ResponsiveContainer width="100%" height={280}>
@@ -8234,16 +8236,16 @@ ${data.map((a, i) => `
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
                             <RechartsTooltip
                               content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
-                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                    <Paper sx={{ p: 1.5, bgcolor: tok('--surface'), border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
+                                      <Typography sx={{ color: tok('--text'), fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                       <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                      <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                     </Paper>
                                   );
                                 }
@@ -8272,16 +8274,16 @@ ${data.map((a, i) => `
                           </RechartsBarChart>
                         </ResponsiveContainer>
                         {/* Detailed Owner Table - Compact Style */}
-                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                           <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
                             <TableHead>
                               <TableRow>
-                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Owner</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Points</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                                <TableCell sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Owner</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Points</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>%</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
@@ -8289,7 +8291,7 @@ ${data.map((a, i) => `
                                 <TableRow 
                                   key={data.name} 
                                   sx={{ 
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+                                    '&:hover': { bgcolor: tok('--overlay-subtle') },
                                     bgcolor: activeGlobalOwnershipInsight === data.name ? 'rgba(59,130,246,0.15)' : 'transparent'
                                   }}
                                 >
@@ -8305,7 +8307,7 @@ ${data.map((a, i) => `
                                     align="right"
                                     onClick={() => handleAnalyticsDrillDown({ owner: data.name })}
                                     sx={{
-                                      color: '#e2e8f0',
+                                      color: tok('--text-secondary'),
                                       fontWeight: 'bold',
                                       cursor: 'pointer',
                                       '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' }
@@ -8335,7 +8337,7 @@ ${data.map((a, i) => `
                                   >
                                     {data.subscription}
                                   </TableCell>
-                                  <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                  <TableCell align="right" sx={{ color: tok('--text-secondary') }}>{data.percentage}%</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -8348,7 +8350,7 @@ ${data.map((a, i) => `
                     {/* Governorate Distribution */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(14, 165, 233, 0.2)' }} elevation={0}>
-                        <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" fontWeight="700" mb={3} color={tok('--text')} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <LocationOn sx={{ color: '#0ea5e9' }} /> Governorate Distribution
                         </Typography>
                         <ResponsiveContainer width="100%" height={280}>
@@ -8360,16 +8362,16 @@ ${data.map((a, i) => `
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
                             <RechartsTooltip
                               content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
-                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                    <Paper sx={{ p: 1.5, bgcolor: tok('--surface'), border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
+                                      <Typography sx={{ color: tok('--text'), fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                       <Typography sx={{ color: '#0ea5e9', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                      <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                     </Paper>
                                   );
                                 }
@@ -8379,26 +8381,26 @@ ${data.map((a, i) => `
                             <RechartsBar dataKey="value" fill="url(#governorateGradient)" radius={[6, 6, 0, 0]} />
                           </RechartsBarChart>
                         </ResponsiveContainer>
-                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                           <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
                             <TableHead>
                               <TableRow>
-                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Governorate</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                                <TableCell sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Governorate</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>%</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).slice(0, 15).map((data) => (
-                                <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                                  <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
+                                <TableRow key={data.name} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
+                                  <TableCell sx={{ color: tok('--text-secondary') }}>{data.name}</TableCell>
                                   <TableCell
                                     align="right"
                                     onClick={() => handleAnalyticsDrillDown({ governorate: data.name })}
                                     sx={{
-                                      color: '#e2e8f0',
+                                      color: tok('--text-secondary'),
                                       fontWeight: 'bold',
                                       cursor: 'pointer',
                                       '&:hover': { bgcolor: 'rgba(14, 165, 233, 0.2)', color: '#0ea5e9' }
@@ -8408,15 +8410,15 @@ ${data.map((a, i) => `
                                   </TableCell>
                                   <TableCell align="right" sx={{ color: data.itn > 0 ? '#f59e0b' : '#64748b' }}>{data.itn}</TableCell>
                                   <TableCell align="right" sx={{ color: data.subscription > 0 ? '#10b981' : '#64748b' }}>{data.subscription}</TableCell>
-                                  <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                  <TableCell align="right" sx={{ color: tok('--text-secondary') }}>{data.percentage}%</TableCell>
                                 </TableRow>
                               ))}
-                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                              <TableRow sx={{ bgcolor: tok('--overlay-subtle'), borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: tok('--text'), fontWeight: 'bold' }}>TOTAL</TableCell>
                                 <TableCell align="right" sx={{ color: '#0ea5e9', fontWeight: 'bold' }}>{((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).reduce((sum, item) => sum + item.total, 0)}</TableCell>
                                 <TableCell align="right" sx={{ color: '#f59e0b', fontWeight: 'bold' }}>{((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).reduce((sum, item) => sum + item.itn, 0)}</TableCell>
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedGovernorates : globalAnalytics.detailedGovernorates) || []).reduce((sum, item) => sum + item.subscription, 0)}</TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                                <TableCell align="right" sx={{ color: tok('--text-secondary'), fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -8427,7 +8429,7 @@ ${data.map((a, i) => `
                     {/* Reason Breakdown */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(16, 185, 129, 0.2)' }} elevation={0}>
-                        <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" fontWeight="700" mb={3} color={tok('--text')} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <PriorityHigh sx={{ color: '#10b981' }} /> Reason Distribution
                         </Typography>
                         <ResponsiveContainer width="100%" height={280}>
@@ -8449,42 +8451,42 @@ ${data.map((a, i) => `
                               content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
+                                    <Paper sx={{ p: 1.5, bgcolor: tok('--surface'), border: '1px solid #334155', borderRadius: 2 }}>
+                                      <Typography sx={{ color: tok('--text'), fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
                                       <Typography sx={{ color: payload[0].payload.fill, fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
+                                      <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
                                     </Paper>
                                   );
                                 }
                                 return null;
                               }}
                             />
-                            <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: '#94a3b8' }} />
+                            <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: tok('--text-secondary') }} />
                           </RechartsPieChart>
                         </ResponsiveContainer>
                         {/* Detailed Reason Table - Compact Style */}
-                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                           <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
                             <TableHead>
                               <TableRow>
-                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Reason</TableCell>
+                                <TableCell sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Reason</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => (
-                                  <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                                  <TableCell key={owner} align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                                 ))}
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>%</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).slice(0, 15).map((data) => {
                                 const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                                 return (
-                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
                                     <TableCell
                                       onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
-                                      sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                      sx={{ color: tok('--text-secondary'), cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                     >
                                       {data.name}
                                     </TableCell>
@@ -8504,7 +8506,7 @@ ${data.map((a, i) => `
                                           }}
                                         >
                                           {count}
-                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: tok('--text-muted'), marginLeft: 4 }}>({pct}%)</span>}
                                         </TableCell>
                                       );
                                     })}
@@ -8533,17 +8535,17 @@ ${data.map((a, i) => `
                                     <TableCell
                                       align="right"
                                       onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
-                                      sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                      sx={{ color: tok('--text-secondary'), fontWeight: 'bold', cursor: 'pointer' }}
                                     >
                                       {data.total}
                                     </TableCell>
-                                    <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                    <TableCell align="right" sx={{ color: tok('--text-secondary') }}>{data.percentage}%</TableCell>
                                   </TableRow>
                                 );
                               })}
                               {/* Total Row */}
-                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                              <TableRow sx={{ bgcolor: tok('--overlay-subtle'), borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: tok('--text'), fontWeight: 'bold' }}>TOTAL</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => {
                                   const totalForOwner = Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                                   return (
@@ -8556,10 +8558,10 @@ ${data.map((a, i) => `
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
                                   {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + data.subscription, 0)}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                                <TableCell align="right" sx={{ color: tok('--text'), fontWeight: 'bold' }}>
                                   {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedReasons : globalAnalytics.detailedReasons) || []).reduce((sum, data) => sum + data.total, 0)}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                                <TableCell align="right" sx={{ color: tok('--text-secondary'), fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -8572,7 +8574,7 @@ ${data.map((a, i) => `
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(245, 158, 11, 0.2)' }} elevation={0}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                          <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="h6" fontWeight="700" color={tok('--text')} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Assignment sx={{ color: '#f59e0b' }} /> Sub-Reason Breakdown
                           </Typography>
                           <IconButton
@@ -8592,16 +8594,16 @@ ${data.map((a, i) => `
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
                             <RechartsTooltip
                               content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                    <Paper sx={{ p: 1.5, bgcolor: tok('--surface'), border: '1px solid #334155', borderRadius: 2 }}>
+                                      <Typography sx={{ color: tok('--text'), fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                       <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                      <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                     </Paper>
                                   );
                                 }
@@ -8612,29 +8614,29 @@ ${data.map((a, i) => `
                           </RechartsBarChart>
                         </ResponsiveContainer>
                         {/* Detailed Sub-Reason Table - Compact Style */}
-                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                           <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
                             <TableHead>
                               <TableRow>
-                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub-Reason</TableCell>
+                                <TableCell sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Sub-Reason</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => (
-                                  <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                                  <TableCell key={owner} align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                                 ))}
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>%</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).slice(0, 15).map((data) => {
                                 const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                                 return (
-                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
                                     <TableCell
                                       onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
-                                      sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                      sx={{ color: tok('--text-secondary'), cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                     >
                                       {data.name}
                                     </TableCell>
@@ -8654,7 +8656,7 @@ ${data.map((a, i) => `
                                           }}
                                         >
                                           {count}
-                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: tok('--text-muted'), marginLeft: 4 }}>({pct}%)</span>}
                                         </TableCell>
                                       );
                                     })}
@@ -8683,17 +8685,17 @@ ${data.map((a, i) => `
                                     <TableCell
                                       align="right"
                                       onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
-                                      sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                      sx={{ color: tok('--text-secondary'), fontWeight: 'bold', cursor: 'pointer' }}
                                     >
                                       {data.total}
                                     </TableCell>
-                                    <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                    <TableCell align="right" sx={{ color: tok('--text-secondary') }}>{data.percentage}%</TableCell>
                                   </TableRow>
                                 );
                               })}
                               {/* Total Row */}
-                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                              <TableRow sx={{ bgcolor: tok('--overlay-subtle'), borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: tok('--text'), fontWeight: 'bold' }}>TOTAL</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => {
                                   const totalForOwner = Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                                   return (
@@ -8706,10 +8708,10 @@ ${data.map((a, i) => `
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
                                   {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + data.subscription, 0)}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                                <TableCell align="right" sx={{ color: tok('--text'), fontWeight: 'bold' }}>
                                   {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedSubReasons : globalAnalytics.detailedSubReasons) || []).reduce((sum, data) => sum + data.total, 0)}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                                <TableCell align="right" sx={{ color: tok('--text-secondary'), fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -8722,7 +8724,7 @@ ${data.map((a, i) => `
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                          <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="h6" fontWeight="700" color={tok('--text')} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <SearchIcon sx={{ color: '#8b5cf6' }} /> Root Cause Matrix
                           </Typography>
                           <IconButton
@@ -8742,16 +8744,16 @@ ${data.map((a, i) => `
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                            <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
                             <RechartsTooltip
                               content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                      <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                    <Paper sx={{ p: 1.5, bgcolor: tok('--surface'), border: '1px solid #334155', borderRadius: 2 }}>
+                                      <Typography sx={{ color: tok('--text'), fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                       <Typography sx={{ color: '#8b5cf6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                      <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                     </Paper>
                                   );
                                 }
@@ -8762,28 +8764,28 @@ ${data.map((a, i) => `
                           </RechartsBarChart>
                         </ResponsiveContainer>
                         {/* Detailed Root Cause Table - Compact Style */}
-                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                        <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                           <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
                             <TableHead>
                               <TableRow>
-                                <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Root Cause</TableCell>
+                                <TableCell sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Root Cause</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => (
-                                  <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                                  <TableCell key={owner} align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                                 ))}
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                                <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>ITN</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Sub</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: tok('--surface'), color: tok('--text-secondary'), fontWeight: 'bold' }}>%</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).slice(0, 15).map((data) => {
                                 const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                                 return (
-                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                                  <TableRow key={data.name} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
                                     <TableCell
                                       onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
-                                      sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                      sx={{ color: tok('--text-secondary'), cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                     >
                                       {data.name}
                                     </TableCell>
@@ -8803,7 +8805,7 @@ ${data.map((a, i) => `
                                           }}
                                         >
                                           {count}
-                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                          {count > 0 && <span style={{ fontSize: '0.6rem', color: tok('--text-muted'), marginLeft: 4 }}>({pct}%)</span>}
                                         </TableCell>
                                       );
                                     })}
@@ -8832,17 +8834,17 @@ ${data.map((a, i) => `
                                     <TableCell
                                       align="right"
                                       onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
-                                      sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                      sx={{ color: tok('--text-secondary'), fontWeight: 'bold', cursor: 'pointer' }}
                                     >
                                       {data.total}
                                     </TableCell>
-                                    <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                    <TableCell align="right" sx={{ color: tok('--text-secondary') }}>{data.percentage}%</TableCell>
                                   </TableRow>
                                 );
                               })}
                               {/* Total Row */}
-                              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                              <TableRow sx={{ bgcolor: tok('--overlay-subtle'), borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                                <TableCell sx={{ color: tok('--text'), fontWeight: 'bold' }}>TOTAL</TableCell>
                                 {globalAnalytics.matrixOwners.map(owner => {
                                   const totalForOwner = Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                                   return (
@@ -8855,10 +8857,10 @@ ${data.map((a, i) => `
                                 <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
                                   {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + data.subscription, 0)}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                                <TableCell align="right" sx={{ color: tok('--text'), fontWeight: 'bold' }}>
                                   {Object.values((activeGlobalOwnershipInsight ? focusedGlobalAnalytics?.detailedRootCauses : globalAnalytics.detailedRootCauses) || []).reduce((sum, data) => sum + data.total, 0)}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                                <TableCell align="right" sx={{ color: tok('--text-secondary'), fontWeight: 'bold' }}>100%</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -8895,7 +8897,7 @@ ${data.map((a, i) => `
               PaperProps={{
                 sx: {
                   ...colors.glass,
-                  bgcolor: '#1a1a1a',
+                  bgcolor: tok('--bg'),
                   borderRadius: '24px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   minHeight: '60vh'
@@ -8904,7 +8906,7 @@ ${data.map((a, i) => `
             >
               <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <Box>
-                  <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800 }}>{drillDownTitle}</Typography>
+                  <Typography variant="h5" sx={{ color: tok('--text'), fontWeight: 800 }}>{drillDownTitle}</Typography>
                   <Typography variant="body2" sx={{ color: colors.textSecondary }}>
                     Related {drillDownItems.length} transaction records
                   </Typography>
@@ -8915,7 +8917,7 @@ ${data.map((a, i) => `
               </DialogTitle>
               <DialogContent sx={{ p: 0 }}>
                 {drillDownType === 'mixed' && (
-                  <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)', px: 2, bgcolor: '#1a1a1a' }}>
+                  <Box sx={{ borderBottom: 1, borderColor: tok('--border'), px: 2, bgcolor: tok('--bg') }}>
                     <Tabs
                       value={drillDownTab}
                       onChange={(e, val) => setDrillDownTab(val)}
@@ -8946,23 +8948,23 @@ ${data.map((a, i) => `
                   <Table stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>TYPE</TableCell>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SLID</TableCell>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>DATE</TableCell>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>CUSTOMER / CATEGORY</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>TYPE</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SLID</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>DATE</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>CUSTOMER / CATEGORY</TableCell>
                         {(drillDownType === 'task' || (drillDownType === 'mixed' && drillDownTab === 'tasks')) && (
                           <>
-                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>REASON</TableCell>
-                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SUB-REASON</TableCell>
-                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>RC</TableCell>
-                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>OWNER</TableCell>
-                            <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>FEEDBACK (VERBATIM)</TableCell>
+                            <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>REASON</TableCell>
+                            <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SUB-REASON</TableCell>
+                            <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>RC</TableCell>
+                            <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>OWNER</TableCell>
+                            <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>FEEDBACK (VERBATIM)</TableCell>
                           </>
                         )}
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>STATUS</TableCell>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>POINTS</TableCell>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SCORE / INFO</TableCell>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '0.75rem', py: 1 }}>ACTIONS</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>STATUS</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>POINTS</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '0.75rem', py: 1 }}>SCORE / INFO</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '0.75rem', py: 1 }}>ACTIONS</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -8986,7 +8988,7 @@ ${data.map((a, i) => `
                             <TableRow
                               key={item._id || idx}
                               sx={{
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }
+                                '&:hover': { bgcolor: tok('--overlay-subtle') }
                               }}
                             >
                               <TableCell sx={{ py: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -9002,15 +9004,15 @@ ${data.map((a, i) => `
                                   }}
                                 />
                               </TableCell>
-                              <TableCell sx={{ py: 1, color: '#fff', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{item.slid}</TableCell>
+                              <TableCell sx={{ py: 1, color: tok('--text'), fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{item.slid}</TableCell>
                               <TableCell sx={{ py: 1, color: colors.textSecondary, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>{formatDate(date)}</TableCell>
-                              <TableCell sx={{ py: 1, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
+                              <TableCell sx={{ py: 1, color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   {isIssue ? (
                                     item.issueCategory || (item.issues?.[0]?.category) || 'Technical Issue'
                                   ) : (
                                     <>
-                                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', fontSize: '0.8rem' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text'), fontSize: '0.8rem' }}>
                                         {item.customerName || 'N/A'}
                                       </Typography>
                                       {item.customerType && (
@@ -9020,7 +9022,7 @@ ${data.map((a, i) => `
                                           sx={{
                                             height: '16px',
                                             fontSize: '0.55rem',
-                                            bgcolor: 'rgba(255,255,255,0.1)',
+                                            bgcolor: tok('--overlay-subtle'),
                                             color: colors.textSecondary,
                                             borderRadius: '4px'
                                           }}
@@ -9062,28 +9064,28 @@ ${data.map((a, i) => `
 
                                 return (
                                   <>
-                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
+                                    <TableCell sx={{ py: 0.5, color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
                                       {validTuples.map((tuple, i) => (
                                         <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
-                                          {tuple.reason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                          {tuple.reason || <span style={{ color: tok('--overlay-subtle') }}>N/A</span>}
                                         </Box>
                                       ))}
                                     </TableCell>
-                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
+                                    <TableCell sx={{ py: 0.5, color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
                                       {validTuples.map((tuple, i) => (
                                         <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
-                                          {tuple.subReason || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                          {tuple.subReason || <span style={{ color: tok('--overlay-subtle') }}>N/A</span>}
                                         </Box>
                                       ))}
                                     </TableCell>
-                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
+                                    <TableCell sx={{ py: 0.5, color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.75rem' }}>
                                       {validTuples.map((tuple, i) => (
                                         <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
-                                          {tuple.rootCause || <span style={{ color: 'rgba(255,255,255,0.2)' }}>N/A</span>}
+                                          {tuple.rootCause || <span style={{ color: tok('--overlay-subtle') }}>N/A</span>}
                                         </Box>
                                       ))}
                                     </TableCell>
-                                    <TableCell sx={{ py: 0.5, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.7rem' }}>
+                                    <TableCell sx={{ py: 0.5, color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top', fontSize: '0.7rem' }}>
                                       {validTuples.map((tuple, i) => (
                                         <Box key={i} sx={{ minHeight: '1.2em', display: 'flex', alignItems: 'center', borderBottom: i < max - 1 ? '1px dashed rgba(255,255,255,0.05)' : 'none' }}>
                                           <Chip
@@ -9092,7 +9094,7 @@ ${data.map((a, i) => `
                                             sx={{
                                               height: '16px',
                                               fontSize: '0.6rem',
-                                              bgcolor: 'rgba(255,255,255,0.05)',
+                                              bgcolor: tok('--overlay-subtle'),
                                               color: tuple.owner !== 'N/A' ? '#fff' : 'rgba(255,255,255,0.3)',
                                               border: '1px solid rgba(255,255,255,0.1)'
                                             }}
@@ -9209,14 +9211,14 @@ ${data.map((a, i) => `
               PaperProps={{
                 sx: {
                   ...colors.glass,
-                  bgcolor: '#1a1a1a',
+                  bgcolor: tok('--bg'),
                   borderRadius: '24px',
                   border: '1px solid rgba(255,255,255,0.1)'
                 }
               }}
             >
               <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800 }}>Teams in {cohortDialogLabel} Cohort</Typography>
+                <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 800 }}>Teams in {cohortDialogLabel} Cohort</Typography>
                 <IconButton onClick={() => setCohortDialogOpen(false)} sx={{ color: colors.textSecondary }}>
                   <CloseIcon />
                 </IconButton>
@@ -9226,17 +9228,17 @@ ${data.map((a, i) => `
                   <Table stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Team</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Violations</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Trained</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: '#1a1a1a', color: colors.textSecondary, fontWeight: 700 }}>Status</TableCell>
+                        <TableCell sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700 }}>Team</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700 }}>Violations</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700 }}>Trained</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: tok('--bg'), color: colors.textSecondary, fontWeight: 700 }}>Status</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {cohortDialogItems.map((item, idx) => (
-                        <TableRow key={`${item.teamName}-${idx}`} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                          <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.teamName}</TableCell>
-                          <TableCell align="right" sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.count}</TableCell>
+                        <TableRow key={`${item.teamName}-${idx}`} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
+                          <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.teamName}</TableCell>
+                          <TableCell align="right" sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.count}</TableCell>
                           <TableCell align="right" sx={{ color: item.trained ? '#22c55e' : '#f43f5e', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                             {item.trained ? 'Yes' : 'No'}
                           </TableCell>
@@ -9261,7 +9263,7 @@ ${data.map((a, i) => `
               PaperProps={{
                 sx: {
                   ...colors.glass,
-                  bgcolor: '#1a1a1a',
+                  bgcolor: tok('--bg'),
                   borderRadius: '16px',
                   border: '1px solid rgba(255,255,255,0.1)',
                   maxWidth: '500px'
@@ -9272,7 +9274,7 @@ ${data.map((a, i) => `
                 Full Customer Feedback
               </DialogTitle>
               <DialogContent sx={{ p: 4 }}>
-                <Typography sx={{ color: '#fff', fontStyle: 'italic', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                <Typography sx={{ color: tok('--text'), fontStyle: 'italic', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                   "{selectedVerbatim}"
                 </Typography>
               </DialogContent>
@@ -9354,7 +9356,7 @@ ${data.map((a, i) => `
               {activeTab === 0 && (
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: tok('--text'), letterSpacing: 0.5 }}>
                       Executive Overview: <span style={{ color: colors.primary }}>{selectedTeam?.teamName}</span>
                     </Typography>
                     <Button
@@ -9509,7 +9511,7 @@ ${data.map((a, i) => `
                               {kpi.icon}
                             </Box>
                           </Box>
-                          <Typography variant="h3" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>
+                          <Typography variant="h3" sx={{ fontWeight: 800, color: tok('--text'), mb: 0.5 }}>
                             {typeof kpi.value === 'number' ? kpi.value : kpi.value}
                             <Typography component="span" variant="h6" sx={{ color: colors.textSecondary, ml: 1 }}>{kpi.unit}</Typography>
                           </Typography>
@@ -9524,7 +9526,7 @@ ${data.map((a, i) => `
                     <Grid item xs={12} md={8}>
                       <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
+                          <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
                           <Chip
                             label="Live Operational Data"
                             size="small"
@@ -9548,8 +9550,8 @@ ${data.map((a, i) => `
                                 width={120}
                               />
                               <RechartsTooltip
-                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                cursor={{ fill: tok('--overlay-subtle') }}
+                                contentStyle={{ backgroundColor: tok('--bg'), border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                               />
                               <RechartsBar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
                                 {operationalEfficiencyData.map((entry, index) => (
@@ -9569,10 +9571,10 @@ ${data.map((a, i) => `
                             { label: 'Express Fixes', value: deepStats.expressResolutionCount, icon: <CheckCircleIcon fontSize="small" />, color: colors.success },
                           ].map((s, i) => (
                             <Grid item xs={3} key={i}>
-                              <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                              <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: tok('--overlay-subtle'), border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
                                   <Box sx={{ color: s.color, display: 'flex' }}>{s.icon}</Box>
-                                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{s.value}</Typography>
+                                  <Typography variant="h6" sx={{ fontWeight: 800, color: tok('--text'), fontSize: '1rem' }}>{s.value}</Typography>
                                 </Box>
                                 <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.65rem', display: 'block' }}>{s.label}</Typography>
                               </Box>
@@ -9584,20 +9586,20 @@ ${data.map((a, i) => `
 
                     <Grid item xs={12} md={4}>
                       <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" sx={{ mb: 3, color: '#fff', fontWeight: 600 }}>Recent Activity</Typography>
-                        <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                        <Typography variant="h6" sx={{ mb: 3, color: tok('--text'), fontWeight: 600 }}>Recent Activity</Typography>
+                        <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {allActivities.slice(0, 15).map((activity, idx) => (
                               <Box key={activity.id || idx} sx={{
                                 p: 2,
                                 borderRadius: '16px',
-                                bgcolor: 'rgba(255,255,255,0.02)',
+                                bgcolor: tok('--overlay-subtle'),
                                 border: '1px solid rgba(255,255,255,0.05)',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 position: 'relative',
                                 overflow: 'hidden',
                                 '&:hover': {
-                                  bgcolor: 'rgba(255,255,255,0.04)',
+                                  bgcolor: tok('--overlay-subtle'),
                                   borderColor: `${activity.color}40`,
                                   transform: 'translateX(4px)'
                                 }
@@ -9622,7 +9624,7 @@ ${data.map((a, i) => `
                                         <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 0.2, fontSize: '0.65rem' }}>
                                           {activity.title}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1.3 }}>
+                                        <Typography variant="body2" sx={{ color: tok('--text'), fontWeight: 600, lineHeight: 1.3 }}>
                                           {activity.detail}
                                         </Typography>
                                       </Box>
@@ -9669,39 +9671,39 @@ ${data.map((a, i) => `
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Customer Issues Dashboard</Typography>
-                      <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                      <Typography variant="h5" sx={{ fontWeight: 'bold', color: tok('--text') }}>Customer Issues Dashboard</Typography>
+                      <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
                         Technical analysis and performance metrics for {selectedTeam?.teamName}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: tok('--surface'), px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
+                          <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>From:</Typography>
                           <TextField
                             type="date"
                             size="small"
                             value={dateFilter.start}
                             onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
                             sx={{
-                              bgcolor: '#1a1a1a',
+                              bgcolor: tok('--bg'),
                               borderRadius: 1,
-                              '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                              '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
                               '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                             }}
                           />
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
+                          <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>To:</Typography>
                           <TextField
                             type="date"
                             size="small"
                             value={dateFilter.end}
                             onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
                             sx={{
-                              bgcolor: '#1a1a1a',
+                              bgcolor: tok('--bg'),
                               borderRadius: 1,
-                              '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                              '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
                               '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                             }}
                           />
@@ -9736,48 +9738,48 @@ ${data.map((a, i) => `
                   <Box mb={4}>
                     <Grid container spacing={4}>
                       <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
                           <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
                           <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
-                            {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                            {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
                           </Typography>
-                          <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                          <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                               * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
                             </Typography>
                           </Box>
                         </Paper>
                       </Grid>
                       <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
                           <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
                           <Typography variant="h3" fontWeight="800" color="success.main">
-                            {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                            {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
                           </Typography>
-                          <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                          <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                               * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
                             </Typography>
                           </Box>
                         </Paper>
                       </Grid>
                       <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                        <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
                           <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
-                          <Typography variant="h3" fontWeight="800" color="white">
-                            {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                          <Typography variant="h3" fontWeight="800" color={tok('--text')}>
+                            {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                             Total time from <b>Initial Report</b> → <b>Closed/Now</b>
                           </Typography>
-                          <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                          <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                            <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                               * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
                             </Typography>
                           </Box>
@@ -9789,7 +9791,7 @@ ${data.map((a, i) => `
                   {/* Charts - Match Reference Layout */}
                   <Grid container spacing={3} mb={4}>
                     <Grid item xs={12} lg={8}>
-                      <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+                      <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                           <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
                           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -9797,7 +9799,7 @@ ${data.map((a, i) => `
                               <Select
                                 value={trendTimeframe}
                                 onChange={(e) => setTrendTimeframe(e.target.value)}
-                                sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                                sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
                               >
                                 <MenuItem value="day">Daily</MenuItem>
                                 <MenuItem value="week">Weekly</MenuItem>
@@ -9808,7 +9810,7 @@ ${data.map((a, i) => `
                               <Select
                                 value={trendChartType}
                                 onChange={(e) => setTrendChartType(e.target.value)}
-                                sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                                sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
                               >
                                 <MenuItem value="mixed">Mixed</MenuItem>
                                 <MenuItem value="bar">Bar</MenuItem>
@@ -9821,13 +9823,13 @@ ${data.map((a, i) => `
                       </Paper>
                     </Grid>
                     <Grid item xs={12} lg={4}>
-                      <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+                      <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
                         <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
                         <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                           <Doughnut data={statusData} options={doughnutOptions} />
                           <Box sx={{ position: 'absolute', textAlign: 'center' }}>
                             <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
-                            <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
+                            <Typography variant="caption" color={tok('--text-secondary')}>Resolved</Typography>
                           </Box>
                         </Box>
                       </Paper>
@@ -9839,7 +9841,7 @@ ${data.map((a, i) => `
                     elevation={0}
                     sx={{
                       p: 0,
-                      bgcolor: '#1e293b',
+                      bgcolor: tok('--surface'),
                       borderRadius: 3,
                       border: '1px solid rgba(255, 255, 255, 0.08)',
                       overflow: 'hidden',
@@ -9847,12 +9849,12 @@ ${data.map((a, i) => `
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                     }}
                   >
-                    <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)' }}>
+                    <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: tok('--overlay-subtle') }}>
                       <Box>
-                        <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                        <Typography variant="h6" fontWeight="700" color={tok('--text')}>
                           Issue History & Registry
                         </Typography>
-                        <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                        <Typography variant="body2" color={tok('--text-secondary')} sx={{ mt: 0.5 }}>
                           Full list of issues associated with this team
                         </Typography>
                       </Box>
@@ -9865,18 +9867,18 @@ ${data.map((a, i) => `
                     <Box sx={{ width: '100%', overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                         <thead>
-                          <tr style={{ background: '#0f172a' }}>
-                            <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
-                            <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
+                          <tr style={{ background: tok('--bg') }}>
+                            <th style={{ padding: '16px 24px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
+                            <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {activeCustomerIssues.length === 0 ? (
                             <tr>
-                              <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                              <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: tok('--text-secondary') }}>
                                 No customer issues or snags registered for this team.
                               </td>
                             </tr>
@@ -9887,15 +9889,15 @@ ${data.map((a, i) => `
                                 <tr
                                   key={issue._id}
                                   style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tok('--overlay-subtle')}
                                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                 >
-                                  <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
+                                  <td style={{ padding: '16px 24px', color: tok('--text'), fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
                                   <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
-                                  <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
-                                  <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                  <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
+                                  <td style={{ padding: '16px', color: tok('--text-secondary'), fontSize: '0.85rem' }}>
                                     {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
-                                    <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
+                                    <Typography variant="caption" sx={{ display: 'block', color: tok('--text-muted') }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
                                   </td>
                                   <td style={{ padding: '16px', textAlign: 'center' }}>
                                     <Chip
@@ -9925,7 +9927,7 @@ ${data.map((a, i) => `
                           setIssuesRowsPerPage(parseInt(e.target.value, 10));
                           setIssuesPage(0);
                         }}
-                        sx={{ color: '#94a3b8' }}
+                        sx={{ color: tok('--text-secondary') }}
                       />
                     </Box>
                   </Paper>
@@ -9937,10 +9939,10 @@ ${data.map((a, i) => `
                 <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 3 }}>
                     <Box>
-                      <Typography variant="h5" sx={{ fontWeight: 900, color: '#fff', mb: 0.5 }}>
+                      <Typography variant="h5" sx={{ fontWeight: 900, color: tok('--text'), mb: 0.5 }}>
                         Advanced Performance Analytics
                       </Typography>
-                      <Typography variant="body2" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+                      <Typography variant="body2" sx={{ color: tok('--text-secondary'), fontWeight: 500 }}>
                         Operational workload and technical assessment deep-dive for <span style={{ color: colors.primary, fontWeight: 700 }}>{selectedTeam?.teamName}</span>
                       </Typography>
                     </Box>
@@ -9950,7 +9952,7 @@ ${data.map((a, i) => `
                       <Paper sx={{
                         display: 'inline-flex',
                         p: 0.5,
-                        bgcolor: 'rgba(255,255,255,0.03)',
+                        bgcolor: tok('--overlay-subtle'),
                         border: '1px solid rgba(255,255,255,0.08)',
                         borderRadius: '14px',
                         backdropFilter: 'blur(10px)'
@@ -9963,14 +9965,14 @@ ${data.map((a, i) => `
                           sx={{
                             '& .MuiToggleButton-root': {
                               border: 'none',
-                              color: '#64748b',
+                              color: tok('--text-muted'),
                               px: 2,
                               borderRadius: '10px !important',
                               textTransform: 'none',
                               fontWeight: 600,
                               '&.Mui-selected': {
                                 bgcolor: colors.primary,
-                                color: '#fff',
+                                color: tok('--text'),
                                 '&:hover': { bgcolor: colors.primary }
                               }
                             }
@@ -9994,9 +9996,9 @@ ${data.map((a, i) => `
                           sx={{
                             width: 100,
                             '& .MuiOutlinedInput-root': {
-                              bgcolor: 'rgba(255,255,255,0.03)',
+                              bgcolor: tok('--overlay-subtle'),
                               borderRadius: '12px',
-                              color: '#fff'
+                              color: tok('--text')
                             }
                           }}
                         >
@@ -10017,8 +10019,8 @@ ${data.map((a, i) => `
                             <TextField {...params} placeholder="Select Weeks" sx={{ width: 250 }} />
                           )}
                           sx={{
-                            '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px' },
-                            '& .MuiChip-root': { bgcolor: colors.primary, color: '#fff' }
+                            '& .MuiOutlinedInput-root': { bgcolor: tok('--overlay-subtle'), borderRadius: '12px' },
+                            '& .MuiChip-root': { bgcolor: colors.primary, color: tok('--text') }
                           }}
                         />
                       )}
@@ -10034,8 +10036,8 @@ ${data.map((a, i) => `
                             <TextField {...params} placeholder="Select Months" sx={{ width: 250 }} />
                           )}
                           sx={{
-                            '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px' },
-                            '& .MuiChip-root': { bgcolor: colors.primary, color: '#fff' }
+                            '& .MuiOutlinedInput-root': { bgcolor: tok('--overlay-subtle'), borderRadius: '12px' },
+                            '& .MuiChip-root': { bgcolor: colors.primary, color: tok('--text') }
                           }}
                         />
                       )}
@@ -10047,15 +10049,15 @@ ${data.map((a, i) => `
                             size="small"
                             value={taskCustomDateRange.start}
                             onChange={(e) => setTaskCustomDateRange({ ...taskCustomDateRange, start: e.target.value })}
-                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#fff' } }}
+                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: tok('--overlay-subtle'), borderRadius: '12px', color: '#fff' } }}
                           />
-                          <Typography sx={{ color: '#94a3b8' }}>-</Typography>
+                          <Typography sx={{ color: tok('--text-secondary') }}>-</Typography>
                           <TextField
                             type="date"
                             size="small"
                             value={taskCustomDateRange.end}
                             onChange={(e) => setTaskCustomDateRange({ ...taskCustomDateRange, end: e.target.value })}
-                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#fff' } }}
+                            sx={{ '& .MuiOutlinedInput-root': { bgcolor: tok('--overlay-subtle'), borderRadius: '12px', color: '#fff' } }}
                           />
                         </Box>
                       )}
@@ -10178,24 +10180,24 @@ ${data.map((a, i) => `
                         }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Box sx={{ p: 1, bgcolor: colors.primary, borderRadius: '8px' }}>
-                              <FaUserTie color="#fff" />
+                              <FaUserTie color={tok('--text')} />
                             </Box>
                             <Box>
                               <Typography variant="subtitle2" sx={{ color: colors.primary, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>Focused Analytical Mode</Typography>
-                              <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700 }}>Ownership: {activeOwnershipInsight}</Typography>
+                              <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700 }}>Ownership: {activeOwnershipInsight}</Typography>
                             </Box>
                           </Box>
                           <Box sx={{ textAlign: 'right', display: 'flex', gap: 2, alignItems: 'center' }}>
                             <Box>
                               <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 900 }}>{individualTeamAnalytics.focusedData.total}</Typography>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>TOTAL VIOLATIONS</Typography>
+                              <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>TOTAL VIOLATIONS</Typography>
                             </Box>
                             <Button
                               variant="outlined"
                               onClick={() => setActiveOwnershipInsight(null)}
                               sx={{
-                                color: '#fff',
-                                borderColor: 'rgba(255,255,255,0.2)',
+                                color: tok('--text'),
+                                borderColor: tok('--border'),
                                 borderRadius: '10px',
                                 textTransform: 'none'
                               }}
@@ -10210,7 +10212,7 @@ ${data.map((a, i) => `
                     {/* Reason Analysis */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <MdInsights style={{ color: colors.success }} />
                           {activeOwnershipInsight ? `Reason Analysis (${activeOwnershipInsight})` : 'Reason Analysis'}
                         </Typography>
@@ -10220,10 +10222,10 @@ ${data.map((a, i) => `
                               data={activeOwnershipInsight ? individualTeamAnalytics.focusedData?.reasonData : individualTeamAnalytics.reasonData.slice(0, 8)}
                             >
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} angle={-25} textAnchor="end" height={60} />
-                              <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} angle={-25} textAnchor="end" height={60} />
+                              <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
                               <RechartsTooltip
-                                contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }}
+                                contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 12 }}
                                 itemStyle={{ color: colors.secondary }}
                               />
                               <RechartsBar
@@ -10246,16 +10248,16 @@ ${data.map((a, i) => `
                     {/* Ownership Selection */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
-                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <FaUserTie style={{ color: colors.info }} /> Ownership Distribution
                         </Typography>
                         <Box sx={{ height: 300 }}>
                           <ResponsiveContainer width="100%" height="100%">
                             <RechartsBarChart data={individualTeamAnalytics.ownerData.slice(0, 8)} layout="vertical">
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                              <XAxis type="number" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} width={120} />
-                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }} />
+                              <XAxis type="number" stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} width={120} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 12 }} />
                               <RechartsBar
                                 dataKey="value"
                                 onClick={(data) => {
@@ -10285,7 +10287,7 @@ ${data.map((a, i) => `
                     {/* Sub-Reason Analysis */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(245, 158, 11, 0.1)' }}>
-                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <MdInsights style={{ color: colors.warning }} />
                           {activeOwnershipInsight ? `Sub-Reason Breakdown (${activeOwnershipInsight})` : 'Sub-Reason Breakdown'}
                         </Typography>
@@ -10296,9 +10298,9 @@ ${data.map((a, i) => `
                               layout="vertical"
                             >
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                              <XAxis type="number" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} width={120} />
-                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }} />
+                              <XAxis type="number" stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} width={120} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 12 }} />
                               <RechartsBar
                                 dataKey="value"
                                 fill={colors.warning}
@@ -10315,7 +10317,7 @@ ${data.map((a, i) => `
                     {/* Root Cause Analysis */}
                     <Grid item xs={12} md={6}>
                       <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
-                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Warning sx={{ color: colors.error }} />
                           {activeOwnershipInsight ? `Root Cause Distribution (${activeOwnershipInsight})` : 'Root Cause Distribution'}
                         </Typography>
@@ -10325,9 +10327,9 @@ ${data.map((a, i) => `
                               data={activeOwnershipInsight ? individualTeamAnalytics.focusedData?.rootCauseData : individualTeamAnalytics.rootCauseData.slice(0, 10)}
                             >
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} angle={-25} textAnchor="end" height={60} />
-                              <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }} />
+                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} angle={-25} textAnchor="end" height={60} />
+                              <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: tok('--text-secondary') }} />
+                              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 12 }} />
                               <RechartsBar
                                 dataKey="value"
                                 fill={colors.error}
@@ -10350,8 +10352,8 @@ ${data.map((a, i) => `
                           <Timeline fontSize="medium" />
                         </Box>
                         <Box>
-                          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 900 }}>Post-Session Performance Analysis</Typography>
-                          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                          <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 900 }}>Post-Session Performance Analysis</Typography>
+                          <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>
                             Analyzing commitment and violations recorded after the latest session ({formatDate(postSessionAnalytics.latestSessionDate)})
                           </Typography>
                         </Box>
@@ -10379,22 +10381,22 @@ ${data.map((a, i) => `
                         <Grid container spacing={3}>
                           <Grid item xs={12} md={4}>
                             <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: '1px solid rgba(139, 92, 246, 0.1)', height: '100%' }}>
-                              <Typography variant="subtitle2" sx={{ color: '#94a3b8', mb: 2, fontWeight: 700 }}>POST-SESSION SENTIMENT</Typography>
+                              <Typography variant="subtitle2" sx={{ color: tok('--text-secondary'), mb: 2, fontWeight: 700 }}>POST-SESSION SENTIMENT</Typography>
                               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <Typography sx={{ color: colors.error, fontWeight: 600 }}>Detractors</Typography>
-                                  <Typography sx={{ color: '#fff', fontWeight: 900 }}>{postSessionAnalytics.sentiment.Detractor} ({((postSessionAnalytics.sentiment.Detractor / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
+                                  <Typography sx={{ color: tok('--text'), fontWeight: 900 }}>{postSessionAnalytics.sentiment.Detractor} ({((postSessionAnalytics.sentiment.Detractor / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <Typography sx={{ color: colors.warning, fontWeight: 600 }}>Neutrals</Typography>
-                                  <Typography sx={{ color: '#fff', fontWeight: 900 }}>{postSessionAnalytics.sentiment.Neutral} ({((postSessionAnalytics.sentiment.Neutral / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
+                                  <Typography sx={{ color: tok('--text'), fontWeight: 900 }}>{postSessionAnalytics.sentiment.Neutral} ({((postSessionAnalytics.sentiment.Neutral / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <Typography sx={{ color: colors.success, fontWeight: 600 }}>Promoters</Typography>
-                                  <Typography sx={{ color: '#fff', fontWeight: 900 }}>{postSessionAnalytics.sentiment.Promoter} ({((postSessionAnalytics.sentiment.Promoter / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
+                                  <Typography sx={{ color: tok('--text'), fontWeight: 900 }}>{postSessionAnalytics.sentiment.Promoter} ({((postSessionAnalytics.sentiment.Promoter / postSessionAnalytics.totalPostTasks) * 100).toFixed(1)}%)</Typography>
                                 </Box>
-                                <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.05)' }} />
-                                <Typography variant="caption" sx={{ color: '#64748b', fontStyle: 'italic' }}>
+                                <Divider sx={{ my: 1, borderColor: tok('--border') }} />
+                                <Typography variant="caption" sx={{ color: tok('--text-muted'), fontStyle: 'italic' }}>
                                   Total of {postSessionAnalytics.totalPostTasks} violations recorded since last training.
                                 </Typography>
                               </Box>
@@ -10403,9 +10405,9 @@ ${data.map((a, i) => `
                           <Grid item xs={12} md={8}>
                             <Paper sx={{ p: 3, ...colors.glass, borderRadius: '24px', border: `1px solid ${activePostSessionOwner ? colors.primary + '40' : 'rgba(59, 130, 246, 0.1)'}` }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ color: '#94a3b8', fontWeight: 700 }}>
+                                <Typography variant="subtitle2" sx={{ color: tok('--text-secondary'), fontWeight: 700 }}>
                                   POST-SESSION OWNERSHIP BREAKDOWN
-                                  <Typography component="span" variant="caption" sx={{ ml: 1, color: '#64748b' }}>click a bar to drill down</Typography>
+                                  <Typography component="span" variant="caption" sx={{ ml: 1, color: tok('--text-muted') }}>click a bar to drill down</Typography>
                                 </Typography>
                                 {activePostSessionOwner && (
                                   <Chip
@@ -10423,7 +10425,7 @@ ${data.map((a, i) => `
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={10} width={120} />
                                     <RechartsTooltip
-                                      contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 12 }}
+                                      contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 12 }}
                                       formatter={(value, name, props) => [value, 'Violations']}
                                     />
                                     <RechartsBar
@@ -10462,10 +10464,10 @@ ${data.map((a, i) => `
                                     <FaUserTie color={colors.primary} />
                                   </Box>
                                   <Box>
-                                    <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800 }}>
+                                    <Typography variant="subtitle1" sx={{ color: tok('--text'), fontWeight: 800 }}>
                                       Violation Breakdown — {activePostSessionOwner}
                                     </Typography>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                    <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>
                                       {postSessionAnalytics.ownerData.find(o => o.name === activePostSessionOwner)?.value || 0} post-session violations attributed to this owner
                                     </Typography>
                                   </Box>
@@ -10473,13 +10475,13 @@ ${data.map((a, i) => `
                                 <Grid container spacing={3}>
                                   {/* Reason */}
                                   <Grid item xs={12} md={4}>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Reason</Typography>
+                                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Reason</Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                       {postSessionAnalytics.ownerChartData[activePostSessionOwner].reasonData.slice(0, 6).map((item, idx) => (
                                         <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                           <Box sx={{ flex: 1 }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
-                                              <Typography variant="caption" sx={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
+                                              <Typography variant="caption" sx={{ color: tok('--text'), fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
                                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 800 }}>{item.value}</Typography>
                                                 {postSessionAnalytics.preReasons.has(item.name) ? (
@@ -10489,7 +10491,7 @@ ${data.map((a, i) => `
                                                 )}
                                               </Box>
                                             </Box>
-                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: tok('--overlay-subtle'), overflow: 'hidden' }}>
                                               <Box sx={{ height: '100%', width: `${item.percentage}%`, bgcolor: postSessionAnalytics.preReasons.has(item.name) ? colors.error : colors.success, borderRadius: 2, transition: 'width 0.6s ease' }} />
                                             </Box>
                                           </Box>
@@ -10499,13 +10501,13 @@ ${data.map((a, i) => `
                                   </Grid>
                                   {/* Sub-Reason */}
                                   <Grid item xs={12} md={4}>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Sub-Reason</Typography>
+                                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Sub-Reason</Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                       {postSessionAnalytics.ownerChartData[activePostSessionOwner].subReasonData.slice(0, 6).map((item, idx) => (
                                         <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                           <Box sx={{ flex: 1 }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
-                                              <Typography variant="caption" sx={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
+                                              <Typography variant="caption" sx={{ color: tok('--text'), fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
                                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Typography variant="caption" sx={{ color: colors.warning, fontWeight: 800 }}>{item.value}</Typography>
                                                 {postSessionAnalytics.preSubReasons.has(item.name) ? (
@@ -10515,7 +10517,7 @@ ${data.map((a, i) => `
                                                 )}
                                               </Box>
                                             </Box>
-                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: tok('--overlay-subtle'), overflow: 'hidden' }}>
                                               <Box sx={{ height: '100%', width: `${item.percentage}%`, bgcolor: postSessionAnalytics.preSubReasons.has(item.name) ? colors.error : colors.success, borderRadius: 2, transition: 'width 0.6s ease' }} />
                                             </Box>
                                           </Box>
@@ -10525,13 +10527,13 @@ ${data.map((a, i) => `
                                   </Grid>
                                   {/* Root Cause */}
                                   <Grid item xs={12} md={4}>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Root Cause</Typography>
+                                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 1.5 }}>By Root Cause</Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                       {postSessionAnalytics.ownerChartData[activePostSessionOwner].rootCauseData.slice(0, 6).map((item, idx) => (
                                         <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                           <Box sx={{ flex: 1 }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
-                                              <Typography variant="caption" sx={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
+                                              <Typography variant="caption" sx={{ color: tok('--text'), fontWeight: 600, fontSize: '0.78rem' }}>{item.name}</Typography>
                                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Typography variant="caption" sx={{ color: colors.error, fontWeight: 800 }}>{item.value}</Typography>
                                                 {postSessionAnalytics.preRootCauses.has(item.name) ? (
@@ -10541,7 +10543,7 @@ ${data.map((a, i) => `
                                                 )}
                                               </Box>
                                             </Box>
-                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                                            <Box sx={{ height: 4, borderRadius: 2, bgcolor: tok('--overlay-subtle'), overflow: 'hidden' }}>
                                               <Box sx={{ height: '100%', width: `${item.percentage}%`, bgcolor: postSessionAnalytics.preRootCauses.has(item.name) ? colors.error : colors.success, borderRadius: 2, transition: 'width 0.6s ease' }} />
                                             </Box>
                                           </Box>
@@ -10556,7 +10558,7 @@ ${data.map((a, i) => `
                         </Grid>
                       ) : (
                         <Paper sx={{ p: 4, ...colors.glass, borderRadius: '24px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                          <Typography sx={{ color: '#94a3b8' }}>Excellent! No violations recorded since the last session on {formatDate(postSessionAnalytics.latestSessionDate)}.</Typography>
+                          <Typography sx={{ color: tok('--text-secondary') }}>Excellent! No violations recorded since the last session on {formatDate(postSessionAnalytics.latestSessionDate)}.</Typography>
                         </Paper>
                       )}
                     </Box>
@@ -10567,7 +10569,7 @@ ${data.map((a, i) => `
                     <Box sx={{ mb: 4, animation: 'fadeIn 0.5s ease-in' }}>
                       <Paper sx={{
                         p: 0,
-                        bgcolor: '#1e293b',
+                        bgcolor: tok('--surface'),
                         borderRadius: 3,
                         border: `1px solid ${colors.primary}40`,
                         overflow: 'hidden',
@@ -10575,24 +10577,24 @@ ${data.map((a, i) => `
                       }}>
                         <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box>
-                            <Typography variant="h6" fontWeight="700" color="#f8fafc">Detailed Violation History</Typography>
+                            <Typography variant="h6" fontWeight="700" color={tok('--text')}>Detailed Violation History</Typography>
                             <Typography variant="caption" sx={{ color: colors.primary }}>Granular view of violations occurring after {formatDate(postSessionAnalytics.latestSessionDate)}</Typography>
                           </Box>
                           <Chip label={`${postSessionAnalytics.totalPostTasks} Violations`} size="small" sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, fontWeight: 800 }} />
                         </Box>
                         <Box sx={{ overflowX: 'auto' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead style={{ background: '#0f172a' }}>
+                            <thead style={{ background: tok('--bg') }}>
                               <tr>
-                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>DATE</th>
-                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
-                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REASON (PRIMARY)</th>
-                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SUB-REASON</th>
-                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>ROOT CAUSE</th>
-                                <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>OWNERSHIP</th>
-                                <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>RECURRENCE</th>
-                                <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SENTIMENT</th>
-                                <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>ACTIONS</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>DATE</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SLID</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>REASON (PRIMARY)</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SUB-REASON</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>ROOT CAUSE</th>
+                                <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>OWNERSHIP</th>
+                                <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem' }}>RECURRENCE</th>
+                                <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SENTIMENT</th>
+                                <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem' }}>ACTIONS</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -10604,9 +10606,9 @@ ${data.map((a, i) => `
 
                                 return (
                                   <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', background: task.isRepeat ? 'rgba(239,68,68,0.03)' : 'rgba(34,197,94,0.03)' }}>
-                                    <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.8rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
+                                    <td style={{ padding: '16px', color: tok('--text-secondary'), fontSize: '0.8rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
                                     <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
-                                    <td style={{ padding: '16px', color: '#fff', fontSize: '0.8rem' }}>
+                                    <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.8rem' }}>
                                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
                                         <span>{reasons[0] || 'N/A'}</span>
                                         {task.isRepeatReason && reasons[0] && reasons[0] !== 'N/A' && (
@@ -10614,12 +10616,12 @@ ${data.map((a, i) => `
                                         )}
                                       </Box>
                                     </td>
-                                    <td style={{ padding: '16px', color: '#fff', fontSize: '0.8rem' }}>{subReasons[0] || 'N/A'}</td>
-                                    <td style={{ padding: '16px', color: '#fff', fontSize: '0.8rem' }}>{rootCauses[0] || 'N/A'}</td>
+                                    <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.8rem' }}>{subReasons[0] || 'N/A'}</td>
+                                    <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.8rem' }}>{rootCauses[0] || 'N/A'}</td>
                                     <td style={{ padding: '16px' }}>
                                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                         {owners.map((o, idx) => (
-                                          <Chip key={idx} label={o} size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: 'rgba(255,255,255,0.05)', color: '#fff' }} />
+                                          <Chip key={idx} label={o} size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: tok('--overlay-subtle'), color: '#fff' }} />
                                         ))}
                                       </Box>
                                     </td>
@@ -10685,7 +10687,7 @@ ${data.map((a, i) => `
                     elevation={0}
                     sx={{
                       p: 0,
-                      bgcolor: '#1e293b',
+                      bgcolor: tok('--surface'),
                       borderRadius: 3,
                       border: '1px solid rgba(255, 255, 255, 0.08)',
                       overflow: 'hidden',
@@ -10693,7 +10695,7 @@ ${data.map((a, i) => `
                     }}
                   >
                     <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="h6" fontWeight="700" color="#f8fafc">Technical Task Registry</Typography>
+                      <Typography variant="h6" fontWeight="700" color={tok('--text')}>Technical Task Registry</Typography>
                       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         {taskTimeFilterMode !== 'all' && (
                           <Chip
@@ -10708,25 +10710,25 @@ ${data.map((a, i) => `
                     </Box>
                     <Box sx={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead style={{ background: '#0f172a' }}>
+                        <thead style={{ background: tok('--bg') }}>
                           <tr>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REQUEST NO</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>CUSTOMER</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PIS DATE</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PRIORITY</th>
-                            <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>STATUS</th>
-                            <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SCORE</th>
-                            <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>ACTIONS</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>REQUEST NO</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>CUSTOMER</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SLID</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>PIS DATE</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>PRIORITY</th>
+                            <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>STATUS</th>
+                            <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SCORE</th>
+                            <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem' }}>ACTIONS</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredTechnicalTasks.map((task) => (
                             <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s' }}>
-                              <td style={{ padding: '16px', color: '#fff', fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
-                              <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{task.customerName}</td>
+                              <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
+                              <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.85rem' }}>{task.customerName}</td>
                               <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
-                              <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
+                              <td style={{ padding: '16px', color: tok('--text-secondary'), fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
                               <td style={{ padding: '16px' }}>
                                 <Chip label={task.priority} size="small" color={task.priority === 'High' ? 'error' : task.priority === 'Medium' ? 'warning' : 'success'} variant="outlined" />
                               </td>
@@ -10768,7 +10770,7 @@ ${data.map((a, i) => `
                           ))}
                           {filteredTechnicalTasks.length === 0 && (
                             <tr>
-                              <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                              <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: tok('--text-secondary') }}>
                                 No tasks found matching the selected filters.
                               </td>
                             </tr>
@@ -10800,7 +10802,7 @@ ${data.map((a, i) => `
                           disabled={quizResults.length === 0}
                           sx={{
                             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                            color: '#fff',
+                            color: tok('--text'),
                             fontWeight: 700,
                             textTransform: 'none',
                             borderRadius: '8px',
@@ -10914,7 +10916,7 @@ ${data.map((a, i) => `
                         overflow: 'hidden'
                       }}>
                         <Table>
-                          <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
+                          <TableHead sx={{ bgcolor: tok('--overlay-subtle') }}>
                             <TableRow>
                               <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Exam Date</TableCell>
                               <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Exam Standard / Quiz Code</TableCell>
@@ -10955,11 +10957,11 @@ ${data.map((a, i) => `
                                     sx={{
                                       transition: '0.2s',
                                       '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.04)'
+                                        backgroundColor: tok('--overlay-subtle')
                                       }
                                     }}
                                   >
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         {safeFormatDate(result.submittedAt || result.createdAt)}
                                       </Typography>
@@ -10968,7 +10970,7 @@ ${data.map((a, i) => `
                                       </Typography>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Typography variant="body2" sx={{ fontWeight: 700, color: '#60a5fa' }}>
                                         {result.quizCode || 'FTTH-EXAM-STD'}
                                       </Typography>
@@ -10977,9 +10979,9 @@ ${data.map((a, i) => `
                                       </Typography>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text-secondary') }}>
                                           {result.candidateName || result.fieldTeamName || selectedTeam?.teamName || 'Technician'}
                                         </Typography>
                                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -11016,7 +11018,7 @@ ${data.map((a, i) => `
                                       </Box>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                         <Chip
                                           label={`${result.correctAnswers || 0} / ${result.totalQuestions || 50} Correct`}
@@ -11047,7 +11049,7 @@ ${data.map((a, i) => `
                                             width: 60,
                                             height: 4,
                                             borderRadius: 2,
-                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                            bgcolor: tok('--overlay-subtle'),
                                             '& .MuiLinearProgress-bar': {
                                               bgcolor: scoreColor
                                             }
@@ -11199,7 +11201,7 @@ ${data.map((a, i) => `
                       backdropFilter: 'blur(10px)'
                     }}>
                       <PsychologyIcon sx={{ fontSize: 48, color: alpha(colors.primary, 0.4), mb: 1.5 }} />
-                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 0.5 }}>
+                      <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 0.5 }}>
                         No Online Exam Assessments Recorded for {selectedTeam?.teamName || 'this team'}
                       </Typography>
                       <Typography variant="body2" sx={{ color: colors.textSecondary, maxWidth: 500, mx: 'auto' }}>
@@ -11230,7 +11232,7 @@ ${data.map((a, i) => `
                           disabled={jobAssessments.length === 0}
                           sx={{
                             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                            color: '#fff',
+                            color: tok('--text'),
                             fontWeight: 700,
                             textTransform: 'none',
                             borderRadius: '8px',
@@ -11287,7 +11289,7 @@ ${data.map((a, i) => `
                             label={`${avgTier.label} (${avgTier.status})`}
                             sx={{
                               bgcolor: alpha(avgTier.color, 0.25),
-                              color: '#fff',
+                              color: tok('--text'),
                               fontWeight: 700,
                               py: 2.2,
                               px: 1
@@ -11314,7 +11316,7 @@ ${data.map((a, i) => `
                         overflow: 'hidden'
                       }}>
                         <Table>
-                          <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
+                          <TableHead sx={{ bgcolor: tok('--overlay-subtle') }}>
                             <TableRow>
                               <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Assessment Date</TableCell>
                               <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Evaluator / Supervisor</TableCell>
@@ -11356,11 +11358,11 @@ ${data.map((a, i) => `
                                     sx={{
                                       transition: '0.2s',
                                       '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.04)'
+                                        backgroundColor: tok('--overlay-subtle')
                                       }
                                     }}
                                   >
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         {safeFormatDate(assessment.assessmentDate || assessment.createdAt)}
                                       </Typography>
@@ -11369,8 +11371,8 @@ ${data.map((a, i) => `
                                       </Typography>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text-secondary') }}>
                                         {assessment.conductedBy || 'Quality Field Supervisor'}
                                       </Typography>
                                       <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -11378,7 +11380,7 @@ ${data.map((a, i) => `
                                       </Typography>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
                                           {expStr && (
@@ -11413,7 +11415,7 @@ ${data.map((a, i) => `
                                             {assessment.fieldTeamId?.teamCompany || selectedTeam?.teamCompany || 'Subcontractor'}
                                           </Typography>
                                           {dobVal && (
-                                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                            <Typography variant="caption" sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>
                                               • DoB: {safeFormatDate(dobVal)}
                                             </Typography>
                                           )}
@@ -11421,7 +11423,7 @@ ${data.map((a, i) => `
                                       </Box>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 240 }}>
                                         <Chip
                                           label={`${checkPointCount} Checkpoints`}
@@ -11460,7 +11462,7 @@ ${data.map((a, i) => `
                                             width: 60,
                                             height: 4,
                                             borderRadius: 2,
-                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                            bgcolor: tok('--overlay-subtle'),
                                             '& .MuiLinearProgress-bar': {
                                               bgcolor: tier.color
                                             }
@@ -11594,7 +11596,7 @@ ${data.map((a, i) => `
                       backdropFilter: 'blur(10px)'
                     }}>
                       <CheckCircleIcon sx={{ fontSize: 48, color: alpha(colors.primary, 0.4), mb: 1.5 }} />
-                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 0.5 }}>
+                      <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 0.5 }}>
                         No Practical OTJ Assessments Recorded for {selectedTeam?.teamName || 'this team'}
                       </Typography>
                       <Typography variant="body2" sx={{ color: colors.textSecondary, maxWidth: 500, mx: 'auto' }}>
@@ -11625,7 +11627,7 @@ ${data.map((a, i) => `
                           disabled={labAssessments.length === 0}
                           sx={{
                             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                            color: '#fff',
+                            color: tok('--text'),
                             fontWeight: 700,
                             textTransform: 'none',
                             borderRadius: '8px',
@@ -11682,7 +11684,7 @@ ${data.map((a, i) => `
                             label={`${avgTier.label} (${avgTier.status})`}
                             sx={{
                               bgcolor: alpha(avgTier.color, 0.25),
-                              color: '#fff',
+                              color: tok('--text'),
                               fontWeight: 700,
                               py: 2.2,
                               px: 1
@@ -11709,7 +11711,7 @@ ${data.map((a, i) => `
                         overflow: 'hidden'
                       }}>
                         <Table>
-                          <TableHead sx={{ bgcolor: 'rgba(255, 255, 255, 0.04)' }}>
+                          <TableHead sx={{ bgcolor: tok('--overlay-subtle') }}>
                             <TableRow>
                               <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Assessment Date</TableCell>
                               <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, fontSize: '0.85rem' }}>Evaluator / Assessor</TableCell>
@@ -11736,11 +11738,11 @@ ${data.map((a, i) => `
                                     sx={{
                                       transition: '0.2s',
                                       '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.04)'
+                                        backgroundColor: tok('--overlay-subtle')
                                       }
                                     }}
                                   >
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                         {safeFormatDate(assessment.assessmentDate || assessment.createdAt)}
                                       </Typography>
@@ -11749,8 +11751,8 @@ ${data.map((a, i) => `
                                       </Typography>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text-secondary') }}>
                                         {assessment.conductedBy || assessment.assessorId?.name || 'Quality Assessor'}
                                       </Typography>
                                       <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -11758,7 +11760,7 @@ ${data.map((a, i) => `
                                       </Typography>
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       {(() => {
                                         const dobVal = assessment.dateOfBirth || assessment.fieldTeamId?.dateOfBirth;
                                         let ageNum = assessment.age !== undefined && assessment.age !== null ? assessment.age : (assessment.fieldTeamId?.age !== undefined && assessment.fieldTeamId?.age !== null ? assessment.fieldTeamId.age : null);
@@ -11804,7 +11806,7 @@ ${data.map((a, i) => `
                                                 {assessment.employmentType || 'Subcontractor'}
                                               </Typography>
                                               {dobVal && (
-                                                <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                                                <Typography variant="caption" sx={{ color: tok('--text-secondary'), fontSize: '0.7rem' }}>
                                                   • DoB: {safeFormatDate(dobVal)}
                                                 </Typography>
                                               )}
@@ -11814,7 +11816,7 @@ ${data.map((a, i) => `
                                       })()}
                                     </TableCell>
 
-                                    <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                                    <TableCell sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
                                       {certKeys.length > 0 ? (
                                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 220 }}>
                                           {certKeys.map(k => (
@@ -11855,7 +11857,7 @@ ${data.map((a, i) => `
                                             width: 60,
                                             height: 4,
                                             borderRadius: 2,
-                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                            bgcolor: tok('--overlay-subtle'),
                                             '& .MuiLinearProgress-bar': {
                                               bgcolor: tier.color
                                             }
@@ -12006,7 +12008,7 @@ ${data.map((a, i) => `
                       backdropFilter: 'blur(10px)'
                     }}>
                       <Assessment sx={{ fontSize: 48, color: alpha(colors.primary, 0.4), mb: 1.5 }} />
-                      <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 0.5 }}>
+                      <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700, mb: 0.5 }}>
                         No Lab Assessments Recorded for {selectedTeam?.teamName || 'this team'}
                       </Typography>
                       <Typography variant="body2" sx={{ color: colors.textSecondary, maxWidth: 500, mx: 'auto' }}>
@@ -12026,7 +12028,7 @@ ${data.map((a, i) => `
                 PaperProps={{
                   sx: {
                     bgcolor: '#18181b',
-                    color: '#fff',
+                    color: tok('--text'),
                     borderRadius: '20px',
                     border: '1px solid rgba(239, 68, 68, 0.4)',
                     boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
@@ -12041,24 +12043,24 @@ ${data.map((a, i) => `
                   <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
                     Permanent Delete Warning: This action cannot be undone!
                   </Alert>
-                  <Typography variant="body1" sx={{ color: '#e2e8f0', mb: 2, lineHeight: 1.6 }}>
+                  <Typography variant="body1" sx={{ color: tok('--text-secondary'), mb: 2, lineHeight: 1.6 }}>
                     You are about to permanently delete the <strong>E2E FTTH Practical Assessment</strong> for team{" "}
                     <span style={{ color: '#60a5fa', fontWeight: 700 }}>
                       {labAssessmentToDelete?.fieldTeamName || labAssessmentToDelete?.fieldTeamId?.teamName || selectedTeam?.teamName || 'this team'}
                     </span>.
                   </Typography>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                  <Paper sx={{ p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block', mb: 0.5 }}>
                       Assessment Date: <strong>{safeFormatDate(labAssessmentToDelete?.assessmentDate || labAssessmentToDelete?.createdAt)}</strong>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block', mb: 0.5 }}>
                       Assessor / Evaluator: <strong>{labAssessmentToDelete?.conductedBy || labAssessmentToDelete?.assessorId?.name || 'Assessor'}</strong>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block' }}>
                       Score: <strong>{labAssessmentToDelete?.totalScore !== undefined ? labAssessmentToDelete.totalScore : (labAssessmentToDelete?.overallScore || 0)}%</strong>
                     </Typography>
                   </Paper>
-                  <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                  <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
                     All evaluation checkpoints, inspection matrices, scores, supervisor comments, and audit records will be permanently removed from the database and exported reports.
                   </Typography>
                 </DialogContent>
@@ -12068,8 +12070,8 @@ ${data.map((a, i) => `
                     onClick={() => setDeleteLabDialogOpen(false)}
                     disabled={deletingLab}
                     sx={{
-                      borderColor: 'rgba(255,255,255,0.2)',
-                      color: '#e2e8f0',
+                      borderColor: tok('--border'),
+                      color: tok('--text-secondary'),
                       borderRadius: '10px',
                       textTransform: 'none',
                       fontWeight: 600
@@ -12106,7 +12108,7 @@ ${data.map((a, i) => `
                 PaperProps={{
                   sx: {
                     bgcolor: '#18181b',
-                    color: '#fff',
+                    color: tok('--text'),
                     borderRadius: '20px',
                     border: '1px solid rgba(239, 68, 68, 0.4)',
                     boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
@@ -12121,24 +12123,24 @@ ${data.map((a, i) => `
                   <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
                     Permanent Delete Warning: This action cannot be undone!
                   </Alert>
-                  <Typography variant="body1" sx={{ color: '#e2e8f0', mb: 2, lineHeight: 1.6 }}>
+                  <Typography variant="body1" sx={{ color: tok('--text-secondary'), mb: 2, lineHeight: 1.6 }}>
                     You are about to permanently delete the <strong>On-The-Job (OTJ) Practical Field Assessment</strong> for team{" "}
                     <span style={{ color: '#60a5fa', fontWeight: 700 }}>
                       {jobAssessmentToDelete?.fieldTeamName || jobAssessmentToDelete?.fieldTeamId?.teamName || selectedTeam?.teamName || 'this team'}
                     </span>.
                   </Typography>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                  <Paper sx={{ p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block', mb: 0.5 }}>
                       Assessment Date: <strong>{safeFormatDate(jobAssessmentToDelete?.assessmentDate || jobAssessmentToDelete?.createdAt)}</strong>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block', mb: 0.5 }}>
                       Supervisor / Evaluator: <strong>{jobAssessmentToDelete?.conductedBy || 'Supervisor'}</strong>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block' }}>
                       Proficiency Score: <strong>{jobAssessmentToDelete?.overallScore || jobAssessmentToDelete?.percentage || 0}%</strong>
                     </Typography>
                   </Paper>
-                  <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                  <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
                     All checkpoint scores, category audits, supervisor notes, and historical evaluations will be permanently removed.
                   </Typography>
                 </DialogContent>
@@ -12148,8 +12150,8 @@ ${data.map((a, i) => `
                     onClick={() => setDeleteJobDialogOpen(false)}
                     disabled={deletingJob}
                     sx={{
-                      borderColor: 'rgba(255,255,255,0.2)',
-                      color: '#e2e8f0',
+                      borderColor: tok('--border'),
+                      color: tok('--text-secondary'),
                       borderRadius: '10px',
                       textTransform: 'none',
                       fontWeight: 600
@@ -12186,7 +12188,7 @@ ${data.map((a, i) => `
                 PaperProps={{
                   sx: {
                     bgcolor: '#18181b',
-                    color: '#fff',
+                    color: tok('--text'),
                     borderRadius: '20px',
                     border: '1px solid rgba(239, 68, 68, 0.4)',
                     boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
@@ -12201,24 +12203,24 @@ ${data.map((a, i) => `
                   <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
                     Permanent Delete Warning: This action cannot be undone!
                   </Alert>
-                  <Typography variant="body1" sx={{ color: '#e2e8f0', mb: 2, lineHeight: 1.6 }}>
+                  <Typography variant="body1" sx={{ color: tok('--text-secondary'), mb: 2, lineHeight: 1.6 }}>
                     You are about to permanently delete the <strong>Online Theoretical Exam Result</strong> for{" "}
                     <span style={{ color: '#60a5fa', fontWeight: 700 }}>
                       {quizToDelete?.candidateName || quizToDelete?.fieldTeamName || selectedTeam?.teamName || 'this candidate'}
                     </span>.
                   </Typography>
-                  <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                  <Paper sx={{ p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block', mb: 0.5 }}>
                       Exam Date: <strong>{safeFormatDate(quizToDelete?.submittedAt || quizToDelete?.createdAt)}</strong>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block', mb: 0.5 }}>
                       Quiz Code: <strong>{quizToDelete?.quizCode || 'Standard'}</strong>
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-secondary'), display: 'block' }}>
                       Score: <strong>{quizToDelete?.percentage !== undefined ? quizToDelete.percentage : quizToDelete?.score}% ({quizToDelete?.correctAnswers || 0}/{quizToDelete?.totalQuestions || 50} Correct)</strong>
                     </Typography>
                   </Paper>
-                  <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                  <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
                     This exam record, correctness metrics, and historical score will be permanently erased.
                   </Typography>
                 </DialogContent>
@@ -12228,8 +12230,8 @@ ${data.map((a, i) => `
                     onClick={() => setDeleteQuizDialogOpen(false)}
                     disabled={deletingQuiz}
                     sx={{
-                      borderColor: 'rgba(255,255,255,0.2)',
-                      color: '#e2e8f0',
+                      borderColor: tok('--border'),
+                      color: tok('--text-secondary'),
                       borderRadius: '10px',
                       textTransform: 'none',
                       fontWeight: 600
@@ -12266,7 +12268,7 @@ ${data.map((a, i) => `
                 PaperProps={{
                   sx: {
                     bgcolor: '#18181b',
-                    color: '#fff',
+                    color: tok('--text'),
                     borderRadius: '20px',
                     border: '1px solid rgba(59, 130, 246, 0.4)',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
@@ -12278,9 +12280,9 @@ ${data.map((a, i) => `
                   <EditIcon sx={{ color: '#60a5fa', fontSize: '1.6rem' }} /> Edit Online Exam Assessment
                 </DialogTitle>
                 <DialogContent sx={{ mt: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2.5 }}>
+                  <Typography variant="body2" sx={{ color: tok('--text-secondary'), mb: 2.5 }}>
                     Modify theoretical examination scores, question correctness breakdown, and assessor remarks for{" "}
-                    <strong style={{ color: '#fff' }}>{quizToEdit?.candidateName || quizToEdit?.fieldTeamName || selectedTeam?.teamName}</strong>.
+                    <strong style={{ color: tok('--text') }}>{quizToEdit?.candidateName || quizToEdit?.fieldTeamName || selectedTeam?.teamName}</strong>.
                   </Typography>
 
                   <Grid container spacing={2}>
@@ -12364,8 +12366,8 @@ ${data.map((a, i) => `
                     onClick={() => setEditQuizDialogOpen(false)}
                     disabled={savingQuizEdit}
                     sx={{
-                      borderColor: 'rgba(255,255,255,0.2)',
-                      color: '#e2e8f0',
+                      borderColor: tok('--border'),
+                      color: tok('--text-secondary'),
                       borderRadius: '10px',
                       textTransform: 'none',
                       fontWeight: 600
@@ -12401,7 +12403,7 @@ ${data.map((a, i) => `
                 PaperProps={{
                   sx: {
                     bgcolor: '#18181b',
-                    color: '#fff',
+                    color: tok('--text'),
                     borderRadius: '20px',
                     border: '1px solid rgba(255,255,255,0.1)',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
@@ -12413,15 +12415,15 @@ ${data.map((a, i) => `
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <PsychologyIcon sx={{ color: '#60a5fa', fontSize: '1.8rem' }} />
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: tok('--text') }}>
                         Theoretical Online Exam Assessment
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                      <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>
                         Quiz Code: <strong>{selectedQuizDetail?.quizCode || 'Standard'}</strong> • {safeFormatDate(selectedQuizDetail?.submittedAt || selectedQuizDetail?.createdAt)}
                       </Typography>
                     </Box>
                   </Box>
-                  <IconButton onClick={() => setQuizDetailOpen(false)} sx={{ color: '#94a3b8' }}>
+                  <IconButton onClick={() => setQuizDetailOpen(false)} sx={{ color: tok('--text-secondary') }}>
                     <CloseIcon />
                   </IconButton>
                 </DialogTitle>
@@ -12429,8 +12431,8 @@ ${data.map((a, i) => `
                   {selectedQuizDetail && (
                     <Grid container spacing={2.5}>
                       <Grid item xs={12} sm={4}>
-                        <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
-                          <Typography variant="caption" sx={{ color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                        <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                          <Typography variant="caption" sx={{ color: tok('--text-secondary'), textTransform: 'uppercase', fontWeight: 700 }}>
                             Final Score
                           </Typography>
                           <Typography variant="h3" sx={{ fontWeight: 900, color: (Number(String(selectedQuizDetail.percentage || selectedQuizDetail.score || '0').replace('%','')) >= 80) ? '#10b981' : '#ef4444', my: 1 }}>
@@ -12449,32 +12451,32 @@ ${data.map((a, i) => `
                       </Grid>
 
                       <Grid item xs={12} sm={8}>
-                        <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                           <Typography variant="subtitle2" sx={{ color: '#60a5fa', fontWeight: 700, mb: 1.5 }}>
                             Candidate & Evaluation Breakdown
                           </Typography>
                           <Grid container spacing={1.5}>
                             <Grid item xs={6}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Candidate / Team</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                              <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Candidate / Team</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                 {selectedQuizDetail.candidateName || selectedQuizDetail.fieldTeamName || selectedTeam?.teamName || 'Technician'}
                               </Typography>
                             </Grid>
                             <Grid item xs={6}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Correct Answers</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                              <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Correct Answers</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                 {selectedQuizDetail.correctAnswers || 0} / {selectedQuizDetail.totalQuestions || 50} Questions
                               </Typography>
                             </Grid>
                             <Grid item xs={6}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Accuracy Rate</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                              <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Accuracy Rate</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                 {selectedQuizDetail.totalQuestions ? Math.round(((selectedQuizDetail.correctAnswers || 0) / selectedQuizDetail.totalQuestions) * 100) : selectedQuizDetail.percentage || 0}%
                               </Typography>
                             </Grid>
                             <Grid item xs={6}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Submission Timestamp</Typography>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                              <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Submission Timestamp</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                 {selectedQuizDetail.submittedAt ? new Date(selectedQuizDetail.submittedAt).toLocaleString() : '-'}
                               </Typography>
                             </Grid>
@@ -12484,11 +12486,11 @@ ${data.map((a, i) => `
 
                       {selectedQuizDetail.remarks && (
                         <Grid item xs={12}>
-                          <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                             <Typography variant="subtitle2" sx={{ color: '#f59e0b', fontWeight: 700, mb: 1 }}>
                               Assessor Feedback & Remarks
                             </Typography>
-                            <Typography variant="body2" sx={{ color: '#cbd5e1', lineHeight: 1.6 }}>
+                            <Typography variant="body2" sx={{ color: tok('--text-secondary'), lineHeight: 1.6 }}>
                               {selectedQuizDetail.remarks}
                             </Typography>
                           </Paper>
@@ -12556,7 +12558,7 @@ ${data.map((a, i) => `
                 PaperProps={{
                   sx: {
                     bgcolor: '#18181b',
-                    color: '#fff',
+                    color: tok('--text'),
                     borderRadius: '20px',
                     border: '1px solid rgba(255,255,255,0.1)',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
@@ -12568,15 +12570,15 @@ ${data.map((a, i) => `
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <CheckCircleIcon sx={{ color: '#10b981', fontSize: '1.8rem' }} />
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: tok('--text') }}>
                         On-The-Job (OTJ) Assessment Details
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                      <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>
                         Evaluator: <strong>{selectedJobDetail?.conductedBy || 'Supervisor'}</strong> • {safeFormatDate(selectedJobDetail?.assessmentDate || selectedJobDetail?.createdAt)}
                       </Typography>
                     </Box>
                   </Box>
-                  <IconButton onClick={() => setJobDetailOpen(false)} sx={{ color: '#94a3b8' }}>
+                  <IconButton onClick={() => setJobDetailOpen(false)} sx={{ color: tok('--text-secondary') }}>
                     <CloseIcon />
                   </IconButton>
                 </DialogTitle>
@@ -12588,8 +12590,8 @@ ${data.map((a, i) => `
                     return (
                       <Grid container spacing={2.5}>
                         <Grid item xs={12} sm={4}>
-                          <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
+                          <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{ color: tok('--text-secondary'), textTransform: 'uppercase', fontWeight: 700 }}>
                               Proficiency Score
                             </Typography>
                             <Typography variant="h3" sx={{ fontWeight: 900, color: tier.color, my: 1 }}>
@@ -12611,32 +12613,32 @@ ${data.map((a, i) => `
                         </Grid>
 
                         <Grid item xs={12} sm={8}>
-                          <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                             <Typography variant="subtitle2" sx={{ color: '#10b981', fontWeight: 700, mb: 1.5 }}>
                               Assessment Metadata & Inspector Details
                             </Typography>
                             <Grid container spacing={1.5}>
                               <Grid item xs={6}>
-                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Field Team</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Field Team</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                   {selectedJobDetail.fieldTeamName || selectedJobDetail.fieldTeamId?.teamName || selectedTeam?.teamName || 'Field Team'}
                                 </Typography>
                               </Grid>
                               <Grid item xs={6}>
-                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Assessor / Supervisor</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Assessor / Supervisor</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                   {selectedJobDetail.conductedBy || 'Field Supervisor'}
                                 </Typography>
                               </Grid>
                               <Grid item xs={6}>
-                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Assessment Date</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Assessment Date</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                   {safeFormatDate(selectedJobDetail.assessmentDate || selectedJobDetail.createdAt)}
                                 </Typography>
                               </Grid>
                               <Grid item xs={6}>
-                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>Checkpoints Audited</Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff' }}>
+                                <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Checkpoints Audited</Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: tok('--text') }}>
                                   {selectedJobDetail.checkPoints?.length || 20} Checkpoints (5 Categories)
                                 </Typography>
                               </Grid>
@@ -12646,7 +12648,7 @@ ${data.map((a, i) => `
 
                         {selectedJobDetail.checkPoints && selectedJobDetail.checkPoints.length > 0 && (
                           <Grid item xs={12}>
-                            <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                               <Typography variant="subtitle2" sx={{ color: '#c4b5fd', fontWeight: 700, mb: 1.5 }}>
                                 Category Checkpoints & Scores
                               </Typography>
@@ -12654,17 +12656,17 @@ ${data.map((a, i) => `
                                 <Table size="small">
                                   <TableHead>
                                     <TableRow>
-                                      <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Checkpoint</TableCell>
-                                      <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Category</TableCell>
-                                      <TableCell align="center" sx={{ color: '#94a3b8', fontWeight: 700 }}>Score</TableCell>
-                                      <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Notes</TableCell>
+                                      <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 700 }}>Checkpoint</TableCell>
+                                      <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 700 }}>Category</TableCell>
+                                      <TableCell align="center" sx={{ color: tok('--text-secondary'), fontWeight: 700 }}>Score</TableCell>
+                                      <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 700 }}>Notes</TableCell>
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
                                     {selectedJobDetail.checkPoints.map((cp, idx) => (
                                       <TableRow key={idx}>
-                                        <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{cp.name}</TableCell>
-                                        <TableCell sx={{ color: '#94a3b8', fontSize: '0.75rem' }}>{cp.category}</TableCell>
+                                        <TableCell sx={{ color: tok('--text'), fontSize: '0.8rem' }}>{cp.name}</TableCell>
+                                        <TableCell sx={{ color: tok('--text-secondary'), fontSize: '0.75rem' }}>{cp.category}</TableCell>
                                         <TableCell align="center">
                                           <Chip
                                             label={`${cp.score || 0}/5`}
@@ -12678,7 +12680,7 @@ ${data.map((a, i) => `
                                             }}
                                           />
                                         </TableCell>
-                                        <TableCell sx={{ color: '#cbd5e1', fontSize: '0.75rem' }}>{cp.notes || '-'}</TableCell>
+                                        <TableCell sx={{ color: tok('--text-secondary'), fontSize: '0.75rem' }}>{cp.notes || '-'}</TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -12690,11 +12692,11 @@ ${data.map((a, i) => `
 
                         {selectedJobDetail.feedback && (
                           <Grid item xs={12}>
-                            <Paper sx={{ p: 2.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <Paper sx={{ p: 2.5, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                               <Typography variant="subtitle2" sx={{ color: '#f59e0b', fontWeight: 700, mb: 1 }}>
                                 Supervisor Observations & Field Recommendations
                               </Typography>
-                              <Typography variant="body2" sx={{ color: '#cbd5e1', lineHeight: 1.6 }}>
+                              <Typography variant="body2" sx={{ color: tok('--text-secondary'), lineHeight: 1.6 }}>
                                 {selectedJobDetail.feedback}
                               </Typography>
                             </Paper>
@@ -12756,24 +12758,24 @@ ${data.map((a, i) => `
           fullWidth
           PaperProps={{
             sx: {
-              backgroundColor: '#1a1a1a',
+              backgroundColor: tok('--bg'),
               backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
               borderRadius: '16px',
               border: '1px solid rgba(255,255,255,0.1)'
             }
           }}
         >
-          <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <DialogTitle sx={{ color: tok('--text'), borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" fontWeight="bold">Customer Feedback</Typography>
             <IconButton 
               onClick={() => setFeedbackDialog({ open: false, content: '' })}
-              sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}
+              sx={{ color: tok('--text-secondary'), '&:hover': { color: tok('--text') } }}
             >
               <CloseIcon />
             </IconButton>
           </DialogTitle>
           <DialogContent sx={{ mt: 2 }}>
-            <Typography variant="body1" sx={{ color: '#e2e8f0', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+            <Typography variant="body1" sx={{ color: tok('--text-secondary'), whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
               {feedbackDialog.content}
             </Typography>
           </DialogContent>
@@ -12787,7 +12789,7 @@ ${data.map((a, i) => `
           maxWidth="lg"
           PaperProps={{
             sx: {
-              backgroundColor: '#1a1a1a',
+              backgroundColor: tok('--bg'),
               backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
               borderRadius: '24px',
               border: '1px solid rgba(255,255,255,0.1)',
@@ -12803,14 +12805,14 @@ ${data.map((a, i) => `
             borderBottom: '1px solid rgba(255,255,255,0.1)'
           }}>
             <Box>
-              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
+              <Typography variant="h5" sx={{ color: tok('--text'), fontWeight: 900, mb: 0.5 }}>
                 Task List
               </Typography>
-              <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+              <Typography variant="caption" sx={{ color: tok('--accent-text'), fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
                 {analyticsDrillDown.title} ({analyticsDrillDown.tasks.length} Tasks)
               </Typography>
             </Box>
-            <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
+            <IconButton onClick={() => setAnalyticsDrillDown(prev => ({ ...prev, open: false }))} sx={{ color: tok('--text') }}>
               <CloseIcon />
             </IconButton>
           </DialogTitle>
@@ -12818,27 +12820,27 @@ ${data.map((a, i) => `
             <TableContainer>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
-                    <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                  <TableRow sx={{ bgcolor: tok('--overlay-subtle') }}>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Sub-Reason</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Feedback</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
+                    <TableCell sx={{ color: tok('--text-secondary'), fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {analyticsDrillDown.tasks.map((task) => (
-                    <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
-                      <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    <TableRow key={task._id} sx={{ '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
+                      <TableCell sx={{ color: tok('--text'), fontSize: '0.8rem', fontWeight: 'bold' }}>
                         {task.interviewDate ? getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : '-'}
                       </TableCell>
-                      <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
-                      <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                      <TableCell sx={{ color: tok('--text'), fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                      <TableCell sx={{ color: tok('--text'), fontSize: '0.8rem' }}>{task.customerName}</TableCell>
                       <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
                         {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
                       </TableCell>
@@ -12893,7 +12895,7 @@ ${data.map((a, i) => `
                           }}
                           sx={{
                             textTransform: 'none',
-                            color: '#7b68ee',
+                            color: tok('--accent-text'),
                             fontWeight: 'bold',
                             '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
                           }}
@@ -12946,7 +12948,7 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
   }, [open, initialType]);
 
   const renderChart = () => {
-    const labelStyle = { fill: '#fff', fontSize: 10, fontWeight: 600 };
+    const labelStyle = { fill: tok('--text'), fontSize: 10, fontWeight: 600 };
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
     switch (chartType) {
@@ -12955,10 +12957,10 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
           <ResponsiveContainer width="100%" height={450}>
             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
               <PolarGrid stroke="rgba(255,255,255,0.1)" />
-              <PolarAngleAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: '#94a3b8', fontSize: 8 }} />
+              <PolarAngleAxis dataKey="name" tick={{ fill: tok('--text-secondary'), fontSize: 10 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={{ fill: tok('--text-secondary'), fontSize: 8 }} />
               <Radar name="Primary Metric" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
-              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8, color: '#fff' }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 8, color: '#fff' }} />
             </RadarChart>
           </ResponsiveContainer>
         );
@@ -12967,9 +12969,9 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
           <ResponsiveContainer width="100%" height={450}>
             <AreaChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <XAxis dataKey="name" tick={{ fill: tok('--text-secondary'), fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+              <YAxis tick={{ fill: tok('--text-secondary'), fontSize: 10 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 8 }} />
               <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>
@@ -12979,9 +12981,9 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
           <ResponsiveContainer width="100%" height={450}>
             <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <XAxis dataKey="name" tick={{ fill: tok('--text-secondary'), fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+              <YAxis tick={{ fill: tok('--text-secondary'), fontSize: 10 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 8 }} />
               <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
             </LineChart>
           </ResponsiveContainer>
@@ -13004,7 +13006,7 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
               </RechartsPie>
-              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 8 }} />
               <RechartsLegend verticalAlign="bottom" height={36} />
             </RechartsPieChart>
           </ResponsiveContainer>
@@ -13015,9 +13017,9 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
           <ResponsiveContainer width="100%" height={450}>
             <RechartsBarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+              <XAxis dataKey="name" tick={{ fill: tok('--text-secondary'), fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+              <YAxis tick={{ fill: tok('--text-secondary'), fontSize: 10 }} />
+              <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: 'none', borderRadius: 8 }} />
               <RechartsBar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </RechartsBarChart>
           </ResponsiveContainer>
@@ -13026,11 +13028,11 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
   };
 
   return (
-    <Dialog fullWidth maxWidth="lg" open={open} onClose={onClose} PaperProps={{ sx: { bgcolor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 3 } }}>
+    <Dialog fullWidth maxWidth="lg" open={open} onClose={onClose} PaperProps={{ sx: { bgcolor: tok('--bg'), border: '1px solid rgba(255,255,255,0.1)', borderRadius: 3 } }}>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', py: 2 }}>
         <Box>
-          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700 }}>{title} Analytical Insight</Typography>
-          <Typography variant="caption" sx={{ color: '#94a3b8' }}>Advanced Pattern & Distribution Analysis</Typography>
+          <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 700 }}>{title} Analytical Insight</Typography>
+          <Typography variant="caption" sx={{ color: tok('--text-secondary') }}>Advanced Pattern & Distribution Analysis</Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {[
@@ -13054,8 +13056,8 @@ const ProfessionalChartDialog = ({ open, onClose, title, data, type: initialType
               {opt.icon}
             </IconButton>
           ))}
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-          <IconButton onClick={onClose} sx={{ color: '#94a3b8' }}><CloseIcon /></IconButton>
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: tok('--border') }} />
+          <IconButton onClick={onClose} sx={{ color: tok('--text-secondary') }}><CloseIcon /></IconButton>
         </Box>
       </DialogTitle>
       <DialogContent sx={{ p: 4 }}>

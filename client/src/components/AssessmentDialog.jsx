@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -39,10 +40,10 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
 
   // Dark mode colors
   const colors = {
-    background: '#2d2d2d',
+    background: tok('--surface'),
     surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: tok('--border'),
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',
@@ -171,7 +172,7 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
           color: colors.textPrimary
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -181,7 +182,7 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
           precision: 0,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },
@@ -225,7 +226,7 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
           precision: 0,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -237,7 +238,7 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
           }
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },
@@ -471,11 +472,11 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
               }}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedResult.teamName}</Typography>
+                  <Typography sx={{ color: tok('--text') }}>{selectedResult.teamName}</Typography>
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
-                  <Typography sx={{ color: "white" }}>
+                  <Typography sx={{ color: tok('--text') }}>
                     {new Date(selectedResult.submittedAt).toLocaleString()}
                   </Typography>
                 </Box>
@@ -490,17 +491,17 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Percentage</Typography>
-                  <Typography sx={{ color: "white" }}>{selectedResult.percentage}%</Typography>
+                  <Typography sx={{ color: tok('--text') }}>{selectedResult.percentage}%</Typography>
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Correct Answers</Typography>
-                  <Typography sx={{ color: "white" }}>
+                  <Typography sx={{ color: tok('--text') }}>
                     {selectedResult.percentage}/100
                   </Typography>
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Questions Scored</Typography>
-                  <Typography sx={{ color: "white" }}>
+                  <Typography sx={{ color: tok('--text') }}>
                     {selectedResult.userAnswers.filter(a => a.type === 'options' || a.isScored || a.score > 0).length}/{selectedResult.userAnswers.length}
                   </Typography>
                 </Box>
@@ -702,7 +703,7 @@ const AssessmentResultDialog = ({ teamId, teamName, onClose }) => {
                         Overall Accuracy
                       </Typography>
                       <Typography sx={{
-                        color: "white",
+                        color: tok('--text'),
                         fontSize: isMobile ? '0.9rem' : '1rem'
                       }}>
                         {Math.round(

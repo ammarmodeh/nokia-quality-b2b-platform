@@ -30,7 +30,7 @@ export const GlobalLeaderboard = ({
                     borderRadius: '16px',
                     display: 'flex',
                     alignItems: 'center',
-                    border: '1px solid rgba(255,255,255,0.1)'
+                    border: '1px solid var(--border)'
                   }}>
                     <SearchIcon sx={{ color: colors.primary, mr: 2, fontSize: '1.2rem' }} />
                     <TextField
@@ -44,7 +44,7 @@ export const GlobalLeaderboard = ({
                       }}
                       InputProps={{
                         disableUnderline: true,
-                        sx: { color: '#fff', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
+                        sx: { color: 'var(--text)', fontSize: '1rem', fontWeight: 300, letterSpacing: '0.5px' }
                       }}
                     />
                     {leaderboardSearchQuery && (
@@ -54,7 +54,7 @@ export const GlobalLeaderboard = ({
                     )}
                   </Paper>
 
-                  <FormControl sx={{ minWidth: 200, ...colors.glass, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <FormControl sx={{ minWidth: 200, ...colors.glass, borderRadius: '16px', border: '1px solid var(--border)' }}>
                     <Select
                       value={leaderboardStatusQuery}
                       onChange={(e) => {
@@ -67,7 +67,7 @@ export const GlobalLeaderboard = ({
                       sx={{
                         height: '100%',
                         px: 2,
-                        color: '#fff',
+                        color: 'var(--text)',
                         fontWeight: 300,
                         '& .MuiSelect-select': { py: 1.5 }
                       }}
@@ -132,7 +132,7 @@ export const GlobalLeaderboard = ({
                           type="date"
                           fullWidth
                           variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          InputProps={{ disableUnderline: true, sx: { color: 'var(--text)', fontWeight: 300 } }}
                           value={leaderboardDateFilter.start}
                           onChange={(e) => {
                             setLeaderboardDateFilter({ ...leaderboardDateFilter, start: e.target.value });
@@ -146,7 +146,7 @@ export const GlobalLeaderboard = ({
                           type="date"
                           fullWidth
                           variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          InputProps={{ disableUnderline: true, sx: { color: 'var(--text)', fontWeight: 300 } }}
                           value={leaderboardDateFilter.end}
                           onChange={(e) => {
                             setLeaderboardDateFilter({ ...leaderboardDateFilter, end: e.target.value });
@@ -161,7 +161,7 @@ export const GlobalLeaderboard = ({
                           type="number"
                           fullWidth
                           variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          InputProps={{ disableUnderline: true, sx: { color: 'var(--text)', fontWeight: 300 } }}
                           value={leaderboardThresholds.minIssues}
                           onChange={(e) => {
                             setLeaderboardThresholds({ ...leaderboardThresholds, minIssues: e.target.value });
@@ -176,7 +176,7 @@ export const GlobalLeaderboard = ({
                           type="number"
                           fullWidth
                           variant="standard"
-                          InputProps={{ disableUnderline: true, sx: { color: '#fff', fontWeight: 300 } }}
+                          InputProps={{ disableUnderline: true, sx: { color: 'var(--text)', fontWeight: 300 } }}
                           value={leaderboardThresholds.minSuccessRate}
                           onChange={(e) => {
                             setLeaderboardThresholds({ ...leaderboardThresholds, minSuccessRate: e.target.value });
@@ -205,24 +205,24 @@ export const GlobalLeaderboard = ({
                 ...colors.glass,
                 borderRadius: '24px',
                 overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.08)'
+                border: '1px solid var(--border)'
               }}>
                 <Table size="small">
-                  <TableHead sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
+                  <TableHead sx={{ bgcolor: 'var(--overlay-subtle)' }}>
                     <TableRow>
-                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>RANK</TableCell>
-                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>STATUS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'issueViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>KEY ISSUES</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalPoints', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL POINTS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
-                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>ACTIONS</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>RANK</TableCell>
+                      <TableCell sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'teamName', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TEAM NAME</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>STATUS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalNpsTickets', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL NPS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsDetractors', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>DETRACTORS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'npsNeutrals', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>NEUTRALS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'issueViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>KEY ISSUES</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'openCount', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>OPEN CASES</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'avgResolutionTime', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>AVG SPEED</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'resPercent', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>SUCCESS %</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalPoints', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL POINTS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => setLeaderboardSort({ field: 'totalViolations', direction: leaderboardSort.direction === 'desc' ? 'asc' : 'desc' })}>TOTAL VIOLATIONS</TableCell>
+                      <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 900, py: 1.5, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>ACTIONS</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -233,11 +233,11 @@ export const GlobalLeaderboard = ({
                           key={team._id}
                           sx={{
                             bgcolor: 'transparent',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                            '&:hover': { bgcolor: 'var(--overlay-subtle)' },
                             transition: 'background 0.2s'
                           }}
                         >
-                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', py: 1 }}>
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, borderBottom: '1px solid var(--border)', fontSize: '0.8rem', py: 1 }}>
                             <Box sx={{
                               width: '24px',
                               height: '24px',
@@ -253,13 +253,13 @@ export const GlobalLeaderboard = ({
                               {actualRank}
                             </Box>
                           </TableCell>
-                          <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                          <TableCell sx={{ borderBottom: '1px solid var(--border)', py: 1 }}>
                             <Box sx={{ cursor: 'pointer' }} onClick={() => handleTeamSelect(team)}>
-                              <Typography sx={{ color: '#fff', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
+                              <Typography sx={{ color: 'var(--text)', fontWeight: 300, fontSize: '0.85rem' }}>{team.teamName}</Typography>
                               <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.7rem' }}>{team.teamCompany} | {team.governorate}</Typography>
                             </Box>
                           </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid var(--border)', py: 1 }}>
                             {(() => {
                               let label = 'Active';
                               let bg = 'rgba(16, 185, 129, 0.15)';
@@ -286,13 +286,13 @@ export const GlobalLeaderboard = ({
                               );
                             })()}
                           </TableCell>
-                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
-                          <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
-                          <TableCell align="center" onClick={() => handleDrillDown(team, 'neutrals')} sx={{ color: colors.warning, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsNeutrals}</TableCell>
-                          <TableCell align="center" onClick={() => handleDrillDown(team, 'issues')} sx={{ color: '#3b82f6', fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.issueViolations}</TableCell>
-                          <TableCell align="center" onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')} sx={{ color: team.openCount > 0 ? colors.error : colors.textSecondary, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', cursor: team.openCount > 0 ? 'pointer' : 'default' }}>{team.openCount}</TableCell>
-                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>{team.avgResolutionTime}d</TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>{team.totalNpsTickets}</TableCell>
+                          <TableCell align="center" onClick={() => handleDrillDown(team, 'detractors')} sx={{ color: colors.error, fontWeight: 300, borderBottom: '1px solid var(--border)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsDetractors}</TableCell>
+                          <TableCell align="center" onClick={() => handleDrillDown(team, 'neutrals')} sx={{ color: colors.warning, fontWeight: 300, borderBottom: '1px solid var(--border)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.npsNeutrals}</TableCell>
+                          <TableCell align="center" onClick={() => handleDrillDown(team, 'issues')} sx={{ color: '#3b82f6', fontWeight: 300, borderBottom: '1px solid var(--border)', fontSize: '0.85rem', cursor: 'pointer' }}>{team.issueViolations}</TableCell>
+                          <TableCell align="center" onClick={() => team.openCount > 0 && handleDrillDown(team, 'open')} sx={{ color: team.openCount > 0 ? colors.error : colors.textSecondary, fontWeight: 300, borderBottom: '1px solid var(--border)', fontSize: '0.85rem', cursor: team.openCount > 0 ? 'pointer' : 'default' }}>{team.openCount}</TableCell>
+                          <TableCell align="center" sx={{ color: colors.info, fontWeight: 300, borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>{team.avgResolutionTime}d</TableCell>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>
                             <Typography variant="body2" sx={{
                               color: team.resPercent > 90 ? colors.success : team.resPercent > 70 ? colors.warning : colors.error,
                               fontWeight: 500,
@@ -301,7 +301,7 @@ export const GlobalLeaderboard = ({
                               {team.resPercent}%
                             </Typography>
                           </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>
                             <Chip
                               label={team.totalPoints}
                               size="small"
@@ -315,7 +315,7 @@ export const GlobalLeaderboard = ({
                               }}
                             />
                           </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }}>
                             <Chip
                               label={team.totalViolations}
                               onClick={() => handleDrillDown(team, 'violations')}
@@ -332,7 +332,7 @@ export const GlobalLeaderboard = ({
                               }}
                             />
                           </TableCell>
-                          <TableCell align="center" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}>
+                          <TableCell align="center" sx={{ borderBottom: '1px solid var(--border)', py: 1 }}>
                             <MuiTooltip title="Export Detailed Team Report">
                               <IconButton
                                 size="small"
@@ -369,7 +369,7 @@ export const GlobalLeaderboard = ({
                   }}
                   sx={{
                     color: colors.textSecondary,
-                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    borderTop: '1px solid var(--border)',
                     '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
                     '& .MuiIconButton-root': { color: colors.primary }
                   }}

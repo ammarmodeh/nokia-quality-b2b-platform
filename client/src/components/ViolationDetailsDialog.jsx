@@ -53,7 +53,7 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
         }
       },
       renderCell: (params) => (
-        <Box sx={{ fontWeight: 'bold', color: '#b3b3b3' }}>
+        <Box sx={{ fontWeight: 'bold', color: 'var(--text-secondary)' }}>
           W{params.value}
         </Box>
       )
@@ -163,7 +163,7 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
       headerName: 'Status',
       width: 130,
       renderCell: (params) => (
-        <Typography variant="caption" sx={{ color: '#b3b3b3' }}>
+        <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
           {params.value}
         </Typography>
       )
@@ -247,13 +247,13 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
       fullScreen
       PaperProps={{
         sx: {
-          backgroundColor: '#1e1e1e',
-          color: '#ffffff',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
           borderRadius: 2
         }
       }}
     >
-      <DialogTitle component="div" sx={{ borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
+      <DialogTitle component="div" sx={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
         <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>{title}</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Export to Excel">
@@ -261,7 +261,7 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
               <MdFileDownload />
             </IconButton>
           </Tooltip>
-          <IconButton onClick={onClose} size="small" sx={{ color: '#999' }}>
+          <IconButton onClick={onClose} size="small" sx={{ color: 'var(--text-muted)' }}>
             <MdClose />
           </IconButton>
         </Box>
@@ -276,30 +276,30 @@ const ViolationDetailsDialog = ({ open, onClose, title, tasks, teamName }) => {
           disableRowSelectionOnClick
           sx={{
             border: 0,
-            color: '#fff',
+            color: 'var(--text)',
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#252525',
+              backgroundColor: 'var(--surface)',
               color: '#b0b0b0',
-              borderBottom: '1px solid #333'
+              borderBottom: '1px solid var(--border)'
             },
             '& .MuiDataGrid-cell': {
-              borderBottom: '1px solid #333'
+              borderBottom: '1px solid var(--border)'
             },
             '& .MuiDataGrid-row:hover': {
-              backgroundColor: '#2a2a2a'
+              backgroundColor: 'var(--surface)'
             },
             '& .MuiDataGrid-footerContainer': {
-              borderTop: '1px solid #333'
+              borderTop: '1px solid var(--border)'
             },
             '& .MuiTablePagination-root': {
-              color: '#fff'
+              color: 'var(--text)'
             }
           }}
         />
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: '1px solid #333', p: 1.5 }}>
-        <Button onClick={onClose} sx={{ color: '#fff' }}>Close</Button>
+      <DialogActions sx={{ borderTop: '1px solid var(--border)', p: 1.5 }}>
+        <Button onClick={onClose} sx={{ color: 'var(--text)' }}>Close</Button>
       </DialogActions>
     </Dialog>
   );

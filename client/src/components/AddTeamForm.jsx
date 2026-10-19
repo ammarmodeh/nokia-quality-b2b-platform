@@ -54,14 +54,14 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
 
   const sharedInputSx = {
     '& .MuiOutlinedInput-root': {
-      bgcolor: '#1a1a1a',
-      '& fieldset': { borderColor: '#333' },
-      '&:hover fieldset': { borderColor: '#7b68ee' },
-      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
-      '& input': { color: '#fff' }
+      bgcolor: 'var(--bg)',
+      '& fieldset': { borderColor: 'var(--border)' },
+      '&:hover fieldset': { borderColor: 'var(--accent)' },
+      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
+      '& input': { color: 'var(--text)' }
     },
-    '& .MuiInputLabel-root': { color: '#888' },
-    '& .MuiInputLabel-root.Mui-focused': { color: '#7b68ee' }
+    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'var(--accent-text)' }
   };
 
   return (
@@ -69,20 +69,20 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
       component="form"
       onSubmit={handleSubmit(onSubmit)}
       sx={{
-        bgcolor: '#111',
+        bgcolor: 'var(--bg)',
         p: 3,
         borderRadius: 3,
-        border: '1px solid #333',
+        border: '1px solid var(--border)',
         height: '100%',
         display: 'flex',
         flexDirection: 'column'
       }}
     >
-      <Typography variant="h6" sx={{ color: '#fff', mb: 1, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 4, height: 20, bgcolor: '#7b68ee', borderRadius: 1 }} />
+      <Typography variant="h6" sx={{ color: 'var(--text)', mb: 1, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 4, height: 20, bgcolor: 'var(--accent)', borderRadius: 1 }} />
         Add New Team
       </Typography>
-      <Typography variant="caption" sx={{ color: '#888', mb: 3 }}>
+      <Typography variant="caption" sx={{ color: 'var(--text-muted)', mb: 3 }}>
         Enter team details to create a new field team account.
       </Typography>
 
@@ -106,30 +106,30 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           {...register('contactNumber', { required: true })}
           sx={sharedInputSx}
           InputProps={{
-            startAdornment: <InputAdornment position="start"><Phone sx={{ color: '#666', fontSize: 18 }} /></InputAdornment>
+            startAdornment: <InputAdornment position="start"><Phone sx={{ color: 'var(--text-muted)', fontSize: 18 }} /></InputAdornment>
           }}
         />
 
         <FormControl fullWidth size="small">
-          <InputLabel sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>Company</InputLabel>
+          <InputLabel sx={{ color: 'var(--text-muted)', '&.Mui-focused': { color: 'var(--accent-text)' } }}>Company</InputLabel>
           <NativeSelect
             {...register('teamCompany', { required: true })}
             sx={{
-              color: '#fff',
-              bgcolor: '#1a1a1a',
-              border: '1px solid #333',
+              color: 'var(--text)',
+              bgcolor: 'var(--bg)',
+              border: '1px solid var(--border)',
               borderRadius: 1,
               pl: 1.5,
               py: 0.5,
               '&:before': { display: 'none' },
               '&:after': { display: 'none' },
               '& select': { paddingLeft: 1 },
-              '& .MuiNativeSelect-icon': { color: '#7b68ee' }
+              '& .MuiNativeSelect-icon': { color: 'var(--accent-text)' }
             }}
           >
-            <option value="" style={{ backgroundColor: '#111' }}>Select Company</option>
+            <option value="" style={{ backgroundColor: 'var(--bg)' }}>Select Company</option>
             {fieldTeamsCompany.map((opt, i) => (
-              <option key={i} value={opt} style={{ backgroundColor: '#111', color: '#fff' }}>{opt}</option>
+              <option key={i} value={opt} style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>{opt}</option>
             ))}
           </NativeSelect>
         </FormControl>
@@ -154,35 +154,35 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         <Divider sx={{ borderColor: '#222' }} />
 
         {/* Section 4: Employment & Safety Certifications */}
-        <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', display: 'block' }}>
+        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', display: 'block' }}>
           Employment & Certifications
         </Typography>
 
         <FormControl fullWidth size="small">
-          <InputLabel sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>Employment Type</InputLabel>
+          <InputLabel sx={{ color: 'var(--text-muted)', '&.Mui-focused': { color: 'var(--accent-text)' } }}>Employment Type</InputLabel>
           <NativeSelect
             defaultValue="Subcontractor"
             {...register('employmentType')}
             sx={{
-              color: '#fff',
-              bgcolor: '#1a1a1a',
-              border: '1px solid #333',
+              color: 'var(--text)',
+              bgcolor: 'var(--bg)',
+              border: '1px solid var(--border)',
               borderRadius: 1,
               pl: 1.5,
               py: 0.5,
               '&:before': { display: 'none' },
               '&:after': { display: 'none' },
               '& select': { paddingLeft: 1 },
-              '& .MuiNativeSelect-icon': { color: '#7b68ee' }
+              '& .MuiNativeSelect-icon': { color: 'var(--accent-text)' }
             }}
           >
-            <option value="Subcontractor" style={{ backgroundColor: '#111', color: '#fff' }}>Subcontractor (Partner)</option>
-            <option value="Employee" style={{ backgroundColor: '#111', color: '#fff' }}>Direct Employee</option>
+            <option value="Subcontractor" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Subcontractor (Partner)</option>
+            <option value="Employee" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Direct Employee</option>
           </NativeSelect>
         </FormControl>
 
-        <Box sx={{ bgcolor: '#161616', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
-          <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1, display: 'block' }}>
+        <Box sx={{ bgcolor: 'var(--bg)', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
+          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mb: 1, display: 'block' }}>
             EXPERIENCE DURATION (YEARS / MONTHS / DAYS)
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
@@ -216,8 +216,8 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           </Box>
         </Box>
 
-        <Box sx={{ bgcolor: '#161616', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
-          <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1, display: 'block' }}>
+        <Box sx={{ bgcolor: 'var(--bg)', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
+          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mb: 1, display: 'block' }}>
             SAFETY & COMPLIANCE CERTIFICATES
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
@@ -236,7 +236,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
                   id={`add-${cert.id}`}
                   style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.1)' }}
                 />
-                <label htmlFor={`add-${cert.id}`} style={{ color: '#ccc', fontSize: '0.8rem', cursor: 'pointer' }}>
+                <label htmlFor={`add-${cert.id}`} style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer' }}>
                   {cert.label}
                 </label>
               </Box>
@@ -247,7 +247,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         <Divider sx={{ borderColor: '#222' }} />
 
         {/* Section 5: Role Expertise */}
-        <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', display: 'block' }}>
+        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', display: 'block' }}>
           Role Expertise
         </Typography>
 
@@ -255,7 +255,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <input type="checkbox" {...register('isNewToInstallation')} id="new-install" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
-              <label htmlFor="new-install" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
+              <label htmlFor="new-install" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
             </Box>
             <TextField
               label="Start Date"
@@ -270,7 +270,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <input type="checkbox" {...register('isNewToActivation')} id="new-activation" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
-              <label htmlFor="new-activation" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
+              <label htmlFor="new-activation" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
             </Box>
             <TextField
               label="Start Date"
@@ -284,7 +284,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <input type="checkbox" {...register('replaceExisting')} id="replace-existing" style={{ accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
-            <label htmlFor="replace-existing" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>
+            <label htmlFor="replace-existing" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>
               Replace existing active team with this code
             </label>
           </Box>
@@ -306,7 +306,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           <Typography variant="caption" sx={{ color: '#ffb74d', fontWeight: 600, display: 'block' }}>
             Submission Error:
           </Typography>
-          <Typography variant="body2" sx={{ color: '#fff' }}>
+          <Typography variant="body2" sx={{ color: 'var(--text)' }}>
             {errorMessage}
           </Typography>
         </Box>
@@ -320,12 +320,12 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         disableElevation
         sx={{
           mt: 4,
-          bgcolor: '#7b68ee',
-          color: '#fff',
+          bgcolor: 'var(--accent)',
+          color: 'var(--text)',
           py: 1.2,
           fontWeight: 'bold',
           '&:hover': { bgcolor: '#6652e0' },
-          '&.Mui-disabled': { bgcolor: '#333', color: '#666' }
+          '&.Mui-disabled': { bgcolor: 'var(--surface-hover)', color: 'var(--text-muted)' }
         }}
       >
         {loading ? 'Adding...' : 'Create Team'}

@@ -202,7 +202,7 @@ const AdminSuggestionsDashboard = () => {
         mx: 'auto',
       }}>
         <Typography variant="h5" gutterBottom sx={{
-          color: '#7b68ee',
+          color: 'var(--accent-text)',
           fontWeight: 'bold',
           fontSize: isMobile ? '1.2rem' : '1.5rem',
           mb: 2
@@ -225,10 +225,10 @@ const AdminSuggestionsDashboard = () => {
             justifyContent: isMobile ? 'flex-start' : 'space-between',
             gap: 2,
             alignItems: 'center',
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
             p: 2,
             borderRadius: '8px',
-            border: '1px solid #3d3d3d',
+            border: '1px solid var(--border)',
             width: '100%',
           }}>
             <Stack
@@ -245,27 +245,27 @@ const AdminSuggestionsDashboard = () => {
                 size="small"
                 sx={{
                   minWidth: 180,
-                  backgroundColor: '#2d2d2d',
+                  backgroundColor: 'var(--surface)',
                   borderRadius: '20px',
                   '& .MuiSelect-select': {
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     padding: '8.5px 14px',
                   },
                   '& .MuiOutlinedInput-notchedOutline': {
                     border: 'none',
                   },
                   '& .MuiSvgIcon-root': {
-                    color: '#b3b3b3',
+                    color: 'var(--text-secondary)',
                   },
                 }}
                 MenuProps={{
                   PaperProps: {
                     sx: {
-                      backgroundColor: '#2d2d2d',
-                      color: '#ffffff',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text)',
                       "& .MuiMenuItem-root": {
                         "&:hover": {
-                          backgroundColor: '#2a2a2a',
+                          backgroundColor: 'var(--surface)',
                         }
                       }
                     }
@@ -274,7 +274,7 @@ const AdminSuggestionsDashboard = () => {
               >
                 <MenuItem value="">All Statuses</MenuItem>
                 {statusOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ color: '#ffffff' }}>
+                  <MenuItem key={option.value} value={option.value} sx={{ color: 'var(--text)' }}>
                     {option.label}
                   </MenuItem>
                 ))}
@@ -287,27 +287,27 @@ const AdminSuggestionsDashboard = () => {
                 size="small"
                 sx={{
                   minWidth: 180,
-                  backgroundColor: '#2d2d2d',
+                  backgroundColor: 'var(--surface)',
                   borderRadius: '20px',
                   '& .MuiSelect-select': {
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     padding: '8.5px 14px',
                   },
                   '& .MuiOutlinedInput-notchedOutline': {
                     border: 'none',
                   },
                   '& .MuiSvgIcon-root': {
-                    color: '#b3b3b3',
+                    color: 'var(--text-secondary)',
                   },
                 }}
                 MenuProps={{
                   PaperProps: {
                     sx: {
-                      backgroundColor: '#2d2d2d',
-                      color: '#ffffff',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text)',
                       "& .MuiMenuItem-root": {
                         "&:hover": {
-                          backgroundColor: '#2a2a2a',
+                          backgroundColor: 'var(--surface)',
                         }
                       }
                     }
@@ -315,21 +315,21 @@ const AdminSuggestionsDashboard = () => {
                 }}
               >
                 <MenuItem value="">All Categories</MenuItem>
-                <MenuItem value="bug" sx={{ color: '#ffffff' }}>Bug Report</MenuItem>
-                <MenuItem value="improvement" sx={{ color: '#ffffff' }}>Improvement</MenuItem>
-                <MenuItem value="feature" sx={{ color: '#ffffff' }}>Feature Request</MenuItem>
-                <MenuItem value="other" sx={{ color: '#ffffff' }}>Other</MenuItem>
+                <MenuItem value="bug" sx={{ color: 'var(--text)' }}>Bug Report</MenuItem>
+                <MenuItem value="improvement" sx={{ color: 'var(--text)' }}>Improvement</MenuItem>
+                <MenuItem value="feature" sx={{ color: 'var(--text)' }}>Feature Request</MenuItem>
+                <MenuItem value="other" sx={{ color: 'var(--text)' }}>Other</MenuItem>
               </Select>
             </Stack>
             <Button
               variant="contained"
               onClick={fetchSuggestions}
               disabled={loading}
-              startIcon={<MdRefresh style={{ color: '#ffffff' }} />}
+              startIcon={<MdRefresh style={{ color: 'var(--text)' }} />}
               size="small"
               sx={{
                 backgroundColor: '#1976d2',
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
                   backgroundColor: '#1565c0',
                 },
@@ -351,31 +351,31 @@ const AdminSuggestionsDashboard = () => {
           flex: 1,
           width: "100%",
           border: 0,
-          color: "#ffffff",
+          color: "var(--text)",
           "&.MuiTableContainer-root": {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
           },
           "& .MuiTable-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
           },
           "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
-              color: "#b3b3b3",
+              color: "var(--text-secondary)",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text)",
             },
             "& .MuiTableRow-root": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "var(--surface)",
               },
             }
           },
@@ -413,8 +413,8 @@ const AdminSuggestionsDashboard = () => {
                         label={suggestion.category}
                         size="small"
                         sx={{
-                          backgroundColor: '#3a3a3a',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--surface-hover)',
+                          color: 'var(--text)',
                           textTransform: 'capitalize'
                         }}
                       />
@@ -425,7 +425,7 @@ const AdminSuggestionsDashboard = () => {
                         color={statusOptions.find(s => s.value === suggestion.status)?.color || 'default'}
                         size="small"
                         sx={{
-                          color: '#ffffff',
+                          color: 'var(--text)',
                           '&.MuiChip-colorWarning': {
                             backgroundColor: '#ff9800',
                           },
@@ -459,11 +459,11 @@ const AdminSuggestionsDashboard = () => {
                           size="small"
                           onClick={() => openResponseDialog(suggestion)}
                           sx={{
-                            color: '#7b68ee',
-                            borderColor: '#7b68ee',
+                            color: 'var(--accent-text)',
+                            borderColor: 'var(--accent)',
                             '&:hover': {
                               backgroundColor: 'rgba(62, 166, 255, 0.08)',
-                              borderColor: '#7b68ee',
+                              borderColor: 'var(--accent)',
                             },
                             fontSize: isMobile ? '0.75rem' : '0.875rem',
                             padding: isMobile ? '4px 8px' : '6px 16px'
@@ -476,8 +476,8 @@ const AdminSuggestionsDashboard = () => {
                           size="small"
                           onClick={() => fetchResponseLog(suggestion._id)}
                           sx={{
-                            color: '#b3b3b3',
-                            borderColor: '#3d3d3d',
+                            color: 'var(--text-secondary)',
+                            borderColor: 'var(--border)',
                             '&:hover': {
                               backgroundColor: 'rgba(170, 170, 170, 0.08)',
                               borderColor: '#666',
@@ -514,7 +514,7 @@ const AdminSuggestionsDashboard = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={tableColumns.length} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                  <TableCell colSpan={tableColumns.length} align="center" sx={{ py: 4, color: 'var(--text)' }}>
                     No suggestions found matching your filters
                   </TableCell>
                 </TableRow>
@@ -531,28 +531,28 @@ const AdminSuggestionsDashboard = () => {
           fullWidth
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
               boxShadow: 'none',
               borderRadius: '8px',
-              border: '1px solid #3d3d3d',
+              border: '1px solid var(--border)',
             }
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
           }}>
             Respond to Suggestion: {selectedSuggestion?.title}
           </DialogTitle>
-          <DialogContent sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
+          <DialogContent sx={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}>
             <Box mb={2} pt={2}>
-              <Typography variant="subtitle1" sx={{ color: '#7b68ee' }}>User&apos;s Suggestion:</Typography>
+              <Typography variant="subtitle1" sx={{ color: 'var(--accent-text)' }}>User&apos;s Suggestion:</Typography>
               <Typography variant="body1" sx={{
                 whiteSpace: 'pre-line',
-                color: '#ffffff',
-                backgroundColor: '#2d2d2d',
+                color: 'var(--text)',
+                backgroundColor: 'var(--surface)',
                 p: 2,
                 borderRadius: '4px',
                 mt: 1
@@ -572,30 +572,30 @@ const AdminSuggestionsDashboard = () => {
               sx={{ mb: 2 }}
               InputProps={{
                 sx: {
-                  color: '#ffffff',
-                  backgroundColor: '#2d2d2d',
+                  color: 'var(--text)',
+                  backgroundColor: 'var(--surface)',
                   '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#3d3d3d',
+                    borderColor: 'var(--border)',
                   },
                   '&:hover .MuiOutlinedInput-notchedOutline': {
                     borderColor: '#666',
                   },
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#7b68ee',
+                    borderColor: 'var(--accent)',
                   },
                 }
               }}
               InputLabelProps={{
                 sx: {
-                  color: '#b3b3b3',
+                  color: 'var(--text-secondary)',
                   '&.Mui-focused': {
-                    color: '#7b68ee',
+                    color: 'var(--accent-text)',
                   },
                 }
               }}
             />
 
-            <Typography variant="subtitle1" sx={{ color: '#7b68ee' }}>Update Status:</Typography>
+            <Typography variant="subtitle1" sx={{ color: 'var(--accent-text)' }}>Update Status:</Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
               {statusOptions.map((option) => (
                 <Chip
@@ -606,7 +606,7 @@ const AdminSuggestionsDashboard = () => {
                   onClick={() => handleStatusUpdate(selectedSuggestion?._id, option.value)}
                   sx={{
                     cursor: 'pointer',
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     '&.MuiChip-filledWarning': {
                       backgroundColor: '#ff9800',
                     },
@@ -641,15 +641,15 @@ const AdminSuggestionsDashboard = () => {
             </Box>
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
           }}>
             <Button
               onClick={handleCloseDialog}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -661,13 +661,13 @@ const AdminSuggestionsDashboard = () => {
               disabled={!responseText}
               sx={{
                 backgroundColor: '#1976d2',
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
                   backgroundColor: '#1565c0',
                 },
                 '&.Mui-disabled': {
                   backgroundColor: '#1976d2',
-                  color: '#ffffff',
+                  color: 'var(--text)',
                   opacity: 0.5,
                 }
               }}
@@ -685,28 +685,28 @@ const AdminSuggestionsDashboard = () => {
           fullWidth
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
               boxShadow: 'none',
               borderRadius: '8px',
-              border: '1px solid #3d3d3d',
+              border: '1px solid var(--border)',
             }
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
           }}>
             Response History: {selectedSuggestion?.title}
           </DialogTitle>
-          <DialogContent dividers sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
+          <DialogContent dividers sx={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}>
+            <Typography variant="h6" gutterBottom sx={{ color: 'var(--accent-text)' }}>
               Original Suggestion
             </Typography>
             <Typography variant="body1" paragraph sx={{
-              color: '#ffffff',
-              backgroundColor: '#2d2d2d',
+              color: 'var(--text)',
+              backgroundColor: 'var(--surface)',
               p: 2,
               borderRadius: '4px',
             }}>
@@ -715,21 +715,21 @@ const AdminSuggestionsDashboard = () => {
 
             <Divider sx={{ my: 2, backgroundColor: '#e5e7eb' }} />
 
-            <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
+            <Typography variant="h6" gutterBottom sx={{ color: 'var(--accent-text)' }}>
               Response Log
             </Typography>
 
             {responseLog.length === 0 ? (
-              <Typography variant="body1" sx={{ color: '#b3b3b3' }}>
+              <Typography variant="body1" sx={{ color: 'var(--text-secondary)' }}>
                 No responses yet
               </Typography>
             ) : (
-              <List sx={{ backgroundColor: '#2d2d2d', borderRadius: '4px' }}>
+              <List sx={{ backgroundColor: 'var(--surface)', borderRadius: '4px' }}>
                 {responseLog.map((response, index) => (
                   <React.Fragment key={index}>
-                    <ListItem alignItems="flex-start" sx={{ color: '#ffffff' }}>
+                    <ListItem alignItems="flex-start" sx={{ color: 'var(--text)' }}>
                       <ListItemAvatar>
-                        <Avatar sx={{ backgroundColor: '#7b68ee' }}>
+                        <Avatar sx={{ backgroundColor: 'var(--accent)' }}>
                           {response.respondedBy?.name?.charAt(0) || 'A'}
                         </Avatar>
                       </ListItemAvatar>
@@ -744,7 +744,7 @@ const AdminSuggestionsDashboard = () => {
                               }
                               sx={{
                                 mr: 1,
-                                color: '#ffffff',
+                                color: 'var(--text)',
                                 '&.MuiChip-colorWarning': {
                                   backgroundColor: '#ff9800',
                                 },
@@ -768,7 +768,7 @@ const AdminSuggestionsDashboard = () => {
                               component="span"
                               variant="body2"
                               sx={{
-                                color: '#b3b3b3',
+                                color: 'var(--text-secondary)',
                                 display: 'block',
                                 mb: 1
                               }}
@@ -778,7 +778,7 @@ const AdminSuggestionsDashboard = () => {
                             {response.response}
                           </>
                         }
-                        sx={{ color: '#ffffff' }}
+                        sx={{ color: 'var(--text)' }}
                       />
                     </ListItem>
                     {index < responseLog.length - 1 && <Divider variant="inset" component="li" sx={{ backgroundColor: '#e5e7eb' }} />}
@@ -788,15 +788,15 @@ const AdminSuggestionsDashboard = () => {
             )}
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
           }}>
             <Button
               onClick={() => setDetailDialogOpen(false)}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -813,36 +813,36 @@ const AdminSuggestionsDashboard = () => {
           fullWidth
           sx={{
             "& .MuiDialog-paper": {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
               boxShadow: 'none',
               borderRadius: '8px',
-              border: '1px solid #3d3d3d',
+              border: '1px solid var(--border)',
             }
           }}
         >
           <DialogTitle sx={{
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            borderBottom: '1px solid var(--border)',
           }}>
             Confirm Deletion
           </DialogTitle>
-          <DialogContent sx={{ backgroundColor: '#2d2d2d', color: '#ffffff', pt: 3 }}>
+          <DialogContent sx={{ backgroundColor: 'var(--surface)', color: 'var(--text)', pt: 3 }}>
             <Typography variant="body1">
               Are you sure you want to delete this suggestion? This action cannot be undone.
             </Typography>
           </DialogContent>
           <DialogActions sx={{
-            backgroundColor: '#2d2d2d',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
           }}>
             <Button
               onClick={() => setDeleteDialogOpen(false)}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -856,7 +856,7 @@ const AdminSuggestionsDashboard = () => {
               }}
               sx={{
                 backgroundColor: '#f44336',
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
                   backgroundColor: '#d32f2f',
                 },
@@ -882,7 +882,7 @@ const AdminSuggestionsDashboard = () => {
               backgroundColor: snackbar.severity === 'error' ? '#f44336' :
                 snackbar.severity === 'success' ? '#4caf50' :
                   snackbar.severity === 'warning' ? '#ff9800' : '#2196f3',
-              color: '#ffffff',
+              color: 'var(--text)',
             }}
           >
             {snackbar.message}

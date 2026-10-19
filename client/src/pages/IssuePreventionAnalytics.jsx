@@ -1,33 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import { useState, useEffect } from "react";
-import {
-  Box,
-  Typography,
-  Paper,
-  Stack,
-  Breadcrumbs,
-  Link,
-  Grid,
-  Chip,
-  Avatar,
-  IconButton,
-  Tooltip,
-  useTheme,
-  alpha,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Table,
-  TableBody,
-  TableRow,
-  TableCell,
-  Button,
-  useMediaQuery,
-  TableHead,
-  Radio,
-  DialogActions,
-  TextField,
-} from "@mui/material";
+import { Box, Typography, Paper, Stack, Breadcrumbs, Link, Grid, Chip, Avatar, IconButton, Tooltip, useTheme, Divider, Dialog, DialogTitle, DialogContent, Table, TableBody, TableRow, TableCell, Button, useMediaQuery, TableHead, Radio, DialogActions, TextField } from "@mui/material";
 import {
   NavigateNext as NavigateNextIcon,
   Timeline as TimelineIcon,
@@ -462,7 +435,7 @@ const IssuePreventionAnalytics = () => {
           <Chip
             label={score}
             size="small"
-            sx={{ backgroundColor: color, color: "white", fontWeight: "bold" }}
+            sx={{ backgroundColor: color, color: "var(--text)", fontWeight: "bold" }}
           />
         );
       }
@@ -755,10 +728,10 @@ const IssuePreventionAnalytics = () => {
           </Button>
         </Stack>
 
-        <Paper sx={{ p: 0, borderRadius: 4, bgcolor: '#1a1a1a', border: '1px solid #333', overflow: 'hidden' }}>
+        <Paper sx={{ p: 0, borderRadius: 4, bgcolor: 'var(--bg)', border: '1px solid var(--border)', overflow: 'hidden' }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: '#262626' }}>
+              <TableRow sx={{ bgcolor: 'var(--surface)' }}>
                 <TableCell sx={{ color: 'grey.100', fontWeight: 'bold', py: 2, width: 50 }}>Select</TableCell>
                 <TableCell sx={{ color: 'grey.100', fontWeight: 'bold' }}>Date</TableCell>
                 <TableCell sx={{ color: 'grey.100', fontWeight: 'bold' }}>Filename</TableCell>
@@ -775,10 +748,10 @@ const IssuePreventionAnalytics = () => {
                   key={log._id}
                   selected={selectedAuditForDeepDive?._id === log._id}
                   sx={{
-                    '& td': { color: 'grey.300', borderBottom: '1px solid #333', py: 2 },
+                    '& td': { color: 'grey.300', borderBottom: '1px solid var(--border)', py: 2 },
                     cursor: 'pointer',
                     '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
+                    '&:hover': { bgcolor: 'var(--overlay-subtle)' }
                   }}
                   onClick={() => handleSelectAuditForDeepDive(log)}
                 >
@@ -816,7 +789,7 @@ const IssuePreventionAnalytics = () => {
                   <TableCell>
                     {log.status === 'Imported' && log.importStats ? (
                       <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Box sx={{ borderRight: '1px solid #333', pr: 1.5 }}>
+                        <Box sx={{ borderRight: '1px solid var(--border)', pr: 1.5 }}>
                           <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 'bold', display: 'block' }}>
                             {log.importStats.updatedTasks}
                           </Typography>
@@ -832,7 +805,7 @@ const IssuePreventionAnalytics = () => {
                             Issue Overlaps
                           </Typography>
                         </Box>
-                        <Box sx={{ pl: 1, borderLeft: '1px solid #333' }}>
+                        <Box sx={{ pl: 1, borderLeft: '1px solid var(--border)' }}>
                           <Typography variant="caption" color="text.secondary">
                             from {log.importStats.totalRows} rows
                           </Typography>
@@ -939,7 +912,7 @@ const IssuePreventionAnalytics = () => {
           </Stack>
 
           {deepStats?.noRecords ? (
-            <Paper sx={{ p: 4, textAlign: 'center', bgcolor: '#1a1a1a', borderRadius: 4, border: '1px solid #333' }}>
+            <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'var(--bg)', borderRadius: 4, border: '1px solid var(--border)' }}>
               <Typography color="warning.main" fontWeight="bold" gutterBottom>
                 No Row-Level Data Available
               </Typography>
@@ -955,7 +928,7 @@ const IssuePreventionAnalytics = () => {
               <Grid container spacing={3} mb={5}>
                 {/* NPS Comparison Card */}
                 <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', border: '1px solid #333', height: '100%' }}>
+                  <Paper sx={{ p: 3, borderRadius: 4, bgcolor: 'var(--bg)', border: '1px solid var(--border)', height: '100%' }}>
                     <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <AssessmentIcon fontSize="small" /> Audit NPS Score
                     </Typography>
@@ -986,7 +959,7 @@ const IssuePreventionAnalytics = () => {
 
                 {/* Match & Gap Analysis */}
                 <Grid item xs={12} md={3}>
-                  <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', border: '1px solid #333', height: '100%' }}>
+                  <Paper sx={{ p: 3, borderRadius: 4, bgcolor: 'var(--bg)', border: '1px solid var(--border)', height: '100%' }}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>Match & Coverage Gaps</Typography>
                     <Stack spacing={2} mt={2}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1003,7 +976,7 @@ const IssuePreventionAnalytics = () => {
 
                 {/* DVOC Metrics */}
                 <Grid item xs={12} md={3}>
-                  <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', border: '1px solid #333', height: '100%' }}>
+                  <Paper sx={{ p: 3, borderRadius: 4, bgcolor: 'var(--bg)', border: '1px solid var(--border)', height: '100%' }}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>DVOC Alignment</Typography>
                     <Stack spacing={1.5} mt={1}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1092,7 +1065,7 @@ const IssuePreventionAnalytics = () => {
                 </Stack>
               </Grid>
               <Grid item xs={12} md={3} textAlign="right">
-                <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed #444', display: 'inline-block', minWidth: 120 }}>
+                <Box sx={{ p: 1, bgcolor: 'var(--overlay-subtle)', borderRadius: 2, border: '1px dashed var(--border)', display: 'inline-block', minWidth: 120 }}>
                   <Typography variant="caption" color="text.secondary" display="block">Overlap Identification</Typography>
                   <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
                     {Math.round(deepStats.summary.matchRate)}% Match
@@ -1102,7 +1075,7 @@ const IssuePreventionAnalytics = () => {
             </Grid>
 
             {deepStats?.manualOverlapStats?.slidLists && (
-              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #333' }}>
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid var(--border)' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
                     Matched SLID Breakdown (Click to filter):
@@ -1130,11 +1103,11 @@ const IssuePreventionAnalytics = () => {
                     { label: 'Detractors', slids: deepStats.manualOverlapStats.slidLists.detractors, color: 'error.main' }
                   ].map((group) => (
                     <Grid item xs={12} md={4} key={group.label}>
-                      <Paper sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: '1px solid #333' }}>
+                      <Paper sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, border: '1px solid var(--border)' }}>
                         <Typography variant="caption" sx={{ color: group.color, fontWeight: 'bold', mb: 1, display: 'block' }}>
                           {group.label} ({group.slids.length})
                         </Typography>
-                        <Box sx={{ maxHeight: 100, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#444', borderRadius: '4px' } }}>
+                        <Box sx={{ maxHeight: 100, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--surface-hover)', borderRadius: '4px' } }}>
                           {group.slids.length > 0 ? (
                             <Stack spacing={0.5}>
                               {group.slids.map(slid => (
@@ -1227,7 +1200,7 @@ const IssuePreventionAnalytics = () => {
           )}
         </Box>
 
-        <Paper id="overlap-data-grid" sx={{ height: 600, width: '100%', borderRadius: 4, overflow: 'hidden', bgcolor: '#1a1a1a', border: '1px solid #333' }}>
+        <Paper id="overlap-data-grid" sx={{ height: 600, width: '100%', borderRadius: 4, overflow: 'hidden', bgcolor: 'var(--bg)', border: '1px solid var(--border)' }}>
           <DataGrid
             rows={(() => {
               const baseRows = deepAuditRecords.map((item, idx) => ({ id: item._id, ...item })) || [];
@@ -1272,22 +1245,22 @@ const IssuePreventionAnalytics = () => {
               border: 'none',
               '& .MuiDataGrid-cell': {
                 color: 'grey.300',
-                borderBottom: '1px solid #333'
+                borderBottom: '1px solid var(--border)'
               },
               '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: '#262626',
+                backgroundColor: 'var(--surface)',
                 color: 'grey.100',
                 fontSize: 14,
                 fontWeight: 'bold',
-                borderBottom: '2px solid #333'
+                borderBottom: '2px solid var(--border)'
               },
               '& .MuiDataGrid-footerContainer': {
-                backgroundColor: '#262626',
-                borderTop: '2px solid #333'
+                backgroundColor: 'var(--surface)',
+                borderTop: '2px solid var(--border)'
               },
               '& .MuiDataGrid-toolbarContainer': {
                 p: 2,
-                backgroundColor: '#1a1a1a'
+                backgroundColor: 'var(--bg)'
               },
               '& .MuiButton-textPrimary': {
                 color: theme.palette.primary.main
@@ -1311,12 +1284,12 @@ const IssuePreventionAnalytics = () => {
         fullScreen
         PaperProps={{
           sx: {
-            bgcolor: '#1a1a1a',
+            bgcolor: 'var(--bg)',
             borderRadius: 3,
           }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)', pb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Avatar sx={{ bgcolor: theme.palette.info.main }}>
               <CompareIcon />
@@ -1392,7 +1365,7 @@ const IssuePreventionAnalytics = () => {
                 </Grid>
 
                 {/* Timeline Insight */}
-                <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                   <Typography variant="subtitle2" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
                     Timeline Analysis
                   </Typography>
@@ -1467,7 +1440,7 @@ const IssuePreventionAnalytics = () => {
                                 size="small"
                                 sx={{
                                   backgroundColor: gap > 7 ? "#d32f2f" : "#ed6c02",
-                                  color: "white",
+                                  color: "var(--text)",
                                   fontWeight: "bold"
                                 }}
                               />
@@ -1482,7 +1455,7 @@ const IssuePreventionAnalytics = () => {
                 {/* Professional Insights & GAIA */}
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2, height: '100%' }}>
+                    <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2, height: '100%' }}>
                       <Typography variant="subtitle2" color="success.main" gutterBottom sx={{ fontWeight: 'bold' }}>
                         Professional Insights
                       </Typography>
@@ -1516,14 +1489,14 @@ const IssuePreventionAnalytics = () => {
                     </Paper>
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2, height: '100%' }}>
+                    <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2, height: '100%' }}>
                       <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                         <VerifiedIcon sx={{ color: task.gaiaCheck === 'Yes' ? '#4caf50' : '#f44336' }} fontSize="small" />
                         <Typography variant="subtitle2" sx={{ color: 'grey.100', fontWeight: 'bold' }}>
                           GAIA Verification
                         </Typography>
                       </Stack>
-                      <Box sx={{ p: 1.5, bgcolor: '#1a1a1a', borderRadius: 2, border: '1px solid #333' }}>
+                      <Box sx={{ p: 1.5, bgcolor: 'var(--bg)', borderRadius: 2, border: '1px solid var(--border)' }}>
                         <Typography variant="caption" color="text.secondary">Status:</Typography>
                         <Typography variant="body2" sx={{ color: task.gaiaCheck === 'Yes' ? '#4caf50' : '#f44336', fontWeight: 'bold', mb: 1 }}>
                           {task.gaiaCheck === 'Yes' ? 'VERIFIED' : task.gaiaCheck === 'No' ? 'NOT VERIFIED' : 'PENDING CHECK'}
@@ -1539,13 +1512,13 @@ const IssuePreventionAnalytics = () => {
                 </Grid>
 
                 {/* Feedback Comparison */}
-                <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                   <Typography variant="subtitle2" color="warning.main" gutterBottom sx={{ fontWeight: 'bold' }}>
                     Notes & Feedback Comparison
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: '#1a1a1a', borderRadius: 2, border: '1px solid #333', height: '100%' }}>
+                      <Box sx={{ p: 2, bgcolor: 'var(--bg)', borderRadius: 2, border: '1px solid var(--border)', height: '100%' }}>
                         <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                           Initial Report (<span style={{ color: '#90caf9' }}>{report.reporter || "Unknown"}</span>)
                         </Typography>
@@ -1558,7 +1531,7 @@ const IssuePreventionAnalytics = () => {
                       </Box>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ p: 2, bgcolor: '#1a1a1a', borderRadius: 2, border: '1px solid #333', height: '100%' }}>
+                      <Box sx={{ p: 2, bgcolor: 'var(--bg)', borderRadius: 2, border: '1px solid var(--border)', height: '100%' }}>
                         <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                           Final Customer Feedback
                         </Typography>
@@ -1571,7 +1544,7 @@ const IssuePreventionAnalytics = () => {
                 </Paper>
 
                 {/* Q-Ops Transaction Logs */}
-                <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                   <Stack direction="row" spacing={1} alignItems="center" mb={2} justifyContent="space-between">
                     <Stack direction="row" spacing={1} alignItems="center">
                       <TimelineIcon sx={{ color: theme.palette.info.main }} />
@@ -1590,9 +1563,9 @@ const IssuePreventionAnalytics = () => {
                             key={idx}
                             sx={{
                               p: 1.5,
-                              bgcolor: '#1a1a1a',
+                              bgcolor: 'var(--bg)',
                               borderRadius: 2,
-                              border: `1px solid ${ticket.status === 'Closed' ? '#333' : alpha(theme.palette.info.main, 0.3)}`,
+                              border: `1px solid ${ticket.status === 'Closed' ? 'var(--border)' : alpha(theme.palette.info.main, 0.3)}`,
                               borderLeft: `4px solid ${ticket.status === 'Closed' ? 'grey' : theme.palette.info.main}`
                             }}
                           >
@@ -1614,7 +1587,7 @@ const IssuePreventionAnalytics = () => {
                                 <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{ticket.agentName || "System"}</Typography>
                               </Grid>
                               <Grid item xs={12}>
-                                <Divider sx={{ my: 0.5, borderColor: '#333' }} />
+                                <Divider sx={{ my: 0.5, borderColor: 'var(--border)' }} />
                                 <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'grey.300' }}>
                                   {ticket.note || "No comments recorded."}
                                 </Typography>
@@ -1625,7 +1598,7 @@ const IssuePreventionAnalytics = () => {
                       </Stack>
                     </Box>
                   ) : (
-                    <Box sx={{ p: 4, textAlign: 'center', bgcolor: '#1a1a1a', borderRadius: 2, border: '1px dashed #444' }}>
+                    <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'var(--bg)', borderRadius: 2, border: '1px dashed var(--border)' }}>
                       <Typography variant="body2" color="text.secondary">
                         No Q-Ops transactions recorded for this task.
                       </Typography>
@@ -1636,8 +1609,8 @@ const IssuePreventionAnalytics = () => {
             );
           })()}
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #333', pt: 2 }}>
-          <Button onClick={() => setShowComparisonDialog(false)} variant="contained" sx={{ bgcolor: '#333' }}>
+        <DialogActions sx={{ borderTop: '1px solid var(--border)', pt: 2 }}>
+          <Button onClick={() => setShowComparisonDialog(false)} variant="contained" sx={{ bgcolor: 'var(--surface-hover)' }}>
             Close
           </Button>
         </DialogActions>
@@ -1659,13 +1632,13 @@ const IssuePreventionAnalytics = () => {
         fullWidth
         PaperProps={{
           sx: {
-            bgcolor: '#1a1a1a',
+            bgcolor: 'var(--bg)',
             borderRadius: 3,
             maxHeight: '90vh'
           }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #333', pb: 2 }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)', pb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Avatar sx={{ bgcolor: theme.palette.secondary.main }}>
@@ -1693,7 +1666,7 @@ const IssuePreventionAnalytics = () => {
               {/* Summary Cards */}
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                     <Typography variant="caption" color="text.secondary">Total Entries</Typography>
                     <Typography variant="h4" fontWeight="bold" color="primary.main">
                       {uploadResults.summary.totalRows}
@@ -1701,7 +1674,7 @@ const IssuePreventionAnalytics = () => {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                     <Typography variant="caption" color="text.secondary">Matched</Typography>
                     <Typography variant="h4" fontWeight="bold" color="success.main">
                       {uploadResults.summary.matchedRows}
@@ -1709,7 +1682,7 @@ const IssuePreventionAnalytics = () => {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                     <Typography variant="caption" color="text.secondary">Not Matched</Typography>
                     <Typography variant="h4" fontWeight="bold" color="warning.main">
                       {uploadResults.summary.unmatchedRows}
@@ -1717,7 +1690,7 @@ const IssuePreventionAnalytics = () => {
                   </Paper>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, bgcolor: '#262626', borderRadius: 2 }}>
+                  <Paper sx={{ p: 2, bgcolor: 'var(--surface)', borderRadius: 2 }}>
                     <Typography variant="caption" color="text.secondary">Match Rate</Typography>
                     <Typography variant="h4" fontWeight="bold" color="info.main">
                       {Math.round(uploadResults.summary.matchRate)}%
@@ -1727,7 +1700,7 @@ const IssuePreventionAnalytics = () => {
               </Grid>
 
               {/* Results Table */}
-              <Paper sx={{ height: 500, width: '100%', borderRadius: 2, overflow: 'hidden', bgcolor: '#1a1a1a' }}>
+              <Paper sx={{ height: 500, width: '100%', borderRadius: 2, overflow: 'hidden', bgcolor: 'var(--bg)' }}>
                 <DataGrid
                   rows={uploadResults.data.map((item, idx) => ({ id: idx, ...item }))}
                   columns={[
@@ -1815,22 +1788,22 @@ const IssuePreventionAnalytics = () => {
                     border: 'none',
                     '& .MuiDataGrid-cell': {
                       color: 'grey.300',
-                      borderBottom: '1px solid #333'
+                      borderBottom: '1px solid var(--border)'
                     },
                     '& .MuiDataGrid-columnHeaders': {
-                      backgroundColor: '#262626',
+                      backgroundColor: 'var(--surface)',
                       color: 'grey.100',
                       fontSize: 13,
                       fontWeight: 'bold',
-                      borderBottom: '2px solid #333'
+                      borderBottom: '2px solid var(--border)'
                     },
                     '& .MuiDataGrid-footerContainer': {
-                      backgroundColor: '#262626',
-                      borderTop: '2px solid #333'
+                      backgroundColor: 'var(--surface)',
+                      borderTop: '2px solid var(--border)'
                     },
                     '& .MuiDataGrid-toolbarContainer': {
                       p: 2,
-                      backgroundColor: '#1a1a1a'
+                      backgroundColor: 'var(--bg)'
                     },
                     '& .MuiButton-textPrimary': {
                       color: theme.palette.primary.main
@@ -1841,7 +1814,7 @@ const IssuePreventionAnalytics = () => {
             </Stack>
           )}
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #333', pt: 2, justifyContent: 'space-between', px: 3, pb: 2 }}>
+        <DialogActions sx={{ borderTop: '1px solid var(--border)', pt: 2, justifyContent: 'space-between', px: 3, pb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
               <CheckCircleIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle', color: 'success.main' }} />
@@ -1870,7 +1843,7 @@ const IssuePreventionAnalytics = () => {
               </Button>
             )}
           </Stack>
-          <Button onClick={() => setShowUploadDialog(false)} variant="contained" sx={{ bgcolor: '#333' }}>
+          <Button onClick={() => setShowUploadDialog(false)} variant="contained" sx={{ bgcolor: 'var(--surface-hover)' }}>
             Close
           </Button>
         </DialogActions>
@@ -1880,7 +1853,7 @@ const IssuePreventionAnalytics = () => {
       <Dialog
         open={showEditRecordDialog}
         onClose={() => setShowEditRecordDialog(false)}
-        PaperProps={{ sx: { bgcolor: '#1a1a1a', borderRadius: 3, border: '1px solid #333', minWidth: 400 } }}
+        PaperProps={{ sx: { bgcolor: 'var(--bg)', borderRadius: 3, border: '1px solid var(--border)', minWidth: 400 } }}
       >
         <DialogTitle sx={{ color: 'primary.main', fontWeight: 'bold' }}>Edit Audit Record</DialogTitle>
         <DialogContent>
@@ -1930,7 +1903,7 @@ const IssuePreventionAnalytics = () => {
       <Dialog
         open={showAddToTrackerDialog}
         onClose={() => setShowAddToTrackerDialog(false)}
-        PaperProps={{ sx: { bgcolor: '#1a1a1a', borderRadius: 3, border: '1px solid #333', minWidth: 500 } }}
+        PaperProps={{ sx: { bgcolor: 'var(--bg)', borderRadius: 3, border: '1px solid var(--border)', minWidth: 500 } }}
       >
         <DialogTitle sx={{ color: 'success.main', fontWeight: 'bold' }}>
           <Stack direction="row" spacing={1} alignItems="center">
@@ -2008,7 +1981,7 @@ const IssuePreventionAnalytics = () => {
       <Dialog
         open={showEditPeriodDialog}
         onClose={() => setShowEditPeriodDialog(false)}
-        PaperProps={{ sx: { bgcolor: '#1a1a1a', borderRadius: 3, border: '1px solid #333', minWidth: 400 } }}
+        PaperProps={{ sx: { bgcolor: 'var(--bg)', borderRadius: 3, border: '1px solid var(--border)', minWidth: 400 } }}
       >
         <DialogTitle sx={{ color: 'primary.main', fontWeight: 'bold' }}>Set Audit Sheet Period</DialogTitle>
         <DialogContent>

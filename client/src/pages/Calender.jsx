@@ -31,7 +31,7 @@ const clickUpTheme = createTheme({
       primary: "#1f2937",
       secondary: "#6b7280",
     },
-    divider: "#e5e7eb",
+    divider: "var(--border)",
   },
   typography: {
     fontFamily: '"Inter", "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -253,7 +253,7 @@ const CalendarPage = () => {
                       py: 0.5,
                       borderRadius: '4px',
                       backgroundColor: 'primary.main',
-                      color: 'white',
+                      color: 'var(--text)',
                       fontSize: '0.6875rem',
                       fontWeight: 600,
                       textTransform: 'uppercase',

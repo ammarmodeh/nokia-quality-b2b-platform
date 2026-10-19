@@ -48,7 +48,7 @@ export default function DownloadDialog({ open, onClose, onPasscodeValid }) {
       fullScreen={isMobile}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
         }
@@ -59,25 +59,25 @@ export default function DownloadDialog({ open, onClose, onPasscodeValid }) {
           display: 'flex',
           alignItems: 'center',
           gap: 2,
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
-          <FaLock color="#7b68ee" size={isMobile ? 16 : 20} />
+          <FaLock color="var(--accent-text)" size={isMobile ? 16 : 20} />
           <Typography variant={isMobile ? "subtitle1" : "h6"} component="div">
             Enter Passcode
           </Typography>
         </DialogTitle>
         <DialogContent sx={{
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           padding: isMobile ? '16px' : '20px 24px',
           "&.MuiDialogContent-root": {
             paddingTop: 3
           }
         }}>
           <DialogContentText sx={{
-            color: '#b3b3b3',
+            color: 'var(--text-secondary)',
             mb: 2,
             fontSize: isMobile ? '0.875rem' : '1rem'
           }}>
@@ -98,20 +98,20 @@ export default function DownloadDialog({ open, onClose, onPasscodeValid }) {
             helperText={error}
             sx={{
               '& .MuiInputBase-root': {
-                color: '#ffffff',
+                color: 'var(--text)',
               },
               '& .MuiInputLabel-root': {
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
               },
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: '#3d3d3d',
+                  borderColor: 'var(--border)',
                 },
                 '&:hover fieldset': {
                   borderColor: '#666',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: '#7b68ee',
+                  borderColor: 'var(--accent)',
                 },
               },
               '& .MuiFormHelperText-root': {
@@ -121,23 +121,23 @@ export default function DownloadDialog({ open, onClose, onPasscodeValid }) {
             InputProps={{
               sx: {
                 borderRadius: '4px',
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
               }
             }}
           />
         </DialogContent>
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
             onClick={onClose}
             size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               }
             }}
           >
@@ -147,8 +147,8 @@ export default function DownloadDialog({ open, onClose, onPasscodeValid }) {
             type="submit"
             size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
-              backgroundColor: '#7b68ee',
+              color: 'var(--text)',
+              backgroundColor: 'var(--accent)',
               '&:hover': {
                 backgroundColor: '#1976d2',
               }

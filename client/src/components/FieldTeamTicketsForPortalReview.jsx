@@ -89,10 +89,10 @@ const FieldTeamTicketsForPortalReview = ({ teamId, teamName }) => {
 
   // Colors for dark mode UI consistency
   const colors = {
-    background: '#2d2d2d',
+    background: 'var(--surface)',
     // surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: 'var(--border)',
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',

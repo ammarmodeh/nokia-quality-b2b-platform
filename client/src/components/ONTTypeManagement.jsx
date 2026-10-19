@@ -37,9 +37,9 @@ const ONTTypeManagement = ({ onTypeChange }) => {
   const [newType, setNewType] = useState({ name: "", description: "" });
 
   const colors = {
-    background: "#2d2d2d",
+    background: "var(--surface)",
     surface: "#252525",
-    border: "#3d3d3d",
+    border: "var(--border)",
     primary: "#7b68ee",
     textPrimary: "#ffffff",
     textSecondary: "#b3b3b3",
@@ -98,7 +98,7 @@ const ONTTypeManagement = ({ onTypeChange }) => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
-          sx={{ bgcolor: colors.primary, "&:hover": { bgcolor: "#6a5acd" } }}
+          sx={{ bgcolor: colors.primary, "&:hover": { bgcolor: "var(--accent-hover)" } }}
         >
           Add Type
         </Button>

@@ -1,26 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Box,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  IconButton,
-  Grid,
-  Checkbox,
-  FormControlLabel,
-  Tooltip,
-  alpha
-} from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Select, FormControl, InputLabel, Box, Typography, useTheme, useMediaQuery, IconButton, Grid, Checkbox, FormControlLabel, Tooltip } from "@mui/material";
 import { useSelector } from "react-redux";
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
 import { MdAdd, MdDelete, MdHistory, MdTerminal } from "react-icons/md";
@@ -454,15 +434,15 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   // Style constants with disabled state
   const textFieldStyles = {
     '& .MuiInputBase-root': {
-      color: '#ffffff',
+      color: 'var(--text)',
       cursor: isAdmin ? 'text' : 'not-allowed',
     },
     '& .MuiInputLabel-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
-        borderColor: '#3d3d3d',
+        borderColor: 'var(--border)',
       },
       '&:hover fieldset': {
         borderColor: isAdmin ? '#666' : '#e5e7eb',
@@ -475,17 +455,17 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       }
     },
     '& .MuiFormHelperText-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
   };
 
   const formControlStyles = {
     '& .MuiInputBase-root': {
-      color: '#ffffff',
+      color: 'var(--text)',
       cursor: isAdmin ? 'pointer' : 'not-allowed',
     },
     '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#3d3d3d',
+      borderColor: 'var(--border)',
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
       borderColor: isAdmin ? '#666' : '#e5e7eb',
@@ -496,7 +476,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const inputLabelStyles = {
-    color: '#b3b3b3',
+    color: 'var(--text-secondary)',
     '&.Mui-focused': {
       color: isAdmin ? '#1976d2' : '#6b7280',
     },
@@ -504,15 +484,15 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
   const selectStyles = {
     '& .MuiSelect-icon': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
   };
 
   const menuItemStyles = {
-    color: '#ffffff',
-    backgroundColor: '#2d2d2d',
+    color: 'var(--text)',
+    backgroundColor: 'var(--surface)',
     '&:hover': {
-      backgroundColor: '#2a2a2a',
+      backgroundColor: 'var(--surface)',
     },
     '&.Mui-selected': {
       backgroundColor: '#1976d2',
@@ -523,7 +503,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const cancelButtonStyles = {
-    color: '#ffffff',
+    color: 'var(--text)',
     backgroundColor: '#555',
     '&:hover': {
       backgroundColor: '#666',
@@ -531,7 +511,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const submitButtonStyles = {
-    color: '#ffffff',
+    color: 'var(--text)',
     backgroundColor: isAdmin ? '#1976d2' : '#555',
     '&:hover': {
       backgroundColor: isAdmin ? '#1565c0' : '#555',
@@ -540,7 +520,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
   };
 
   const resetButtonStyle = {
-    color: '#ffffff',
+    color: 'var(--text)',
     backgroundColor: '#b91c1c', // Deep Red
     '&:hover': {
       backgroundColor: '#991b1b', // Darker Red
@@ -555,16 +535,16 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       fullScreen
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           boxShadow: 'none',
           borderRadius: fullScreen ? '0px' : '8px',
         }
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
-        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
+        borderBottom: '1px solid var(--border)',
         padding: '16px 24px',
       }}>
         <Typography variant="h6" component="div">
@@ -573,8 +553,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       </DialogTitle>
 
       <DialogContent dividers sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
         padding: '20px 24px',
         '&.MuiDialogContent-root': {
           padding: '20px 24px',
@@ -582,8 +562,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Section 1: Customer & Reported Date */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <FaUser size={18} /> Customer & Primary Info
             </Typography>
             <Grid container spacing={2}>
@@ -654,11 +634,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                         checked={formData.pisDateKnown}
                         onChange={handleChange}
                         name="pisDateKnown"
-                        sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                        sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                       />
                     }
                     label="PIS Date Known"
-                    sx={{ color: '#ffffff', minWidth: '150px' }}
+                    sx={{ color: 'var(--text)', minWidth: '150px' }}
                   />
                   {formData.pisDateKnown && (
                     <TextField
@@ -694,11 +674,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                         checked={formData.dateKnown}
                         onChange={handleChange}
                         name="dateKnown"
-                        sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                        sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                       />
                     }
                     label="Reported Date Known"
-                    sx={{ color: '#ffffff', minWidth: '150px' }}
+                    sx={{ color: 'var(--text)', minWidth: '150px' }}
                   />
                   {formData.dateKnown && (
                     <TextField
@@ -722,13 +702,13 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                       checked={formData.isQoS}
                       onChange={handleChange}
                       name="isQoS"
-                      sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                      sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                     />
                   }
                   label={
                     <Box>
-                      <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 'bold' }}>Quality of Service (QoS)</Typography>
-                      <Typography variant="caption" sx={{ color: '#b3b3b3', display: 'block' }}>Flag for higher weighting in rankings</Typography>
+                      <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>Quality of Service (QoS)</Typography>
+                      <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block' }}>Flag for higher weighting in rankings</Typography>
                     </Box>
                   }
                   disabled={!isAdmin}
@@ -739,8 +719,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               {/* Dynamic Scoring Keys - Autocomplete */}
               {scoringKeyOptions.length > 0 && (
                 <Grid item xs={12}>
-                  <Box sx={{ p: 2, border: '1px solid #3d3d3d', borderRadius: 2, mt: 2 }}>
-                    <Typography variant="subtitle2" sx={{ color: '#7b68ee', mb: 1 }}>Scoring Factors</Typography>
+                  <Box sx={{ p: 2, border: '1px solid var(--border)', borderRadius: 2, mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'var(--accent-text)', mb: 1 }}>Scoring Factors</Typography>
                     <MuiAutocomplete
                       multiple
                       id="scoring-keys-autocomplete"
@@ -764,26 +744,26 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                         />
                       )}
                       renderOption={(props, option, { selected }) => (
-                        <li {...props} style={{ backgroundColor: '#2d2d2d', color: '#fff' }}>
+                        <li {...props} style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}>
                           <Checkbox
                             icon={<Box component="span" sx={{ width: 16, height: 16, border: '1px solid gray', borderRadius: '3px' }} />}
-                            checkedIcon={<Box component="span" sx={{ width: 16, height: 16, bgcolor: '#7b68ee', borderRadius: '3px' }} />}
+                            checkedIcon={<Box component="span" sx={{ width: 16, height: 16, bgcolor: 'var(--accent)', borderRadius: '3px' }} />}
                             style={{ marginRight: 8 }}
                             checked={selected}
-                            sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                            sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                           />
-                          {option.label} <span style={{ color: '#b3b3b3', fontSize: '0.8em', marginLeft: '4px' }}>({option.points > 0 ? '+' : ''}{option.points})</span>
+                          {option.label} <span style={{ color: 'var(--text-secondary)', fontSize: '0.8em', marginLeft: '4px' }}>({option.points > 0 ? '+' : ''}{option.points})</span>
                         </li>
                       )}
                       fullWidth
                       ChipProps={{
                         sx: {
-                          backgroundColor: '#7b68ee',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--accent)',
+                          color: 'var(--text)',
                           '& .MuiChip-deleteIcon': {
-                            color: '#ffffff',
+                            color: 'var(--text)',
                             '&:hover': {
-                              color: '#e0e0e0',
+                              color: 'var(--text-secondary)',
                             },
                           },
                         },
@@ -796,8 +776,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Box>
 
           {/* Section 2: Reporter Details */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Reporter Information</Typography>
+          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2 }}>Reporter Information</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <ManagedAutocomplete
@@ -853,11 +833,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     sx={{
                       mt: 1,
                       minWidth: '90px',
-                      borderColor: '#3d3d3d',
-                      color: '#7b68ee',
+                      borderColor: 'var(--border)',
+                      color: 'var(--accent-text)',
                       fontSize: '0.65rem',
                       textTransform: 'none',
-                      '&:hover': { borderColor: '#7b68ee', backgroundColor: alpha('#7b68ee', 0.05) }
+                      '&:hover': { borderColor: 'var(--accent)', backgroundColor: alpha('#7b68ee', 0.05) }
                     }}
                   >
                     Use Reporter
@@ -882,8 +862,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Box>
 
           {/* Section 3: Problem Description (Issues) */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Problem Description</Typography>
+          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2 }}>Problem Description</Typography>
             {formData.issues.map((issue, index) => (
               <Grid container spacing={2} key={index} alignItems="center" sx={{ mb: 2 }}>
                 <Grid item xs={11}>
@@ -931,14 +911,14 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 </Grid>
               </Grid>
             ))}
-            <Button startIcon={<MdAdd />} onClick={addIssueRow} disabled={!isAdmin} sx={{ color: '#7b68ee', textTransform: 'none' }}>
+            <Button startIcon={<MdAdd />} onClick={addIssueRow} disabled={!isAdmin} sx={{ color: 'var(--accent-text)', textTransform: 'none' }}>
               Add Another Category
             </Button>
           </Box>
 
           {/* Section 4: Team Information */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Team Information</Typography>
+          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2 }}>Team Information</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <MuiAutocomplete
@@ -966,8 +946,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   sx={{
                     ...textFieldStyles,
                     '& .MuiInputBase-root': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      color: '#b3b3b3'
+                      backgroundColor: 'var(--overlay-subtle)',
+                      color: 'var(--text-secondary)'
                     }
                   }}
                 />
@@ -975,8 +955,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             </Grid>
           </Box>
           {/* Section: Caller Details - Separately after Assignment */}
-          {/* <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Caller Information</Typography>
+          {/* <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2 }}>Caller Information</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <ManagedAutocomplete
@@ -1017,8 +997,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Box> */}
 
           {/* Section 5: Dispatch & Closure */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Dispatch & Supervisor Approval</Typography>
+          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2 }}>Dispatch & Supervisor Approval</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
                 <FormControl fullWidth sx={formControlStyles}>
@@ -1030,7 +1010,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     onChange={handleChange}
                     disabled={!isAdmin}
                     sx={selectStyles}
-                    MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
+                    MenuProps={{ PaperProps: { sx: { backgroundColor: 'var(--surface)', color: 'var(--text)', '& .MuiMenuItem-root': menuItemStyles } } }}
                   >
                     <MenuItem value="yes" sx={menuItemStyles}>Yes (Dispatched)</MenuItem>
                     <MenuItem value="no" sx={menuItemStyles}>No (Pending)</MenuItem>
@@ -1046,11 +1026,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                           checked={formData.dispatchedAtKnown}
                           onChange={handleChange}
                           name="dispatchedAtKnown"
-                          sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                          sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                         />
                       }
                       label="Dispatched Date Known"
-                      sx={{ color: '#ffffff', minWidth: '150px' }}
+                      sx={{ color: 'var(--text)', minWidth: '150px' }}
                     />
                     {formData.dispatchedAtKnown && (
                       <TextField
@@ -1084,8 +1064,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           </Box>
 
           {/* Section 6: Resolution Status */}
-          <Box sx={{ border: '1px solid #3d3d3d', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ color: '#7b68ee', mb: 2 }}>Final Status & Resolution</Typography>
+          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ color: 'var(--accent-text)', mb: 2 }}>Final Status & Resolution</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
                 <FormControl fullWidth required sx={formControlStyles}>
@@ -1097,7 +1077,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     onChange={handleChange}
                     disabled={!isAdmin}
                     sx={selectStyles}
-                    MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
+                    MenuProps={{ PaperProps: { sx: { backgroundColor: 'var(--surface)', color: 'var(--text)', '& .MuiMenuItem-root': menuItemStyles } } }}
                   >
                     <MenuItem value="yes" sx={menuItemStyles}>Closed (Resolved)</MenuItem>
                     <MenuItem value="no" sx={menuItemStyles}>Open (In Progress)</MenuItem>
@@ -1115,7 +1095,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                       onChange={handleChange}
                       disabled={!isAdmin}
                       sx={selectStyles}
-                      MenuProps={{ PaperProps: { sx: { backgroundColor: '#2d2d2d', color: '#ffffff', '& .MuiMenuItem-root': menuItemStyles } } }}
+                      MenuProps={{ PaperProps: { sx: { backgroundColor: 'var(--surface)', color: 'var(--text)', '& .MuiMenuItem-root': menuItemStyles } } }}
                     >
                       <MenuItem value="" sx={menuItemStyles}>Not Specified</MenuItem>
                       <MenuItem value="Phone" sx={menuItemStyles}>Phone</MenuItem>
@@ -1133,11 +1113,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                           checked={formData.closedAtKnown}
                           onChange={handleChange}
                           name="closedAtKnown"
-                          sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                          sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                         />
                       }
                       label="Close Date Known"
-                      sx={{ color: '#ffffff', minWidth: '150px' }}
+                      sx={{ color: 'var(--text)', minWidth: '150px' }}
                     />
                     {formData.closedAtKnown && (
                       <TextField
@@ -1165,11 +1145,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                             checked={formData.resolveDateKnown}
                             onChange={handleChange}
                             name="resolveDateKnown"
-                            sx={{ color: '#b3b3b3', '&.Mui-checked': { color: '#7b68ee' } }}
+                            sx={{ color: 'var(--text-secondary)', '&.Mui-checked': { color: 'var(--accent-text)' } }}
                           />
                         }
                         label="Resolution Date Known"
-                        sx={{ color: '#ffffff', minWidth: '150px' }}
+                        sx={{ color: 'var(--text)', minWidth: '150px' }}
                       />
                       {formData.resolveDateKnown && (
                         <TextField
@@ -1211,8 +1191,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
 
       <DialogActions sx={{
-        backgroundColor: '#2d2d2d',
-        borderTop: '1px solid #e5e7eb',
+        backgroundColor: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
         padding: '12px 24px',
         justifyContent: 'space-between' // Ensure space between reset and other buttons
       }}>
@@ -1249,8 +1229,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         fullWidth
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#1e1e1e', // Darker background for warning
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)', // Darker background for warning
+            color: 'var(--text)',
             borderRadius: '12px',
             border: '1px solid #f59e0b', // Amber warning border
           }
@@ -1279,31 +1259,31 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
               <Box key={issue._id || index} sx={{
                 p: 2,
                 borderRadius: '8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                backgroundColor: 'var(--overlay-subtle)',
+                border: '1px solid var(--border)'
               }}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={4}>
-                    <Typography variant="caption" color="#b3b3b3">Reported Date</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Reported Date</Typography>
                     <Typography variant="body2" fontWeight="bold">
                       {issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <Typography variant="caption" color="#b3b3b3">Reporter</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Reporter</Typography>
                     <Typography variant="body2" fontWeight="bold">{issue.reporter}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <Typography variant="caption" color="#b3b3b3">Assigned To</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Assigned To</Typography>
                     <Typography variant="body2" fontWeight="bold">{issue.assignedTo}</Typography>
                   </Grid>
 
                   <Grid item xs={12} sm={4}>
-                    <Typography variant="caption" color="#b3b3b3">Customer Name</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Customer Name</Typography>
                     <Typography variant="body2">{issue.customerName || 'N/A'}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <Typography variant="caption" color="#b3b3b3">Status</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Status</Typography>
                     <Typography variant="body2" sx={{
                       color: issue.solved === 'yes' ? '#4caf50' : '#f44336',
                       fontWeight: 'bold',
@@ -1313,7 +1293,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <Typography variant="caption" color="#b3b3b3">Category</Typography>
+                    <Typography variant="caption" color="var(--text-secondary)">Category</Typography>
                     <Typography variant="body2">
                       {issue.issues?.[0]?.category || 'N/A'}
                     </Typography>
@@ -1323,7 +1303,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             ))}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid var(--border)' }}>
           <Button
             onClick={() => setDuplicateDialogOpen(false)}
             variant="contained"

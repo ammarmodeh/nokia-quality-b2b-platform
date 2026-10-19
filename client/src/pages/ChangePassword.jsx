@@ -99,14 +99,14 @@ const ChangePassword = () => {
   // Style constants
   const textFieldStyles = {
     '& .MuiInputBase-root': {
-      color: '#ffffff',
+      color: 'var(--text)',
     },
     '& .MuiInputLabel-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
-        borderColor: '#3d3d3d',
+        borderColor: 'var(--border)',
       },
       '&:hover fieldset': {
         borderColor: '#666',
@@ -116,25 +116,25 @@ const ChangePassword = () => {
       },
     },
     '& .MuiFormHelperText-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
     },
   };
 
   const buttonStyles = {
     backgroundColor: '#1976d2',
-    color: '#ffffff',
+    color: 'var(--text)',
     fontWeight: 'bold',
     '&:hover': {
       backgroundColor: '#1565c0',
     },
     '&:disabled': {
       backgroundColor: '#555',
-      color: '#999'
+      color: 'var(--text-muted)'
     }
   };
 
   // const cancelButtonStyles = {
-  //   color: '#ffffff',
+  //   color: 'var(--text)',
   //   backgroundColor: '#555',
   //   fontWeight: 'bold',
   //   '&:hover': {
@@ -149,7 +149,7 @@ const ChangePassword = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: '#2d2d2d',
+        backgroundColor: 'var(--surface)',
         p: isMobile ? 0 : 2
       }}
     >
@@ -177,7 +177,7 @@ const ChangePassword = () => {
           width: '100%',
           height: isMobile ? '100vh' : 'auto',
           maxWidth: isMobile ? '100%' : '450px',
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           borderRadius: isMobile ? 0 : '8px',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
           border: isMobile ? 'none' : '1px solid #f3f4f6',
@@ -191,7 +191,7 @@ const ChangePassword = () => {
             <MuiButton
               startIcon={<ArrowBackIcon />}
               onClick={handleBackClick}
-              sx={{ color: '#ffffff' }}
+              sx={{ color: 'var(--text)' }}
             >
               {isMobile ? '' : 'Back'}
             </MuiButton>
@@ -206,13 +206,13 @@ const ChangePassword = () => {
             <Typography
               variant={isMobile ? 'h6' : 'h5'}
               component="h1"
-              sx={{ color: '#ffffff', fontWeight: 'bold' }}
+              sx={{ color: 'var(--text)', fontWeight: 'bold' }}
             >
               Change Password
             </Typography>
             <Typography
               variant={isMobile ? 'body2' : 'body1'}
-              sx={{ color: '#b3b3b3', mt: 1 }}
+              sx={{ color: 'var(--text-secondary)', mt: 1 }}
             >
               Secure your account with a new password
             </Typography>
@@ -243,7 +243,7 @@ const ChangePassword = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <LockIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -252,7 +252,7 @@ const ChangePassword = () => {
                     <IconButton
                       onClick={() => togglePasswordVisibility('oldPassword')}
                       edge="end"
-                      sx={{ color: '#666' }}
+                      sx={{ color: 'var(--text-muted)' }}
                       size={isMobile ? 'small' : 'medium'}
                     >
                       {showPassword.oldPassword ? <VisibilityOff fontSize={isMobile ? 'small' : 'medium'} /> : <Visibility fontSize={isMobile ? 'small' : 'medium'} />}
@@ -284,7 +284,7 @@ const ChangePassword = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <LockOpenIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -293,7 +293,7 @@ const ChangePassword = () => {
                     <IconButton
                       onClick={() => togglePasswordVisibility('newPassword')}
                       edge="end"
-                      sx={{ color: '#666' }}
+                      sx={{ color: 'var(--text-muted)' }}
                       size={isMobile ? 'small' : 'medium'}
                     >
                       {showPassword.newPassword ? <VisibilityOff fontSize={isMobile ? 'small' : 'medium'} /> : <Visibility fontSize={isMobile ? 'small' : 'medium'} />}
@@ -318,7 +318,7 @@ const ChangePassword = () => {
               size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ color: '#666' }}>
+                  <InputAdornment position="start" sx={{ color: 'var(--text-muted)' }}>
                     <VerifiedIcon fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
@@ -327,7 +327,7 @@ const ChangePassword = () => {
                     <IconButton
                       onClick={() => togglePasswordVisibility('confirmPassword')}
                       edge="end"
-                      sx={{ color: '#666' }}
+                      sx={{ color: 'var(--text-muted)' }}
                       size={isMobile ? 'small' : 'medium'}
                     >
                       {showPassword.confirmPassword ? <VisibilityOff fontSize={isMobile ? 'small' : 'medium'} /> : <Visibility fontSize={isMobile ? 'small' : 'medium'} />}
@@ -368,9 +368,9 @@ const ChangePassword = () => {
           sx={{
             width: '100%',
             backgroundColor: snackbarSeverity === 'success' ? '#1976d2' : '#d32f2f',
-            color: '#ffffff',
+            color: 'var(--text)',
             '& .MuiAlert-icon': {
-              color: '#ffffff'
+              color: 'var(--text)'
             }
           }}
         >

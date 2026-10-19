@@ -32,16 +32,16 @@ const StatCard = ({ title, count, total, color, icon, percentage }) => (
     overflow: 'visible',
     borderRadius: 3,
     bgcolor: 'rgba(30, 41, 59, 0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
+    border: '1px solid var(--border)',
     backdropFilter: 'blur(10px)'
   }}>
     <CardContent sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
         <Box>
-          <Typography variant="subtitle2" color="#94a3b8" fontWeight="600" gutterBottom>
+          <Typography variant="subtitle2" color="var(--text-secondary)" fontWeight="600" gutterBottom>
             {title}
           </Typography>
-          <Typography variant="h4" fontWeight="800" color="#fff">
+          <Typography variant="h4" fontWeight="800" color="var(--text)">
             {count}
           </Typography>
         </Box>
@@ -77,7 +77,7 @@ const StatCard = ({ title, count, total, color, icon, percentage }) => (
           {percentage.toFixed(0)}%
         </Typography>
       </Box>
-      <Typography variant="caption" color="#64748b">
+      <Typography variant="caption" color="var(--text-muted)">
         {count} of {total} tasks
       </Typography>
     </CardContent>
@@ -588,7 +588,7 @@ const AssignedToMe = () => {
         p: 2,
         overflow: 'hidden',
         bgcolor: 'rgba(30, 41, 59, 0.3)',
-        border: '1px solid rgba(255, 255, 255, 0.05)'
+        border: '1px solid var(--border)'
       }} elevation={0}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
 
@@ -620,15 +620,15 @@ const AssignedToMe = () => {
                 ),
                 endAdornment: searchTerm && (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={handleClearSearch} sx={{ color: '#fff', opacity: 0.6 }}><MdClose /></IconButton>
+                    <IconButton size="small" onClick={handleClearSearch} sx={{ color: 'var(--text)', opacity: 0.6 }}><MdClose /></IconButton>
                   </InputAdornment>
                 )
               }}
               sx={{
                 width: { xs: '100%', md: 240 },
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                bgcolor: 'var(--overlay-subtle)',
                 borderRadius: 2,
-                '& .MuiOutlinedInput-root': { color: '#fff' },
+                '& .MuiOutlinedInput-root': { color: 'var(--text)' },
                 '& fieldset': { border: 'none' }
               }}
             />
@@ -641,9 +641,9 @@ const AssignedToMe = () => {
               size="small"
               sx={{
                 minWidth: 150,
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                bgcolor: 'var(--overlay-subtle)',
                 borderRadius: 2,
-                '& .MuiOutlinedInput-root': { color: '#fff' },
+                '& .MuiOutlinedInput-root': { color: 'var(--text)' },
                 '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.5)' },
                 '& fieldset': { border: 'none' }
               }}
@@ -676,9 +676,9 @@ const AssignedToMe = () => {
               }}
               sx={{
                 minWidth: 150,
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                bgcolor: 'var(--overlay-subtle)',
                 borderRadius: 2,
-                '& .MuiOutlinedInput-root': { color: '#fff' },
+                '& .MuiOutlinedInput-root': { color: 'var(--text)' },
                 '& fieldset': { border: 'none' }
               }}
             >

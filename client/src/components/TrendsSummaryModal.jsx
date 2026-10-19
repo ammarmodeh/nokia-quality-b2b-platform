@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useState, useMemo } from 'react';
 import {
   Dialog,
@@ -192,14 +193,14 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
       legend: {
         position: 'top',
         labels: {
-          color: '#fff',
+          color: tok('--text'),
           font: { size: 14 }
         }
       },
       title: {
         display: true,
         text: `${period === 'week' ? 'Weekly' : 'Monthly'} Trend Volume`,
-        color: '#fff',
+        color: tok('--text'),
         font: { size: 20 }
       },
       tooltip: {
@@ -218,17 +219,17 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
       y: {
         beginAtZero: true,
         ticks: {
-          color: '#fff',
+          color: tok('--text'),
           font: { size: 14 }
         },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+        grid: { color: tok('--overlay-subtle') }
       },
       x: {
         ticks: {
-          color: '#fff',
+          color: tok('--text'),
           font: { size: 14 }
         },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+        grid: { color: tok('--overlay-subtle') }
       }
     }
   };
@@ -257,8 +258,8 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
       // fullWidth
       PaperProps={{
         sx: {
-          backgroundColor: '#1e1e1e',
-          color: '#fff',
+          backgroundColor: tok('--surface'),
+          color: tok('--text'),
           minHeight: '80vh'
         }
       }}
@@ -271,7 +272,7 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
           <IconButton onClick={handleExport} sx={{ color: '#4caf50', mr: 1 }} title="Export Table">
             <MdFileDownload />
           </IconButton>
-          <IconButton onClick={onClose} sx={{ color: '#aaa' }}>
+          <IconButton onClick={onClose} sx={{ color: tok('--text-secondary') }}>
             <MdClose />
           </IconButton>
         </Box>
@@ -280,7 +281,7 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
       <DialogContent sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
         {/* Chart Section */}
-        <Paper sx={{ p: 2, backgroundColor: '#2d2d2d', height: '1200px' }}>
+        <Paper sx={{ p: 2, backgroundColor: tok('--surface'), height: '1200px' }}>
           <Box sx={{ position: 'relative', height: '400px', width: '100%' }}>
             <Bar data={chartData} options={chartOptions} />
           </Box>
@@ -296,23 +297,23 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
             disableSelectionOnClick
             sx={{
               border: 0,
-              color: '#ffffff',
-              '& .MuiDataGrid-main': { backgroundColor: '#2d2d2d' },
+              color: tok('--text'),
+              '& .MuiDataGrid-main': { backgroundColor: tok('--surface') },
               '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: '#333',
-                color: '#b3b3b3',
+                backgroundColor: tok('--surface-hover'),
+                color: tok('--text-secondary'),
                 fontWeight: 'bold',
                 borderBottom: '1px solid #444',
               },
               '& .MuiDataGrid-cell': { borderBottom: '1px solid #444' },
-              '& .MuiDataGrid-row:hover': { backgroundColor: '#3d3d3d' },
+              '& .MuiDataGrid-row:hover': { backgroundColor: tok('--surface-hover') },
               '& .MuiDataGrid-footerContainer': {
-                backgroundColor: '#333',
+                backgroundColor: tok('--surface-hover'),
                 borderTop: '1px solid #444',
-                color: '#fff'
+                color: tok('--text')
               },
-              '& .MuiTablePagination-root': { color: '#fff' },
-              '& .MuiSvgIcon-root': { color: '#fff' }
+              '& .MuiTablePagination-root': { color: tok('--text') },
+              '& .MuiSvgIcon-root': { color: tok('--text') }
             }}
           />
         </Box>
@@ -320,7 +321,7 @@ const TrendsSummaryModal = ({ open, onClose, tasks, period = 'week' }) => {
       </DialogContent>
 
       <DialogActions sx={{ borderTop: '1px solid #333', p: 2 }}>
-        <Button onClick={onClose} variant="outlined" sx={{ color: '#aaa', borderColor: '#aaa' }}>
+        <Button onClick={onClose} variant="outlined" sx={{ color: tok('--text-secondary'), borderColor: '#aaa' }}>
           Close
         </Button>
       </DialogActions>

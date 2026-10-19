@@ -124,7 +124,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                     sx={{
                       height: 6,
                       borderRadius: 3,
-                      bgcolor: 'rgba(255,255,255,0.05)',
+                      bgcolor: 'var(--overlay-subtle)',
                       '& .MuiLinearProgress-bar': {
                         borderRadius: 3,
                         backgroundColor: range.includes('Excel') ? colors.success :
@@ -225,7 +225,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                             sx={{
                               height: 4,
                               borderRadius: 2,
-                              bgcolor: 'rgba(255,255,255,0.05)',
+                              bgcolor: 'var(--overlay-subtle)',
                               '& .MuiLinearProgress-bar': { bgcolor: colors.primary }
                             }}
                           />

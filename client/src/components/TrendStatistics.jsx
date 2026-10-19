@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
@@ -372,7 +373,7 @@ const TrendStatistics = ({ tasks }) => {
       legend: {
         position: isMobile ? 'bottom' : 'top',
         labels: {
-          color: '#ffffff',
+          color: tok('--text'),
           font: { size: isMobile ? 10 : 12 }
         }
       },
@@ -380,14 +381,14 @@ const TrendStatistics = ({ tasks }) => {
         display: true,
         text: `${period === 'week' ? 'Weekly' : 'Monthly'} Trend - ${selectedEntities.length > 0 ? 'Selected' : (viewMode === 'top5' ? 'Top 5' : 'All')} ${analysisType === 'team' ? 'Teams' : 'Reasons'}` +
           (range === 'custom' ? ` (Custom Date Range)` : ''),
-        color: '#ffffff',
+        color: tok('--text'),
         font: { size: isMobile ? 14 : 16 }
       },
       tooltip: {
-        backgroundColor: '#2d2d2d',
+        backgroundColor: tok('--surface'),
         titleColor: '#ffffff',
         bodyColor: '#ffffff',
-        borderColor: '#7b68ee',
+        borderColor: tok('--accent'),
         borderWidth: 1,
         callbacks: {
           title: (tooltipItems) => {
@@ -398,12 +399,12 @@ const TrendStatistics = ({ tasks }) => {
     },
     scales: {
       x: {
-        ticks: { color: '#ffffff', font: { size: isMobile ? 9 : 11 } },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+        ticks: { color: tok('--text'), font: { size: isMobile ? 9 : 11 } },
+        grid: { color: tok('--overlay-subtle') }
       },
       y: {
-        ticks: { color: '#ffffff', stepSize: 1, font: { size: isMobile ? 9 : 11 } },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+        ticks: { color: tok('--text'), stepSize: 1, font: { size: isMobile ? 9 : 11 } },
+        grid: { color: tok('--overlay-subtle') }
       }
     }
   };
@@ -435,7 +436,7 @@ const TrendStatistics = ({ tasks }) => {
             size="small"
             sx={{
               backgroundColor: showHelp ? '#7b68ee' : '#3d3d3d',
-              color: '#fff',
+              color: tok('--text'),
               cursor: 'pointer'
             }}
           />
@@ -472,46 +473,46 @@ const TrendStatistics = ({ tasks }) => {
       </Box>
 
       {showHelp && (
-        <Paper sx={{ p: 2, mb: 3, backgroundColor: '#333', border: '1px solid #7b68ee', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', mb: 1 }}>
+        <Paper sx={{ p: 2, mb: 3, backgroundColor: tok('--surface-hover'), border: '1px solid #7b68ee', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: tok('--accent-text'), fontWeight: 'bold', mb: 1 }}>
             Guide:
           </Typography>
           <Stack spacing={1}>
-            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+            <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
               • <strong>Analysis Type:</strong> Switch between analyzing specific <em>Teams</em> or underlying <em>Reasons</em>.
             </Typography>
-            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+            <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
               • <strong>View:</strong> 'Top 5' shows highest volume. 'All' shows everything. 'Select Specific' lets you choose.
             </Typography>
-            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+            <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
               • <strong>Range:</strong> 'Last 8' shows recent trend, 'All Time' shows Year-To-Date. 'Custom' lets you pick dates.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 1, mb: 0.5 }}>
+            <Typography variant="subtitle2" sx={{ color: tok('--accent-text'), fontWeight: 'bold', mt: 1, mb: 0.5 }}>
               Status Definitions:
             </Typography>
             <Stack spacing={0.5} pl={1}>
-              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+              <Typography variant="body2" sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>
                 <span style={{ color: '#4caf50' }}>● Excellent:</span> Zero violations in the current period.
               </Typography>
-              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+              <Typography variant="body2" sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>
                 <span style={{ color: '#4caf50' }}>● Improving:</span> Below average and decreasing.
               </Typography>
-              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+              <Typography variant="body2" sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>
                 <span style={{ color: '#f44336' }}>● Worsening:</span> Above average and increasing.
               </Typography>
-              <Typography variant="body2" sx={{ color: '#ccc', fontSize: '0.8rem' }}>
+              <Typography variant="body2" sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>
                 <span style={{ color: '#f44336' }}>● Critical:</span> Reached the highest peak of the period.
               </Typography>
             </Stack>
 
-            <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 1, mb: 0.5 }}>
+            <Typography variant="subtitle2" sx={{ color: tok('--accent-text'), fontWeight: 'bold', mt: 1, mb: 0.5 }}>
               Metrics:
             </Typography>
-            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+            <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
               • <strong>Overall Change:</strong> Comparison between the <em>First</em> period and the <em>Current</em> period of the range.
             </Typography>
-            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+            <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
               • <strong>Breakdown (Detractors/Neutrals):</strong> Shows the specific trend for each type. <br />
               &nbsp;&nbsp; - <span style={{ color: '#f44336' }}>▲ 100%</span> means it doubled since the start.<br />
               &nbsp;&nbsp; - <span style={{ color: '#4caf50' }}>▼ 50%</span> means it halved since the start.
@@ -528,7 +529,7 @@ const TrendStatistics = ({ tasks }) => {
               <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 'bold', textTransform: 'uppercase' }}>
                 Highest Concern
               </Typography>
-              <Typography variant="body2" sx={{ color: '#fff', mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: tok('--text'), mt: 0.5 }}>
                 {trendAnalysis.worsening.name} increased by <strong>{trendAnalysis.worsening.change}%</strong>
               </Typography>
             </Paper>
@@ -538,7 +539,7 @@ const TrendStatistics = ({ tasks }) => {
               <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold', textTransform: 'uppercase' }}>
                 Top Improved
               </Typography>
-              <Typography variant="body2" sx={{ color: '#fff', mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: tok('--text'), mt: 0.5 }}>
                 {trendAnalysis.improving.name} decreased by <strong>{Math.abs(trendAnalysis.improving.change)}%</strong>
               </Typography>
             </Paper>
@@ -546,7 +547,7 @@ const TrendStatistics = ({ tasks }) => {
         </Stack>
       )}
 
-      <Paper sx={{ p: isMobile ? 2 : 3, backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}>
+      <Paper sx={{ p: isMobile ? 2 : 3, backgroundColor: tok('--surface'), border: '1px solid #3d3d3d' }}>
         {/* Controls */}
         <Stack spacing={3} sx={{ mb: 3 }}>
           <Stack direction="column" spacing={2.5}>
@@ -554,7 +555,7 @@ const TrendStatistics = ({ tasks }) => {
             {/* Top Row: Analysis Type & View & Range */}
             <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'flex-start' : 'center'}>
               <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: tok('--text-secondary'), mb: 0.5, display: 'block' }}>
                   Analysis Type
                 </Typography>
                 <ToggleButtonGroup
@@ -565,9 +566,9 @@ const TrendStatistics = ({ tasks }) => {
                   fullWidth={isMobile}
                   sx={{
                     '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                      color: tok('--text-secondary'),
+                      borderColor: tok('--border'),
+                      '&.Mui-selected': { bgcolor: tok('--accent'), color: '#fff', '&:hover': { bgcolor: tok('--accent-hover') } }
                     }
                   }}
                 >
@@ -577,7 +578,7 @@ const TrendStatistics = ({ tasks }) => {
               </Box>
 
               <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: tok('--text-secondary'), mb: 0.5, display: 'block' }}>
                   View
                 </Typography>
                 <ToggleButtonGroup
@@ -589,9 +590,9 @@ const TrendStatistics = ({ tasks }) => {
                   fullWidth={isMobile}
                   sx={{
                     '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } },
+                      color: tok('--text-secondary'),
+                      borderColor: tok('--border'),
+                      '&.Mui-selected': { bgcolor: tok('--accent'), color: '#fff', '&:hover': { bgcolor: tok('--accent-hover') } },
                       '&.Mui-disabled': { color: '#555' }
                     }
                   }}
@@ -602,7 +603,7 @@ const TrendStatistics = ({ tasks }) => {
               </Box>
 
               <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: tok('--text-secondary'), mb: 0.5, display: 'block' }}>
                   Range
                 </Typography>
                 <ToggleButtonGroup
@@ -613,9 +614,9 @@ const TrendStatistics = ({ tasks }) => {
                   fullWidth={isMobile}
                   sx={{
                     '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                      color: tok('--text-secondary'),
+                      borderColor: tok('--border'),
+                      '&.Mui-selected': { bgcolor: tok('--accent'), color: '#fff', '&:hover': { bgcolor: tok('--accent-hover') } }
                     }
                   }}
                 >
@@ -629,7 +630,7 @@ const TrendStatistics = ({ tasks }) => {
             {/* Middle Row: Metric & Period */}
             <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'flex-start' : 'center'}>
               <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: tok('--text-secondary'), mb: 0.5, display: 'block' }}>
                   X-Axis Unit
                 </Typography>
                 <ToggleButtonGroup
@@ -640,9 +641,9 @@ const TrendStatistics = ({ tasks }) => {
                   fullWidth={isMobile}
                   sx={{
                     '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                      color: tok('--text-secondary'),
+                      borderColor: tok('--border'),
+                      '&.Mui-selected': { bgcolor: tok('--accent'), color: '#fff', '&:hover': { bgcolor: tok('--accent-hover') } }
                     }
                   }}
                 >
@@ -652,7 +653,7 @@ const TrendStatistics = ({ tasks }) => {
               </Box>
 
               <Box sx={{ width: isMobile ? '100% ' : 'auto' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: tok('--text-secondary'), mb: 0.5, display: 'block' }}>
                   Metric
                 </Typography>
                 <ToggleButtonGroup
@@ -663,9 +664,9 @@ const TrendStatistics = ({ tasks }) => {
                   fullWidth={isMobile}
                   sx={{
                     '& .MuiToggleButton-root': {
-                      color: '#b3b3b3',
-                      borderColor: '#3d3d3d',
-                      '&.Mui-selected': { bgcolor: '#7b68ee', color: '#fff', '&:hover': { bgcolor: '#6a5acd' } }
+                      color: tok('--text-secondary'),
+                      borderColor: tok('--border'),
+                      '&.Mui-selected': { bgcolor: tok('--accent'), color: '#fff', '&:hover': { bgcolor: tok('--accent-hover') } }
                     }
                   }}
                 >
@@ -692,18 +693,18 @@ const TrendStatistics = ({ tasks }) => {
                       size="small"
                       sx={{
                         '& .MuiOutlinedInput-root': {
-                          color: '#fff',
-                          '& fieldset': { borderColor: '#3d3d3d' },
-                          '&:hover fieldset': { borderColor: '#7b68ee' },
+                          color: tok('--text'),
+                          '& fieldset': { borderColor: tok('--border') },
+                          '&:hover fieldset': { borderColor: tok('--accent') },
                         },
-                        '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                        '& .MuiChip-root': { bgcolor: '#7b68ee', color: '#fff' },
-                        '& .MuiSvgIcon-root': { color: '#b3b3b3' }
+                        '& .MuiInputLabel-root': { color: tok('--text-secondary') },
+                        '& .MuiChip-root': { bgcolor: tok('--accent'), color: '#fff' },
+                        '& .MuiSvgIcon-root': { color: tok('--text-secondary') }
                       }}
                     />
                   )}
                   PaperComponent={({ children }) => (
-                    <Paper sx={{ bgcolor: '#2d2d2d', color: '#fff' }}>{children}</Paper>
+                    <Paper sx={{ bgcolor: tok('--surface'), color: tok('--text') }}>{children}</Paper>
                   )}
                 />
               </Box>
@@ -716,9 +717,9 @@ const TrendStatistics = ({ tasks }) => {
                     fullWidth={isMobile}
                     value={customStart}
                     onChange={(e) => setCustomStart(e.target.value)}
-                    InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
+                    InputLabelProps={{ shrink: true, style: { color: tok('--text-secondary') } }}
                     size="small"
-                    sx={{ input: { color: '#fff' }, fieldset: { borderColor: '#555' } }}
+                    sx={{ input: { color: tok('--text') }, fieldset: { borderColor: tok('--border') } }}
                   />
                   <TextField
                     type="date"
@@ -726,9 +727,9 @@ const TrendStatistics = ({ tasks }) => {
                     fullWidth={isMobile}
                     value={customEnd}
                     onChange={(e) => setCustomEnd(e.target.value)}
-                    InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
+                    InputLabelProps={{ shrink: true, style: { color: tok('--text-secondary') } }}
                     size="small"
-                    sx={{ input: { color: '#fff' }, fieldset: { borderColor: '#555' } }}
+                    sx={{ input: { color: tok('--text') }, fieldset: { borderColor: tok('--border') } }}
                   />
                 </Stack>
               )}
@@ -745,7 +746,7 @@ const TrendStatistics = ({ tasks }) => {
 
         {/* Detailed Trend Cards */}
         <Box>
-          <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 2, borderBottom: '1px solid #3d3d3d', pb: 1 }}>
+          <Typography variant="subtitle2" sx={{ color: tok('--text-secondary'), mb: 2, borderBottom: '1px solid #3d3d3d', pb: 1 }}>
             {analysisType === 'team' ? 'Team' : 'Reason'} Performance Analysis (Selected Range)
           </Typography>
           <Stack direction={isMobile ? 'column' : 'row'} spacing={2} flexWrap="wrap" useFlexGap>
@@ -754,7 +755,7 @@ const TrendStatistics = ({ tasks }) => {
                 key={index}
                 onClick={() => handleCardClick(indicator.name)}
                 sx={{
-                  backgroundColor: '#1e1e1e',
+                  backgroundColor: tok('--surface'),
                   borderRadius: '8px',
                   p: 2,
                   flex: '1 1 200px',
@@ -786,8 +787,8 @@ const TrendStatistics = ({ tasks }) => {
                   position: 'absolute',
                   top: 8,
                   right: 8,
-                  bgcolor: '#7b68ee',
-                  color: '#fff',
+                  bgcolor: tok('--accent'),
+                  color: tok('--text'),
                   borderRadius: '12px',
                   px: 1,
                   py: 0.5,
@@ -797,7 +798,7 @@ const TrendStatistics = ({ tasks }) => {
                   {trendData[indicator.name]?.allTasks?.length || 0} tasks
                 </Box>
 
-                <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 600, mb: 1, minHeight: '2.5em', pr: 8 }}>
+                <Typography variant="body1" sx={{ color: tok('--text'), fontWeight: 600, mb: 1, minHeight: '2.5em', pr: 8 }}>
                   {indicator.name}
                 </Typography>
 
@@ -816,8 +817,8 @@ const TrendStatistics = ({ tasks }) => {
 
                 <Stack spacing={0.5} sx={{ mb: 2 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="caption" sx={{ color: '#888' }}>Detractors:</Typography>
-                    <Typography variant="caption" sx={{ color: '#fff' }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-muted') }}>Detractors:</Typography>
+                    <Typography variant="caption" sx={{ color: tok('--text') }}>
                       {indicator.currentDet}
                       <span style={{ color: indicator.detChange > 0 ? '#f44336' : indicator.detChange < 0 ? '#4caf50' : '#888', marginLeft: 4 }}>
                         ({indicator.detChange > 0 ? '▲' : indicator.detChange < 0 ? '▼' : ''}{Math.abs(indicator.detChange)}%)
@@ -825,8 +826,8 @@ const TrendStatistics = ({ tasks }) => {
                     </Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="caption" sx={{ color: '#888' }}>Neutrals:</Typography>
-                    <Typography variant="caption" sx={{ color: '#fff' }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-muted') }}>Neutrals:</Typography>
+                    <Typography variant="caption" sx={{ color: tok('--text') }}>
                       {indicator.currentNeut}
                       <span style={{ color: indicator.neutChange > 0 ? '#f44336' : indicator.neutChange < 0 ? '#4caf50' : '#888', marginLeft: 4 }}>
                         ({indicator.neutChange > 0 ? '▲' : indicator.neutChange < 0 ? '▼' : ''}{Math.abs(indicator.neutChange)}%)
@@ -838,7 +839,7 @@ const TrendStatistics = ({ tasks }) => {
                 {/* Reason Breakdown */}
                 {indicator.allReasons && indicator.allReasons.length > 0 && (
                   <Box sx={{ mb: 1.5 }}>
-                    <Typography variant="caption" sx={{ color: '#666', mb: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                    <Typography variant="caption" sx={{ color: tok('--text-muted'), mb: 0.5, display: 'block', fontSize: '0.65rem' }}>
                       Reason Breakdown:
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -850,8 +851,8 @@ const TrendStatistics = ({ tasks }) => {
                           sx={{
                             height: 16,
                             fontSize: '0.65rem',
-                            bgcolor: '#252525',
-                            color: '#aaa',
+                            bgcolor: tok('--surface'),
+                            color: tok('--text-secondary'),
                             border: '1px solid #333'
                           }}
                         />
@@ -862,16 +863,16 @@ const TrendStatistics = ({ tasks }) => {
 
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1, borderTop: '1px solid #333', pt: 1 }}>
                   <Box>
-                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>Avg</Typography>
-                    <Typography variant="body2" sx={{ color: '#ccc' }}>{indicator.average}</Typography>
+                    <Typography variant="caption" sx={{ color: tok('--text-muted'), display: 'block' }}>Avg</Typography>
+                    <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>{indicator.average}</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>Peak</Typography>
-                    <Typography variant="body2" sx={{ color: '#ccc' }}>{indicator.peak}</Typography>
+                    <Typography variant="caption" sx={{ color: tok('--text-muted'), display: 'block' }}>Peak</Typography>
+                    <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>{indicator.peak}</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>Current</Typography>
-                    <Typography variant="h6" sx={{ color: '#fff', lineHeight: 1 }}>{indicator.current}</Typography>
+                    <Typography variant="caption" sx={{ color: tok('--text-muted'), display: 'block' }}>Current</Typography>
+                    <Typography variant="h6" sx={{ color: tok('--text'), lineHeight: 1 }}>{indicator.current}</Typography>
                   </Box>
                 </Stack>
               </Box>
@@ -880,7 +881,7 @@ const TrendStatistics = ({ tasks }) => {
         </Box>
 
         {!chartData && (
-          <Typography variant="body2" sx={{ color: '#6b7280', textAlign: 'center', py: 4 }}>
+          <Typography variant="body2" sx={{ color: tok('--text-muted'), textAlign: 'center', py: 4 }}>
             {!customStart || (range === 'custom' && !customEnd)
               ? "Please select a start and end date."
               : "No trend data available."}

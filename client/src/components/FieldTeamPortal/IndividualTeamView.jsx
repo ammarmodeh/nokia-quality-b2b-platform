@@ -1,3 +1,4 @@
+import { tok } from "../../theme/tokens";
 
 import React from 'react';
 import { Box, Paper, Typography, Grid, Button, Tabs, Tab, FormControl, InputLabel, Select, MenuItem, TextField, Chip, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Pagination, LinearProgress, Stack, Avatar, Card, CardContent, CircularProgress, Alert, TablePagination, Tooltip as MuiTooltip, IconButton } from '@mui/material';
@@ -59,7 +60,7 @@ export const IndividualTeamView = ({
             {activeTab === 0 && (
               <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: tok('--text'), letterSpacing: 0.5 }}>
                     Executive Overview: <span style={{ color: colors.primary }}>{selectedTeam?.teamName}</span>
                   </Typography>
                   <Button
@@ -142,7 +143,7 @@ export const IndividualTeamView = ({
                             {kpi.icon}
                           </Box>
                         </Box>
-                        <Typography variant="h3" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>
+                        <Typography variant="h3" sx={{ fontWeight: 800, color: tok('--text'), mb: 0.5 }}>
                           {typeof kpi.value === 'number' ?
                             (kpi.max === 5 ? kpi.value.toFixed(1) : Math.round(kpi.value))
                             : kpi.value}
@@ -159,7 +160,7 @@ export const IndividualTeamView = ({
                   <Grid item xs={12} md={8}>
                     <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
+                        <Typography variant="h6" sx={{ color: tok('--text'), fontWeight: 600 }}>Operational Efficiency & Responsivity</Typography>
                         <Chip
                           label="Live Operational Data"
                           size="small"
@@ -183,8 +184,8 @@ export const IndividualTeamView = ({
                               width={120}
                             />
                             <RechartsTooltip
-                              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                              cursor={{ fill: tok('--overlay-subtle') }}
+                              contentStyle={{ backgroundColor: tok('--bg'), border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
                             />
                             <RechartsBar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
                               {operationalEfficiencyData.map((entry, index) => (
@@ -204,10 +205,10 @@ export const IndividualTeamView = ({
                           { label: 'Express Fixes', value: deepStats.expressResolutionCount, icon: <CheckCircleIcon fontSize="small" />, color: colors.success },
                         ].map((s, i) => (
                           <Grid item xs={3} key={i}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: tok('--overlay-subtle'), border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
                                 <Box sx={{ color: s.color, display: 'flex' }}>{s.icon}</Box>
-                                <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', fontSize: '1rem' }}>{s.value}</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 800, color: tok('--text'), fontSize: '1rem' }}>{s.value}</Typography>
                               </Box>
                               <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: '0.65rem', display: 'block' }}>{s.label}</Typography>
                             </Box>
@@ -219,20 +220,20 @@ export const IndividualTeamView = ({
 
                   <Grid item xs={12} md={4}>
                     <Paper {...glassCardProps} sx={{ ...glassCardProps.sx, p: 4, height: 450, display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="h6" sx={{ mb: 3, color: '#fff', fontWeight: 600 }}>Recent Activity</Typography>
-                      <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
+                      <Typography variant="h6" sx={{ mb: 3, color: tok('--text'), fontWeight: 600 }}>Recent Activity</Typography>
+                      <Box sx={{ flex: 1, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: tok('--overlay-subtle'), borderRadius: '4px' } }}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {allActivities.slice(0, 15).map((activity, idx) => (
                             <Box key={activity.id || idx} sx={{
                               p: 2,
                               borderRadius: '16px',
-                              bgcolor: 'rgba(255,255,255,0.02)',
+                              bgcolor: tok('--overlay-subtle'),
                               border: '1px solid rgba(255,255,255,0.05)',
                               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                               position: 'relative',
                               overflow: 'hidden',
                               '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.04)',
+                                bgcolor: tok('--overlay-subtle'),
                                 borderColor: `${activity.color}40`,
                                 transform: 'translateX(4px)'
                               }
@@ -257,7 +258,7 @@ export const IndividualTeamView = ({
                                       <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 0.2, fontSize: '0.65rem' }}>
                                         {activity.title}
                                       </Typography>
-                                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, lineHeight: 1.3 }}>
+                                      <Typography variant="body2" sx={{ color: tok('--text'), fontWeight: 600, lineHeight: 1.3 }}>
                                         {activity.detail}
                                       </Typography>
                                     </Box>
@@ -304,39 +305,39 @@ export const IndividualTeamView = ({
               <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                   <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>Customer Issues Dashboard</Typography>
-                    <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: tok('--text') }}>Customer Issues Dashboard</Typography>
+                    <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
                       Technical analysis and performance metrics for {selectedTeam?.teamName}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: tok('--surface'), px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
+                        <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>From:</Typography>
                         <TextField
                           type="date"
                           size="small"
                           value={dateFilter.start}
                           onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
                           sx={{
-                            bgcolor: '#1a1a1a',
+                            bgcolor: tok('--bg'),
                             borderRadius: 1,
-                            '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                            '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
                             '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                           }}
                         />
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
+                        <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>To:</Typography>
                         <TextField
                           type="date"
                           size="small"
                           value={dateFilter.end}
                           onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
                           sx={{
-                            bgcolor: '#1a1a1a',
+                            bgcolor: tok('--bg'),
                             borderRadius: 1,
-                            '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                            '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
                             '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                           }}
                         />
@@ -371,48 +372,48 @@ export const IndividualTeamView = ({
                 <Box mb={4}>
                   <Grid container spacing={4}>
                     <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
                         <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
                         <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
-                          {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                          {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                           Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
                         </Typography>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                        <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                             * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
                           </Typography>
                         </Box>
                       </Paper>
                     </Grid>
                     <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
                         <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
                         <Typography variant="h3" fontWeight="800" color="success.main">
-                          {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                          {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                           Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
                         </Typography>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                        <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                             * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
                           </Typography>
                         </Box>
                       </Paper>
                     </Grid>
                     <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+                      <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
                         <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
-                        <Typography variant="h3" fontWeight="800" color="white">
-                          {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                        <Typography variant="h3" fontWeight="800" color={tok('--text')}>
+                          {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                           Total time from <b>Initial Report</b> → <b>Closed/Now</b>
                         </Typography>
-                        <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+                        <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                             * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
                           </Typography>
                         </Box>
@@ -424,7 +425,7 @@ export const IndividualTeamView = ({
                 {/* Charts - Match Reference Layout */}
                 <Grid container spacing={3} mb={4}>
                   <Grid item xs={12} lg={8}>
-                    <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+                    <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d' }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
                         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -432,7 +433,7 @@ export const IndividualTeamView = ({
                             <Select
                               value={trendTimeframe}
                               onChange={(e) => setTrendTimeframe(e.target.value)}
-                              sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                              sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
                             >
                               <MenuItem value="day">Daily</MenuItem>
                               <MenuItem value="week">Weekly</MenuItem>
@@ -443,7 +444,7 @@ export const IndividualTeamView = ({
                             <Select
                               value={trendChartType}
                               onChange={(e) => setTrendChartType(e.target.value)}
-                              sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                              sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
                             >
                               <MenuItem value="mixed">Mixed</MenuItem>
                               <MenuItem value="bar">Bar</MenuItem>
@@ -456,13 +457,13 @@ export const IndividualTeamView = ({
                     </Paper>
                   </Grid>
                   <Grid item xs={12} lg={4}>
-                    <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+                    <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
                       <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
                       <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <Doughnut data={statusData} options={doughnutOptions} />
                         <Box sx={{ position: 'absolute', textAlign: 'center' }}>
                           <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
-                          <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
+                          <Typography variant="caption" color={tok('--text-secondary')}>Resolved</Typography>
                         </Box>
                       </Box>
                     </Paper>
@@ -474,7 +475,7 @@ export const IndividualTeamView = ({
                   elevation={0}
                   sx={{
                     p: 0,
-                    bgcolor: '#1e293b',
+                    bgcolor: tok('--surface'),
                     borderRadius: 3,
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     overflow: 'hidden',
@@ -482,12 +483,12 @@ export const IndividualTeamView = ({
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                   }}
                 >
-                  <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)' }}>
+                  <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: tok('--overlay-subtle') }}>
                     <Box>
-                      <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                      <Typography variant="h6" fontWeight="700" color={tok('--text')}>
                         Issue History & Registry
                       </Typography>
-                      <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                      <Typography variant="body2" color={tok('--text-secondary')} sx={{ mt: 0.5 }}>
                         Full list of issues associated with this team
                       </Typography>
                     </Box>
@@ -500,18 +501,18 @@ export const IndividualTeamView = ({
                   <Box sx={{ width: '100%', overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                       <thead>
-                        <tr style={{ background: '#0f172a' }}>
-                          <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
-                          <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
+                        <tr style={{ background: tok('--bg') }}>
+                          <th style={{ padding: '16px 24px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Date</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>SLID</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Reporter</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Category</th>
+                          <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(!customerIssues || customerIssues.length === 0) ? (
                           <tr>
-                            <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                            <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: tok('--text-secondary') }}>
                               No customer issues or snags registered for this team.
                             </td>
                           </tr>
@@ -522,15 +523,15 @@ export const IndividualTeamView = ({
                               <tr
                                 key={issue._id}
                                 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s ease' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tok('--overlay-subtle')}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                               >
-                                <td style={{ padding: '16px 24px', color: '#f8fafc', fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
+                                <td style={{ padding: '16px 24px', color: tok('--text'), fontSize: '0.85rem' }}>{formatDate(issue.date || issue.createdAt)}</td>
                                 <td style={{ padding: '16px', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.85rem' }}>{issue.slid}</td>
-                                <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
-                                <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.85rem' }}>{issue.reporter || 'N/A'}</td>
+                                <td style={{ padding: '16px', color: tok('--text-secondary'), fontSize: '0.85rem' }}>
                                   {issue.issues?.[0]?.category || issue.issueCategory || 'Uncategorized'}
-                                  <Typography variant="caption" sx={{ display: 'block', color: '#64748b' }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
+                                  <Typography variant="caption" sx={{ display: 'block', color: tok('--text-muted') }}>{issue.issues?.[0]?.subCategory || '-'}</Typography>
                                 </td>
                                 <td style={{ padding: '16px', textAlign: 'center' }}>
                                   <Chip
@@ -560,7 +561,7 @@ export const IndividualTeamView = ({
                         setIssuesRowsPerPage(parseInt(e.target.value, 10));
                         setIssuesPage(0);
                       }}
-                      sx={{ color: '#94a3b8' }}
+                      sx={{ color: tok('--text-secondary') }}
                     />
                   </Box>
                 </Paper>
@@ -572,8 +573,8 @@ export const IndividualTeamView = ({
               <Box sx={{ animation: 'fadeIn 0.5s ease-in' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                   <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#fff' }}>NPS Tickets</Typography>
-                    <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: tok('--text') }}>NPS Tickets</Typography>
+                    <Typography variant="body2" sx={{ color: tok('--text-secondary') }}>
                       Operational workload and technical assessment registry for {selectedTeam?.teamName}
                     </Typography>
                   </Box>
@@ -661,7 +662,7 @@ export const IndividualTeamView = ({
                             <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
                             <XAxis dataKey="name" stroke={colors.textSecondary} fontSize={12} />
                             <YAxis stroke={colors.textSecondary} fontSize={12} />
-                            <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                            <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
                             <RechartsBar dataKey="value" radius={[4, 4, 0, 0]}>
                               {[colors.error, colors.warning, colors.success].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
                             </RechartsBar>
@@ -686,7 +687,7 @@ export const IndividualTeamView = ({
                             >
                               {[colors.success, colors.warning, colors.error].map((color, idx) => <Cell key={`cell-${idx}`} fill={color} />)}
                             </RechartsPie>
-                            <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                            <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
                             <RechartsLegend verticalAlign="bottom" height={36} />
                           </RechartsPieChart>
                         </ResponsiveContainer>
@@ -700,7 +701,7 @@ export const IndividualTeamView = ({
                   elevation={0}
                   sx={{
                     p: 0,
-                    bgcolor: '#1e293b',
+                    bgcolor: tok('--surface'),
                     borderRadius: 3,
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     overflow: 'hidden',
@@ -708,29 +709,29 @@ export const IndividualTeamView = ({
                   }}
                 >
                   <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="700" color="#f8fafc">Technical Task Registry</Typography>
+                    <Typography variant="h6" fontWeight="700" color={tok('--text')}>Technical Task Registry</Typography>
                     <Chip label={`${technicalTasks.length} Tasks`} size="small" sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }} />
                   </Box>
                   <Box sx={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ background: '#0f172a' }}>
+                      <thead style={{ background: tok('--bg') }}>
                         <tr>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>REQUEST NO</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>CUSTOMER</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>SLID</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PIS DATE</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>PRIORITY</th>
-                          <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem' }}>STATUS</th>
-                          <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>SCORE</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>REQUEST NO</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>CUSTOMER</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SLID</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>PIS DATE</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>PRIORITY</th>
+                          <th style={{ padding: '16px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem' }}>STATUS</th>
+                          <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem' }}>SCORE</th>
                         </tr>
                       </thead>
                       <tbody>
                         {technicalTasks.map((task) => (
-                          <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                            <td style={{ padding: '16px', color: '#fff', fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
-                            <td style={{ padding: '16px', color: '#f8fafc', fontSize: '0.85rem' }}>{task.customerName}</td>
+                          <tr key={task._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: '0.2s', '&:hover': { bgcolor: tok('--overlay-subtle') } }}>
+                            <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.85rem' }}>{task.requestNumber || 'N/A'}</td>
+                            <td style={{ padding: '16px', color: tok('--text'), fontSize: '0.85rem' }}>{task.customerName}</td>
                             <td style={{ padding: '16px', color: colors.primary, fontWeight: 'bold' }}>{task.slid}</td>
-                            <td style={{ padding: '16px', color: '#94a3b8', fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
+                            <td style={{ padding: '16px', color: tok('--text-secondary'), fontSize: '0.85rem' }}>{formatDate(task.pisDate || task.createdAt)}</td>
                             <td style={{ padding: '16px' }}>
                               <Chip label={task.priority} size="small" color={task.priority === 'High' ? 'error' : task.priority === 'Medium' ? 'warning' : 'success'} variant="outlined" />
                             </td>
@@ -1168,7 +1169,7 @@ export const IndividualTeamView = ({
                   <Typography variant="h5" sx={{ color: colors.primary }}>Advanced Analytics & Reporting</Typography>
                   <Button
                     variant="contained"
-                    startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
+                    startIcon={generatingReport ? <CircularProgress size={20} sx={{ color: tok('--text') }} /> : <PictureAsPdfIcon />}
                     onClick={handleGenerateFullReport}
                     disabled={generatingReport || (quizResults.length === 0 && jobAssessments.length === 0 && labAssessments.length === 0)}
                     sx={{
@@ -1208,10 +1209,10 @@ export const IndividualTeamView = ({
                                 <LinearProgress
                                   variant="determinate"
                                   value={Math.min(100, (avgMastery / 90) * 100)}
-                                  sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
+                                  sx={{ mt: 1, height: 6, borderRadius: 3, bgcolor: tok('--overlay-subtle'), '& .MuiLinearProgress-bar': { bgcolor: colors.primary } }}
                                 />
                               </Box>
-                              <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                              <Box sx={{ mt: 1, p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: 2, border: '1px dashed rgba(255,255,255,0.1)' }}>
                                 <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>
                                   {avgMastery < 70 ? 'Recommendation: Remedial training required in core domains.'
                                     : avgMastery < 85 ? 'Recommendation: Focus on consistency and error reduction.'
@@ -1252,7 +1253,7 @@ export const IndividualTeamView = ({
                           <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: colors.textSecondary, fontSize: 8 }} />
                           <Radar name="Score" dataKey="score" stroke={colors.primary} fill={colors.primary} fillOpacity={0.3} />
                           <RechartsTooltip
-                            contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }}
+                            contentStyle={{ backgroundColor: tok('--surface'), border: `1px solid ${colors.border}`, borderRadius: '12px' }}
                             formatter={(value) => `${Math.round(value)}%`}
                           />
                         </RadarChart>
@@ -1353,7 +1354,7 @@ export const IndividualTeamView = ({
                             <LinearProgress
                               variant="determinate"
                               value={Math.min(100, (metric.value / 10) * 100)}
-                              sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)', '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
+                              sx={{ height: 4, borderRadius: 2, bgcolor: tok('--overlay-subtle'), '& .MuiLinearProgress-bar': { bgcolor: metric.color } }}
                             />
                           </Box>
                         ))}
@@ -1416,7 +1417,7 @@ export const IndividualTeamView = ({
                                   <CartesianGrid strokeDasharray="3 3" stroke={colors.chartGrid} vertical={false} />
                                   <XAxis dataKey="date" hide />
                                   <YAxis domain={[0, 100]} hide />
-                                  <RechartsTooltip contentStyle={{ backgroundColor: '#252525', border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
+                                  <RechartsTooltip contentStyle={{ backgroundColor: tok('--surface'), border: `1px solid ${colors.border}`, borderRadius: '12px' }} />
                                   <Area
                                     type="monotone"
                                     dataKey="score"

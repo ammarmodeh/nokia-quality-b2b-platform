@@ -994,10 +994,10 @@ const FieldTeamForm = () => {
       minWidth: 200,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: '#7b68ee', width: 32, height: 32, fontSize: '0.875rem' }}>
+          <Avatar sx={{ bgcolor: 'var(--accent)', width: 32, height: 32, fontSize: '0.875rem' }}>
             {params.value.charAt(0).toUpperCase()}
           </Avatar>
-          <Typography variant="body2" sx={{ fontWeight: 500, color: '#fff' }}>
+          <Typography variant="body2" sx={{ fontWeight: 500, color: 'var(--text)' }}>
             {params.value}
           </Typography>
         </Box>
@@ -1027,7 +1027,7 @@ const FieldTeamForm = () => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
-        let color = '#757575'; // Default Grey
+        let color = 'var(--text-muted)'; // Default Grey
         let label = 'N/A';
 
         if (params.row.isTerminated) {
@@ -1094,9 +1094,9 @@ const FieldTeamForm = () => {
           label={params.value || 'N/A'}
           size="small"
           sx={{
-            bgcolor: '#333',
-            color: '#ccc',
-            border: '1px solid #444',
+            bgcolor: 'var(--surface-hover)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--border)',
             height: 24,
             fontSize: '0.75rem'
           }}
@@ -1111,8 +1111,8 @@ const FieldTeamForm = () => {
       headerClassName: 'dark-header',
       renderCell: (params) => (
         <Stack direction="row" spacing={1} alignItems="center" height="100%">
-          <PhoneIcon sx={{ fontSize: 16, color: '#666' }} />
-          <Typography variant="body2" sx={{ color: '#aaa' }}>{params.value}</Typography>
+          <PhoneIcon sx={{ fontSize: 16, color: 'var(--text-muted)' }} />
+          <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>{params.value}</Typography>
         </Stack>
       ),
     },
@@ -1124,14 +1124,14 @@ const FieldTeamForm = () => {
       headerClassName: 'dark-header',
       renderCell: (params) => {
         const latestEval = params.row.evaluationHistory?.[0];
-        if (!latestEval) return <Typography variant="caption" sx={{ color: '#666' }}>No Data</Typography>;
+        if (!latestEval) return <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>No Data</Typography>;
 
         return (
           <Stack direction="column" justifyContent="center" height="100%">
             <Typography variant="body2" sx={{ fontWeight: 600, color: latestEval.percentage >= 90 ? '#4caf50' : latestEval.percentage >= 70 ? '#ff9800' : '#f44336' }}>
               {latestEval.percentage}%
             </Typography>
-            <Typography variant="caption" sx={{ color: '#666', fontSize: '0.7rem' }}>
+            <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
               {new Date(latestEval.submittedAt).toLocaleDateString()}
             </Typography>
           </Stack>
@@ -1195,7 +1195,7 @@ const FieldTeamForm = () => {
       headerClassName: 'dark-header',
       renderCell: (params) => {
         const val = params.value;
-        if (!val || val === '-') return <Typography variant="caption" sx={{ color: '#666' }}>None Assigned</Typography>;
+        if (!val || val === '-') return <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>None Assigned</Typography>;
         return (
           <Typography variant="body2" sx={{ fontWeight: 600, color: '#f43f5e' }}>
             {val}
@@ -1212,7 +1212,7 @@ const FieldTeamForm = () => {
       headerAlign: 'center',
       renderCell: (params) => {
         const val = params.value || 'Pending';
-        let color = '#757575';
+        let color = 'var(--text-muted)';
         if (val === 'Completed' || val === 'Closed' || val === 'Compliant') color = '#10b981';
         else if (val === 'Action Taken' || val === 'Warning Issued' || val === 'Training Assigned') color = '#f59e0b';
         else if (val === '1 Week Suspension' || val === '1 Month Suspension' || val === 'Termination') color = '#ef4444';
@@ -1245,9 +1245,9 @@ const FieldTeamForm = () => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
-        if (!params.value) return <Typography variant="caption" sx={{ color: '#666' }}>-</Typography>;
+        if (!params.value) return <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>-</Typography>;
         return (
-          <Typography variant="caption" sx={{ color: '#cbd5e1', fontWeight: 500 }}>
+          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
             {new Date(params.value).toLocaleDateString()}
           </Typography>
         );
@@ -1311,13 +1311,13 @@ const FieldTeamForm = () => {
           </Tooltip>
 
           <Tooltip title="Edit Team">
-            <IconButton size="small" onClick={() => handleEditClick(params.row)} sx={{ color: '#7b68ee', '&:hover': { bgcolor: '#7b68ee22' } }}>
+            <IconButton size="small" onClick={() => handleEditClick(params.row)} sx={{ color: 'var(--accent-text)', '&:hover': { bgcolor: '#7b68ee22' } }}>
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
 
           <Tooltip title="More Actions">
-            <IconButton size="small" onClick={(e) => handleMenuOpen(e, params.row)} sx={{ color: '#aaa', '&:hover': { bgcolor: '#ffffff11', color: '#fff' } }}>
+            <IconButton size="small" onClick={(e) => handleMenuOpen(e, params.row)} sx={{ color: 'var(--text-secondary)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: '#fff' } }}>
               <MoreVert fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -1336,7 +1336,7 @@ const FieldTeamForm = () => {
         px: isMobile ? 0 : undefined
       }}
     >
-      <Box sx={{ minHeight: '100vh', py: 3, color: '#ffffff' }}>
+      <Box sx={{ minHeight: '100vh', py: 3, color: 'var(--text)' }}>
         {loading && <Typography>Loading...</Typography>}
         {errorMessage && <Typography color="error">{errorMessage}</Typography>}
         <AddTeamForm onAddTeam={handleAddTeam} loading={loading} errorMessage={errorMessage} user={user} />
@@ -1353,14 +1353,14 @@ const FieldTeamForm = () => {
                 px: 2,
                 gap: 1,
                 borderRadius: '999px',
-                backgroundColor: '#2d2d2d',
-                border: '1px solid #3d3d3d',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
                 '&:focus-within': {
-                  borderColor: '#7b68ee',
+                  borderColor: 'var(--accent)',
                 },
               }}
             >
-              <MdOutlineSearch className="text-gray-400 text-xl" />
+              <MdOutlineSearch className="text-[var(--text-muted)] text-xl" />
               <TextField
                 fullWidth
                 variant="standard"
@@ -1370,11 +1370,11 @@ const FieldTeamForm = () => {
                 sx={{
                   '& .MuiInputBase-root': {
                     backgroundColor: 'transparent',
-                    color: '#ffffff',
+                    color: 'var(--text)',
                   },
                   '& .MuiInputBase-input': {
                     fontSize: '14px',
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     padding: 0,
                   },
                   '& .MuiInput-root:before': {
@@ -1389,12 +1389,12 @@ const FieldTeamForm = () => {
                 }}
                 InputProps={{
                   disableUnderline: true,
-                  style: { color: '#ffffff' },
+                  style: { color: 'var(--text)' },
                   endAdornment: searchText && (
                     <IconButton
                       size="small"
                       onClick={() => setSearchText('')}
-                      sx={{ color: '#b3b3b3', '&:hover': { color: '#ffffff' } }}
+                      sx={{ color: 'var(--text-secondary)', '&:hover': { color: 'var(--text)' } }}
                     >
                       <MdClose className="text-xl" />
                     </IconButton>
@@ -1407,7 +1407,7 @@ const FieldTeamForm = () => {
                 onClick={() => setUpdateState(prev => !prev)}
                 disabled={loading}
                 sx={{
-                  color: '#7b68ee',
+                  color: 'var(--accent-text)',
                   '&:hover': {
                     backgroundColor: 'rgba(123, 104, 238, 0.1)',
                   },
@@ -1456,10 +1456,10 @@ const FieldTeamForm = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               <GavelIcon sx={{ color: '#818cf8', fontSize: 24 }} />
               <Box>
-                <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700 }}>
+                <Typography variant="subtitle2" sx={{ color: 'var(--text)', fontWeight: 700 }}>
                   Dynamic Escalation Matrix Analysis
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                   Calculating required consequence from accountable issues for: <strong style={{ color: '#a5b4fc' }}>{activeDateRange.label}</strong>
                 </Typography>
               </Box>
@@ -1477,7 +1477,7 @@ const FieldTeamForm = () => {
                   minWidth: 200,
                   '& .MuiOutlinedInput-root': {
                     bgcolor: '#1e1b4b',
-                    color: '#fff',
+                    color: 'var(--text)',
                     '& fieldset': { borderColor: '#4338ca' },
                     '&:hover fieldset': { borderColor: '#818cf8' },
                     '&.Mui-focused fieldset': { borderColor: '#818cf8' },
@@ -1485,11 +1485,11 @@ const FieldTeamForm = () => {
                   '& .MuiInputLabel-root': { color: '#a5b4fc' },
                 }}
               >
-                <option value="Cumulative" style={{ backgroundColor: '#111', color: '#fff' }}>Cumulative (From 01/06/2026)</option>
-                <option value="jun_2026" style={{ backgroundColor: '#111', color: '#fff' }}>June 2026</option>
-                <option value="jul_2026" style={{ backgroundColor: '#111', color: '#fff' }}>July 2026</option>
-                <option value="aug_2026" style={{ backgroundColor: '#111', color: '#fff' }}>August 2026</option>
-                <option value="custom" style={{ backgroundColor: '#111', color: '#fff' }}>Custom Date Range...</option>
+                <option value="Cumulative" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Cumulative (From 01/06/2026)</option>
+                <option value="jun_2026" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>June 2026</option>
+                <option value="jul_2026" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>July 2026</option>
+                <option value="aug_2026" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>August 2026</option>
+                <option value="custom" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Custom Date Range...</option>
               </TextField>
 
               {escalationPeriod === 'custom' && (
@@ -1505,9 +1505,9 @@ const FieldTeamForm = () => {
                       width: 140,
                       '& .MuiOutlinedInput-root': {
                         bgcolor: '#1e1b4b',
-                        color: '#fff',
+                        color: 'var(--text)',
                         '& fieldset': { borderColor: '#4338ca' },
-                        '& input': { color: '#fff', fontSize: '0.8rem', py: 1 }
+                        '& input': { color: 'var(--text)', fontSize: '0.8rem', py: 1 }
                       },
                       '& .MuiInputLabel-root': { color: '#a5b4fc' },
                     }}
@@ -1523,9 +1523,9 @@ const FieldTeamForm = () => {
                       width: 140,
                       '& .MuiOutlinedInput-root': {
                         bgcolor: '#1e1b4b',
-                        color: '#fff',
+                        color: 'var(--text)',
                         '& fieldset': { borderColor: '#4338ca' },
-                        '& input': { color: '#fff', fontSize: '0.8rem', py: 1 }
+                        '& input': { color: 'var(--text)', fontSize: '0.8rem', py: 1 }
                       },
                       '& .MuiInputLabel-root': { color: '#a5b4fc' },
                     }}
@@ -1536,7 +1536,7 @@ const FieldTeamForm = () => {
           </Paper>
 
           <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600 }} />
+            <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'var(--overlay-subtle)', color: '#fff', fontWeight: 600 }} />
             <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', border: '1px solid #4caf5040', fontWeight: 600 }} />
             <Chip size="small" label={`Inactive: ${teamStatusStats.inactive}`} sx={{ bgcolor: 'rgba(244, 67, 54, 0.1)', color: '#f44336', border: '1px solid #f4433640', fontWeight: 600 }} />
             {teamStatusStats.onLeave > 0 && <Chip size="small" label={`On Leave: ${teamStatusStats.onLeave}`} sx={{ bgcolor: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0', border: '1px solid #9c27b040', fontWeight: 600 }} />}
@@ -1550,11 +1550,11 @@ const FieldTeamForm = () => {
               width: '100%',
               height: '400px',
               overflow: 'hidden',
-              backgroundColor: '#111',
+              backgroundColor: 'var(--bg)',
               borderRadius: 1,
               display: 'flex',
               flexDirection: 'column',
-              border: '1px solid #333',
+              border: '1px solid var(--border)',
             }}
           >
             <DataGrid
@@ -1570,17 +1570,17 @@ const FieldTeamForm = () => {
                 flex: 1,
                 width: '100%',
                 border: 0,
-                color: '#fff',
-                bgcolor: '#111',
+                color: 'var(--text)',
+                bgcolor: 'var(--bg)',
                 '& .MuiDataGrid-main': {
-                  bgcolor: '#111',
+                  bgcolor: 'var(--bg)',
                 },
                 '& .MuiDataGrid-columnHeaders': {
-                  bgcolor: '#1a1a1a',
-                  color: '#aaa',
+                  bgcolor: 'var(--bg)',
+                  color: 'var(--text-secondary)',
                   fontSize: '0.875rem',
                   fontWeight: 'bold',
-                  borderBottom: '1px solid #333',
+                  borderBottom: '1px solid var(--border)',
                 },
                 '& .MuiDataGrid-columnHeaderTitle': {
                   fontWeight: 600,
@@ -1595,9 +1595,9 @@ const FieldTeamForm = () => {
                   },
                 },
                 '& .MuiDataGrid-row': {
-                  bgcolor: '#111',
+                  bgcolor: 'var(--bg)',
                   '&:hover': {
-                    bgcolor: '#1a1a1a',
+                    bgcolor: 'var(--bg)',
                   },
                   '&.Mui-selected': {
                     bgcolor: 'rgba(123, 104, 238, 0.08)',
@@ -1607,16 +1607,16 @@ const FieldTeamForm = () => {
                   },
                 },
                 '& .MuiDataGrid-footerContainer': {
-                  bgcolor: '#1a1a1a',
-                  borderTop: '1px solid #333',
+                  bgcolor: 'var(--bg)',
+                  borderTop: '1px solid var(--border)',
                   '& .MuiTablePagination-root': {
-                    color: '#aaa',
+                    color: 'var(--text-secondary)',
                   },
                   '& .MuiTablePagination-selectIcon': {
-                    color: '#aaa',
+                    color: 'var(--text-secondary)',
                   },
                   '& .MuiIconButton-root': {
-                    color: '#aaa',
+                    color: 'var(--text-secondary)',
                     '&.Mui-disabled': {
                       color: '#444',
                     },
@@ -1625,7 +1625,7 @@ const FieldTeamForm = () => {
                 '& .MuiCheckbox-root': {
                   color: '#555',
                   '&.Mui-checked': {
-                    color: '#7b68ee',
+                    color: 'var(--accent-text)',
                   }
                 },
                 '& .MuiDataGrid-virtualScroller': {
@@ -1634,14 +1634,14 @@ const FieldTeamForm = () => {
                     height: '6px',
                   },
                   '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: '#333',
+                    backgroundColor: 'var(--surface-hover)',
                     borderRadius: '3px',
                     '&:hover': {
                       backgroundColor: '#555'
                     }
                   },
                   '&::-webkit-scrollbar-track': {
-                    backgroundColor: '#111',
+                    backgroundColor: 'var(--bg)',
                   },
                 }
               }}
@@ -1703,9 +1703,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            bgcolor: '#111',
-            borderBottom: '1px solid #333',
-            color: '#fff',
+            bgcolor: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
+            color: 'var(--text)',
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
@@ -1715,7 +1715,7 @@ const FieldTeamForm = () => {
           </DialogTitle>
           <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
             {evaluationHistory.length === 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, color: '#666' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, color: 'var(--text-muted)' }}>
                 <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
                 <Typography>No evaluation history found</Typography>
               </Box>
@@ -1723,7 +1723,7 @@ const FieldTeamForm = () => {
               <Stack spacing={2} sx={{ mt: 1 }}>
                 {evaluationHistory.map((evalItem, index) => (
                   <Box key={evalItem._id} sx={{
-                    bgcolor: '#111',
+                    bgcolor: 'var(--bg)',
                     p: 2,
                     borderRadius: 2,
                     border: '1px solid #222',
@@ -1732,10 +1732,10 @@ const FieldTeamForm = () => {
                     gap: 1
                   }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="subtitle2" sx={{ color: '#7b68ee', fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ color: 'var(--accent-text)', fontWeight: 'bold' }}>
                         Attempt #{evaluationHistory.length - index}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#666' }}>
+                      <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
                         {new Date(evalItem.submittedAt).toLocaleString()}
                       </Typography>
                     </Box>
@@ -1752,11 +1752,11 @@ const FieldTeamForm = () => {
                         </Typography>
                       </Box>
                       <Box>
-                        <Typography variant="body2" sx={{ color: '#ccc' }}>
+                        <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                           Score: {evalItem.score}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#888' }}>
-                          Quiz Code: <span style={{ fontFamily: 'monospace', color: '#fff' }}>{evalItem.quizCode}</span>
+                        <Typography variant="body2" sx={{ color: 'var(--text-muted)' }}>
+                          Quiz Code: <span style={{ fontFamily: 'monospace', color: 'var(--text)' }}>{evalItem.quizCode}</span>
                         </Typography>
                       </Box>
                     </Box>
@@ -1777,8 +1777,8 @@ const FieldTeamForm = () => {
               </Stack>
             )}
           </DialogContent>
-          <DialogActions sx={{ bgcolor: '#111', borderTop: '1px solid #333', p: 2 }}>
-            <Button onClick={() => setOpenHistoryDialog(false)} sx={{ color: '#fff' }}>Close</Button>
+          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+            <Button onClick={() => setOpenHistoryDialog(false)} sx={{ color: 'var(--text)' }}>Close</Button>
           </DialogActions>
         </Dialog>
 
@@ -1801,19 +1801,19 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            bgcolor: '#111',
-            borderBottom: '1px solid #333',
-            color: '#fff',
+            bgcolor: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
+            color: 'var(--text)',
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
             gap: 1
           }}>
-            <HistoryIcon sx={{ color: '#7b68ee' }} /> State Logs
+            <HistoryIcon sx={{ color: 'var(--accent-text)' }} /> State Logs
           </DialogTitle>
           <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
             {selectedLogs.length === 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, color: '#666' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, color: 'var(--text-muted)' }}>
                 <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
                 <Typography>No activities recorded</Typography>
               </Box>
@@ -1833,19 +1833,19 @@ const FieldTeamForm = () => {
                       bgcolor: log.state === 'Active' ? '#4caf50' : log.state === 'Suspended' ? '#ed6c02' : log.state === 'Terminated' ? '#d32f2f' : '#9c27b0',
                       borderRadius: 2
                     },
-                    bgcolor: '#111',
+                    bgcolor: 'var(--bg)',
                     p: 2,
                     borderRadius: 2,
                     border: '1px solid #222'
                   }}>
-                    <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 'bold', mb: 0.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'var(--text)', fontWeight: 'bold', mb: 0.5 }}>
                       {log.state}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#aaa', mb: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
                       {new Date(log.changedAt).toLocaleString()}
                     </Typography>
 
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: '0.8rem', color: '#888' }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       <Box>
                         Reason: <span style={{ color: '#ddd' }}>{log.reason || 'N/A'}</span>
                       </Box>
@@ -1864,8 +1864,8 @@ const FieldTeamForm = () => {
               </Stack>
             )}
           </DialogContent>
-          <DialogActions sx={{ bgcolor: '#111', borderTop: '1px solid #333', p: 2 }}>
-            <Button onClick={handleCloseLogsDialog} sx={{ color: '#fff' }}>Close</Button>
+          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+            <Button onClick={handleCloseLogsDialog} sx={{ color: 'var(--text)' }}>Close</Button>
           </DialogActions>
         </Dialog>
 
@@ -1888,9 +1888,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            bgcolor: '#111',
-            borderBottom: '1px solid #333',
-            color: '#fff',
+            bgcolor: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
+            color: 'var(--text)',
             fontWeight: 600,
           }}>
             Mark Team as On Leave
@@ -1907,11 +1907,11 @@ const FieldTeamForm = () => {
                         setLeaveStartDate(new Date().toISOString().split('T')[0]);
                       }
                     }}
-                    sx={{ color: '#fff' }}
+                    sx={{ color: 'var(--text)' }}
                   />
                 }
                 label="Assign today as start date"
-                sx={{ color: '#fff' }}
+                sx={{ color: 'var(--text)' }}
               />
               <TextField
                 label="Leave Reason (optional)"
@@ -1920,13 +1920,13 @@ const FieldTeamForm = () => {
                 onChange={(e) => setLeaveReason(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#1a1a1a',
-                    '& fieldset': { borderColor: '#333' },
+                    bgcolor: 'var(--bg)',
+                    '& fieldset': { borderColor: 'var(--border)' },
                     '&:hover fieldset': { borderColor: '#0288d1' },
                     '&.Mui-focused fieldset': { borderColor: '#0288d1' },
-                    '& input': { color: '#fff' }
+                    '& input': { color: 'var(--text)' }
                   },
-                  '& .MuiInputLabel-root': { color: '#888' },
+                  '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#0288d1' }
                 }}
               />
@@ -1945,13 +1945,13 @@ const FieldTeamForm = () => {
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#1a1a1a',
-                      '& fieldset': { borderColor: '#333' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
                       '&:hover fieldset': { borderColor: '#0288d1' },
                       '&.Mui-focused fieldset': { borderColor: '#0288d1' },
-                      '& input': { color: '#fff' }
+                      '& input': { color: 'var(--text)' }
                     },
-                    '& .MuiInputLabel-root': { color: '#888' },
+                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#0288d1' }
                   }}
                 />
@@ -1964,21 +1964,21 @@ const FieldTeamForm = () => {
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#1a1a1a',
-                      '& fieldset': { borderColor: '#333' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
                       '&:hover fieldset': { borderColor: '#0288d1' },
                       '&.Mui-focused fieldset': { borderColor: '#0288d1' },
-                      '& input': { color: '#fff' }
+                      '& input': { color: 'var(--text)' }
                     },
-                    '& .MuiInputLabel-root': { color: '#888' },
+                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#0288d1' }
                   }}
                 />
               </Box>
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ bgcolor: '#111', borderTop: '1px solid #333', p: 2 }}>
-            <Button onClick={() => setOpenOnLeaveDialog(false)} sx={{ color: '#fff' }}>Cancel</Button>
+          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+            <Button onClick={() => setOpenOnLeaveDialog(false)} sx={{ color: 'var(--text)' }}>Cancel</Button>
             <Button onClick={handleConfirmOnLeave} variant="contained" sx={{ bgcolor: '#0288d1', '&:hover': { bgcolor: '#0277bd' } }}>
               Confirm Leave
             </Button>
@@ -2004,9 +2004,9 @@ const FieldTeamForm = () => {
           }}
         >
           <DialogTitle sx={{
-            bgcolor: '#111',
-            borderBottom: '1px solid #333',
-            color: '#fff',
+            bgcolor: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
+            color: 'var(--text)',
             fontWeight: 600,
           }}>
             Mark Team as Resigned
@@ -2020,20 +2020,20 @@ const FieldTeamForm = () => {
                 onChange={(e) => setResignationReason(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#1a1a1a',
-                    '& fieldset': { borderColor: '#333' },
+                    bgcolor: 'var(--bg)',
+                    '& fieldset': { borderColor: 'var(--border)' },
                     '&:hover fieldset': { borderColor: '#9c27b0' },
                     '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
-                    '& input': { color: '#fff' }
+                    '& input': { color: 'var(--text)' }
                   },
-                  '& .MuiInputLabel-root': { color: '#888' },
+                  '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#9c27b0' }
                 }}
               />
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ bgcolor: '#111', borderTop: '1px solid #333', p: 2 }}>
-            <Button onClick={() => setOpenResignedDialog(false)} sx={{ color: '#fff' }}>Cancel</Button>
+          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+            <Button onClick={() => setOpenResignedDialog(false)} sx={{ color: 'var(--text)' }}>Cancel</Button>
             <Button onClick={handleConfirmResigned} variant="contained" sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}>
               Confirm Resignation
             </Button>
@@ -2047,20 +2047,20 @@ const FieldTeamForm = () => {
           onClose={handleMenuClose}
           PaperProps={{
             sx: {
-              bgcolor: '#1a1a1a',
-              color: '#fff',
-              border: '1px solid #333',
+              bgcolor: 'var(--bg)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5)',
               minWidth: 180,
               '& .MuiMenuItem-root': {
                 fontSize: '0.875rem',
                 py: 1,
                 px: 2,
-                '&:hover': { bgcolor: '#333' }
+                '&:hover': { bgcolor: 'var(--surface-hover)' }
               },
               '& .MuiListItemIcon-root': {
                 minWidth: 32,
-                color: '#aaa'
+                color: 'var(--text-secondary)'
               }
             }
           }}
@@ -2100,7 +2100,7 @@ const FieldTeamForm = () => {
             </MenuItem>
           )}
 
-          <Divider sx={{ borderColor: '#333', my: 0.5 }} />
+          <Divider sx={{ borderColor: 'var(--border)', my: 0.5 }} />
 
           <MenuItem onClick={() => { handleOpenEscalationDialog(menuTeam); handleMenuClose(); }}>
             <ListItemIcon><GavelIcon fontSize="small" sx={{ color: '#ec4899' }} /></ListItemIcon>
@@ -2108,16 +2108,16 @@ const FieldTeamForm = () => {
           </MenuItem>
 
           <MenuItem onClick={() => { handleViewDetailsClick(menuTeam); handleMenuClose(); }}>
-            <ListItemIcon><Visibility fontSize="small" sx={{ color: '#7b68ee' }} /></ListItemIcon>
+            <ListItemIcon><Visibility fontSize="small" sx={{ color: 'var(--accent-text)' }} /></ListItemIcon>
             View Full Details
           </MenuItem>
 
           <MenuItem onClick={() => { handleViewLogsClick(menuTeam._id); handleMenuClose(); }}>
-            <ListItemIcon><HistoryIcon fontSize="small" sx={{ color: '#aaa' }} /></ListItemIcon>
+            <ListItemIcon><HistoryIcon fontSize="small" sx={{ color: 'var(--text-secondary)' }} /></ListItemIcon>
             View State Logs
           </MenuItem>
 
-          {user.role === 'Admin' && <Divider sx={{ borderColor: '#333', my: 0.5 }} />}
+          {user.role === 'Admin' && <Divider sx={{ borderColor: 'var(--border)', my: 0.5 }} />}
           {user.role === 'Admin' && (
             <MenuItem onClick={() => { handleDeleteClick(menuTeam); handleMenuClose(); }} sx={{ color: '#f44336' }}>
               <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
@@ -2139,19 +2139,19 @@ const FieldTeamForm = () => {
           onClose={() => setOpenDeleteConfirmDialog(false)}
           PaperProps={{
             sx: {
-              bgcolor: '#111',
-              color: '#fff',
-              border: '1px solid #333',
+              bgcolor: 'var(--bg)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
               borderRadius: 2
             }
           }}
         >
           <DialogTitle sx={{ borderBottom: '1px solid #222', p: 2 }}>Confirm Deletion</DialogTitle>
           <DialogContent sx={{ p: 3 }}>
-            <DialogContentText sx={{ color: '#aaa', mb: 2 }}>
+            <DialogContentText sx={{ color: 'var(--text-secondary)', mb: 2 }}>
               Are you sure you want to delete <strong>{teamToDelete?.teamName}</strong>? This action is permanent and cannot be undone.
             </DialogContentText>
-            <DialogContentText sx={{ color: '#666', mb: 2, fontSize: '0.875rem' }}>
+            <DialogContentText sx={{ color: 'var(--text-muted)', mb: 2, fontSize: '0.875rem' }}>
               To confirm, please type the team name exactly as shown above.
             </DialogContentText>
             <TextField
@@ -2163,17 +2163,17 @@ const FieldTeamForm = () => {
               onChange={(e) => setDeleteConfirmationName(e.target.value)}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#f44336' },
                   '&.Mui-focused fieldset': { borderColor: '#f44336' },
-                  '& input': { color: '#fff' }
+                  '& input': { color: 'var(--text)' }
                 }
               }}
             />
           </DialogContent>
           <DialogActions sx={{ p: 2, borderTop: '1px solid #222' }}>
-            <Button onClick={() => setOpenDeleteConfirmDialog(false)} sx={{ color: '#888' }}>Cancel</Button>
+            <Button onClick={() => setOpenDeleteConfirmDialog(false)} sx={{ color: 'var(--text-muted)' }}>Cancel</Button>
             <Button
               onClick={handleConfirmDeleteTeam}
               variant="contained"
@@ -2181,7 +2181,7 @@ const FieldTeamForm = () => {
               sx={{
                 bgcolor: '#f44336',
                 '&:hover': { bgcolor: '#d32f2f' },
-                '&.Mui-disabled': { bgcolor: '#222', color: '#444' }
+                '&.Mui-disabled': { bgcolor: 'var(--surface)', color: '#444' }
               }}
             >
               Confirm Permanent Deletion
@@ -2197,9 +2197,9 @@ const FieldTeamForm = () => {
           fullWidth
           PaperProps={{
             sx: {
-              bgcolor: '#0a0a0a',
-              color: '#fff',
-              border: '1px solid #333',
+              bgcolor: 'var(--bg)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
               borderRadius: 3,
               boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
             }
@@ -2209,10 +2209,10 @@ const FieldTeamForm = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <GavelIcon sx={{ color: '#ec4899', fontSize: 28 }} />
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff', fontSize: '1.1rem' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: 'var(--text)', fontSize: '1.1rem' }}>
                   Manage Escalation Action & Warning History
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                   Field Team: <strong style={{ color: '#ec4899' }}>{escalationTeam?.teamName}</strong> ({escalationTeam?.teamCode})
                 </Typography>
               </Box>
@@ -2238,7 +2238,7 @@ const FieldTeamForm = () => {
             sx={{
               borderBottom: '1px solid #222',
               px: 2.5,
-              '& .MuiTab-root': { color: '#94a3b8', fontWeight: 600, textTransform: 'none', minHeight: 48 },
+              '& .MuiTab-root': { color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'none', minHeight: 48 },
               '& .Mui-selected': { color: '#ec4899' },
               '& .MuiTabs-indicator': { bgcolor: '#ec4899' }
             }}
@@ -2254,7 +2254,7 @@ const FieldTeamForm = () => {
           <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             {escDialogTab === 0 ? (
               <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" sx={{ color: '#94a3b8', mb: 1, display: 'block', fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)', mb: 1, display: 'block', fontWeight: 600 }}>
                   Quick Escalation Presets (Click to apply):
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2.5 }}>
@@ -2281,8 +2281,8 @@ const FieldTeamForm = () => {
                       }}
                       sx={{
                         bgcolor: escAction === preset.act ? '#ec4899' : '#1e293b',
-                        color: '#fff',
-                        border: '1px solid #334155',
+                        color: 'var(--text)',
+                        border: '1px solid var(--border)',
                         fontWeight: 600,
                         fontSize: '0.75rem',
                         '&:hover': { bgcolor: '#ec489988' }
@@ -2301,13 +2301,13 @@ const FieldTeamForm = () => {
                     SelectProps={{ native: true }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: '#141414',
-                        '& fieldset': { borderColor: '#333' },
+                        bgcolor: 'var(--bg)',
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#ec4899' },
                         '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& select': { color: '#fff' }
+                        '& select': { color: 'var(--text)' }
                       },
-                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                       '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
                     }}
                   >
@@ -2320,7 +2320,7 @@ const FieldTeamForm = () => {
                       '5th Offense & Beyond',
                       'Custom Violation / Disciplinary'
                     ].map((scale, idx) => (
-                      <option key={idx} value={scale} style={{ backgroundColor: '#111', color: '#fff' }}>
+                      <option key={idx} value={scale} style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>
                         {scale}
                       </option>
                     ))}
@@ -2334,13 +2334,13 @@ const FieldTeamForm = () => {
                     placeholder="e.g. Cumulative (From 01/06/2026) or Aug 2026"
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: '#141414',
-                        '& fieldset': { borderColor: '#333' },
+                        bgcolor: 'var(--bg)',
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#ec4899' },
                         '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& input': { color: '#fff' }
+                        '& input': { color: 'var(--text)' }
                       },
-                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                       '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
                     }}
                   />
@@ -2356,13 +2356,13 @@ const FieldTeamForm = () => {
                   sx={{
                     mb: 2,
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#141414',
-                      '& fieldset': { borderColor: '#333' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
                       '&:hover fieldset': { borderColor: '#ec4899' },
                       '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                      '& input': { color: '#fff' }
+                      '& input': { color: 'var(--text)' }
                     },
-                    '& .MuiInputLabel-root': { color: '#888' },
+                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
                   }}
                 />
@@ -2377,18 +2377,18 @@ const FieldTeamForm = () => {
                     SelectProps={{ native: true }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: '#141414',
-                        '& fieldset': { borderColor: '#333' },
+                        bgcolor: 'var(--bg)',
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#ec4899' },
                         '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& select': { color: '#fff' }
+                        '& select': { color: 'var(--text)' }
                       },
-                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                       '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
                     }}
                   >
                     {['Pending', 'Under Review', 'Action Taken', 'Warning Issued', 'Training Assigned', '1 Week Suspension', '1 Month Suspension', 'Termination', 'Completed', 'Closed', 'Waived', 'Compliant'].map((st, idx) => (
-                      <option key={idx} value={st} style={{ backgroundColor: '#111', color: '#fff' }}>
+                      <option key={idx} value={st} style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>
                         {st}
                       </option>
                     ))}
@@ -2403,13 +2403,13 @@ const FieldTeamForm = () => {
                     InputLabelProps={{ shrink: true }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: '#141414',
-                        '& fieldset': { borderColor: '#333' },
+                        bgcolor: 'var(--bg)',
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#ec4899' },
                         '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& input': { color: '#fff' }
+                        '& input': { color: 'var(--text)' }
                       },
-                      '& .MuiInputLabel-root': { color: '#888' },
+                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                       '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
                     }}
                   />
@@ -2425,13 +2425,13 @@ const FieldTeamForm = () => {
                   placeholder="Add details regarding date of warning, deduction percentage, trainer details or next review date..."
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#141414',
-                      '& fieldset': { borderColor: '#333' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
                       '&:hover fieldset': { borderColor: '#ec4899' },
                       '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                      '& textarea': { color: '#fff' }
+                      '& textarea': { color: 'var(--text)' }
                     },
-                    '& .MuiInputLabel-root': { color: '#888' },
+                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
                   }}
                 />
@@ -2439,7 +2439,7 @@ const FieldTeamForm = () => {
             ) : (
               <Box sx={{ mt: 1 }}>
                 {(!escalationTeam?.escalationHistory || escalationTeam.escalationHistory.length === 0) ? (
-                  <Box sx={{ textAlign: 'center', py: 4, color: '#64748b' }}>
+                  <Box sx={{ textAlign: 'center', py: 4, color: 'var(--text-muted)' }}>
                     <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
                     <Typography variant="body1" sx={{ fontWeight: 600 }}>No Escalation Warnings Recorded</Typography>
                     <Typography variant="caption">Use the "Record New Escalation Warning" tab to add warnings and disciplinary actions.</Typography>
@@ -2451,8 +2451,8 @@ const FieldTeamForm = () => {
                         key={idx}
                         sx={{
                           p: 2,
-                          bgcolor: '#141414',
-                          border: '1px solid #2d2d2d',
+                          bgcolor: 'var(--bg)',
+                          border: '1px solid var(--border)',
                           borderRadius: 2,
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -2476,20 +2476,20 @@ const FieldTeamForm = () => {
                               <Chip
                                 label={`Period: ${item.period}`}
                                 size="small"
-                                sx={{ bgcolor: '#ffffff11', color: '#cbd5e1', fontSize: '0.7rem' }}
+                                sx={{ bgcolor: 'var(--overlay-subtle)', color: 'var(--text-secondary)', fontSize: '0.7rem' }}
                               />
                             )}
-                            <Typography variant="caption" sx={{ color: '#94a3b8', ml: 'auto' }}>
-                              Date: <strong style={{ color: '#fff' }}>{item.actionDate ? new Date(item.actionDate).toLocaleDateString() : 'N/A'}</strong>
+                            <Typography variant="caption" sx={{ color: 'var(--text-secondary)', ml: 'auto' }}>
+                              Date: <strong style={{ color: 'var(--text)' }}>{item.actionDate ? new Date(item.actionDate).toLocaleDateString() : 'N/A'}</strong>
                             </Typography>
                           </Stack>
 
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#fff', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'var(--text)', mb: 0.5 }}>
                             {item.action || 'No Action Specified'}
                           </Typography>
 
                           {item.notes && (
-                            <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block', bgcolor: '#0a0a0a', p: 1, borderRadius: 1, border: '1px solid #222' }}>
+                            <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block', bgcolor: 'var(--bg)', p: 1, borderRadius: 1, border: '1px solid #222' }}>
                               {item.notes}
                             </Typography>
                           )}
@@ -2513,7 +2513,7 @@ const FieldTeamForm = () => {
           </DialogContent>
 
           <DialogActions sx={{ p: 2.5, borderTop: '1px solid #222', gap: 1.5 }}>
-            <Button onClick={() => setOpenEscalationDialog(false)} sx={{ color: '#94a3b8' }}>
+            <Button onClick={() => setOpenEscalationDialog(false)} sx={{ color: 'var(--text-secondary)' }}>
               Close
             </Button>
             {escDialogTab === 0 && (
@@ -2523,7 +2523,7 @@ const FieldTeamForm = () => {
                 disabled={loading}
                 sx={{
                   bgcolor: '#ec4899',
-                  color: '#fff',
+                  color: 'var(--text)',
                   fontWeight: 700,
                   px: 3,
                   '&:hover': { bgcolor: '#db2777' }

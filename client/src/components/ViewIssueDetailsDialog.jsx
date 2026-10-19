@@ -48,13 +48,13 @@ import CustomerIssueDialog from './CustomerIssueDialog';
 
 // Premium Colors
 const colors = {
-  background: '#121212',
+  background: 'var(--bg)',
   surface: 'rgba(30, 30, 30, 0.7)',
   primary: '#8b5cf6', // Violet
   secondary: '#10b981', // Emerald
   textPrimary: '#ffffff',
   textSecondary: 'rgba(255, 255, 255, 0.7)',
-  border: 'rgba(255, 255, 255, 0.08)',
+  border: 'var(--border)',
   timeline: {
     reported: '#3b82f6', // Blue
     dispatched: '#f59e0b', // Amber
@@ -106,7 +106,7 @@ const StatusTimeline = ({ issue }) => {
                 left: '60%',
                 width: '80%',
                 height: '2px',
-                bgcolor: steps[idx + 1].active ? steps[idx + 1].color : 'rgba(255,255,255,0.05)',
+                bgcolor: steps[idx + 1].active ? steps[idx + 1].color : 'var(--overlay-subtle)',
                 zIndex: 0
               }} />
             )}
@@ -123,7 +123,7 @@ const StatusTimeline = ({ issue }) => {
                 color: step.active ? step.color : colors.textSecondary,
                 width: 40,
                 height: 40,
-                border: `2px solid ${step.active ? step.color : 'rgba(255,255,255,0.1)'}`,
+                border: `2px solid ${step.active ? step.color : 'var(--border)'}`,
                 mb: 1
               }}>
                 <step.icon size={20} />
@@ -265,7 +265,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
       fullScreen
       PaperProps={{
         sx: {
-          bgcolor: '#1a1a1a',
+          bgcolor: 'var(--bg)',
           backgroundImage: 'none',
           borderRadius: isMobile ? 0 : 4,
           border: isMobile ? 'none' : `1px solid ${colors.border}`,
@@ -275,7 +275,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
     >
       <DialogTitle sx={{
         p: 2.5,
-        bgcolor: 'rgba(255,255,255,0.02)',
+        bgcolor: 'var(--overlay-subtle)',
         borderBottom: `1px solid ${colors.border}`,
         display: 'flex',
         justifyContent: 'space-between',
@@ -286,7 +286,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
             <MdOutlineBugReport size={24} />
           </Avatar>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
               Issue Details
             </Typography>
             <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 500 }}>
@@ -296,7 +296,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
         </Box>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Copy to Clipboard">
-            <IconButton onClick={handleCopyDetails} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', color: colors.primary } }}>
+            <IconButton onClick={handleCopyDetails} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: colors.primary } }}>
               <MdContentCopy size={20} />
             </IconButton>
           </Tooltip>
@@ -305,13 +305,13 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
               <MdWhatsapp size={20} />
             </IconButton>
           </Tooltip>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: '#fff' } }}>
+          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: '#fff' } }}>
             <MdClose size={20} />
           </IconButton>
         </Stack>
       </DialogTitle>
 
-      <DialogContent sx={{ p: isMobile ? 2 : 4, bgcolor: '#121212' }}>
+      <DialogContent sx={{ p: isMobile ? 2 : 4, bgcolor: 'var(--bg)' }}>
         <StatusTimeline issue={issue} />
 
         <Grid container spacing={isMobile ? 2 : 4}>
@@ -357,7 +357,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
                       key={idx}
                       label={`${i.category}${i.subCategory ? `: ${i.subCategory}` : ''}`}
                       size="small"
-                      sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600 }}
+                      sx={{ bgcolor: 'var(--overlay-subtle)', color: '#fff', border: '1px solid var(--border)', fontWeight: 600 }}
                     />
                   )) : (
                     <Chip label={issue.issueCategory || 'No Categories'} size="small" variant="outlined" />
@@ -366,7 +366,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
               </Box>
               <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, borderLeft: `4px solid ${colors.primary}` }}>
                 <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 800, textTransform: 'uppercase', mb: 0.5, display: 'block' }}>Reporter Note</Typography>
-                <Typography variant="body2" sx={{ color: '#fff', fontStyle: 'italic', lineHeight: 1.6 }}>
+                <Typography variant="body2" sx={{ color: 'var(--text)', fontStyle: 'italic', lineHeight: 1.6 }}>
                   {issue.reporterNote || "No additional notes from reporter."}
                 </Typography>
               </Box>
@@ -437,7 +437,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderTop: `1px solid ${colors.border}`, gap: 1 }}>
+      <DialogActions sx={{ p: 2, bgcolor: 'var(--overlay-subtle)', borderTop: `1px solid ${colors.border}`, gap: 1 }}>
         {isAdmin && (
           <Button
             onClick={() => setOpenEditDialog(true)}
@@ -445,7 +445,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
             startIcon={<MdEdit />}
             sx={{
               bgcolor: colors.primary,
-              '&:hover': { bgcolor: '#6a5acd' },
+              '&:hover': { bgcolor: 'var(--accent-hover)' },
               textTransform: 'none',
               borderRadius: 2,
               px: 3
@@ -458,14 +458,14 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
           onClick={onClose}
           variant="outlined"
           sx={{
-            color: '#fff',
-            borderColor: 'rgba(255,255,255,0.2)',
+            color: 'var(--text)',
+            borderColor: 'var(--border)',
             textTransform: 'none',
             borderRadius: 2,
             px: 4,
             '&:hover': {
               borderColor: '#fff',
-              bgcolor: 'rgba(255,255,255,0.05)'
+              bgcolor: 'var(--overlay-subtle)'
             }
           }}
         >

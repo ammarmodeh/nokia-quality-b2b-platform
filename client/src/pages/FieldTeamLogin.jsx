@@ -97,14 +97,14 @@ const FieldTeamLogin = () => {
 
   const textFieldStyles = {
     '& .MuiOutlinedInput-root': {
-      '& fieldset': { borderColor: '#3d3d3d' },
-      '&:hover fieldset': { borderColor: '#555' },
-      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
-      color: '#ffffff',
+      '& fieldset': { borderColor: 'var(--border)' },
+      '&:hover fieldset': { borderColor: 'var(--border)' },
+      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
+      color: 'var(--text)',
     },
     '& .MuiInputLabel-root': {
-      color: '#b3b3b3',
-      '&.Mui-focused': { color: '#7b68ee' }
+      color: 'var(--text-secondary)',
+      '&.Mui-focused': { color: 'var(--accent-text)' }
     }
   };
 
@@ -114,7 +114,7 @@ const FieldTeamLogin = () => {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#2d2d2d',
+      backgroundColor: 'var(--surface)',
       p: 2
     }}>
       <Paper elevation={3} sx={{
@@ -124,25 +124,25 @@ const FieldTeamLogin = () => {
         display: 'flex',
         flexDirection: 'column',
         gap: 3,
-        backgroundColor: '#2d2d2d',
+        backgroundColor: 'var(--surface)',
         border: '1px solid #f3f4f6'
       }}>
-        <Typography variant="h4" component="div" align="center" gutterBottom sx={{ color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
+        <Typography variant="h4" component="div" align="center" gutterBottom sx={{ color: 'var(--text)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0 }}>
           <img src="/images/reach_logo_new.svg" width={100} height={100} alt="ReachLogo" />
           <img src="/images/Orange-Logo.png" width={40} height={40} alt="Orange Logo" />
         </Typography>
-        <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: '#ffffff', fontSize: '12px' }}>
+        <Typography variant="p" component="div" align="center" gutterBottom sx={{ color: 'var(--text)', fontSize: '12px' }}>
           <span style={{ fontWeight: 'bold', color: '#ff9800' }}>{settings?.clientName || "OrangeJo"}</span> {settings?.projectName || "FTTH Project"}
         </Typography>
 
         <Divider sx={{ borderColor: '#f3f4f6' }} />
 
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-          <Typography variant="h4" component="h1" align="center" gutterBottom sx={{ color: '#ffffff' }}>
+          <Typography variant="h4" component="h1" align="center" gutterBottom sx={{ color: 'var(--text)' }}>
             Field Team Login
           </Typography>
 
-          <Typography variant="body1" align="center" sx={{ color: '#b3b3b3' }}>
+          <Typography variant="body1" align="center" sx={{ color: 'var(--text-secondary)' }}>
             Enter your Team ID and Quiz Code
           </Typography>
         </Box>
@@ -180,7 +180,7 @@ const FieldTeamLogin = () => {
             sx={{
               mt: 2,
               height: 48,
-              backgroundColor: '#7b68ee',
+              backgroundColor: 'var(--accent)',
               '&:hover': { backgroundColor: '#1d4ed8' }
             }}
           >

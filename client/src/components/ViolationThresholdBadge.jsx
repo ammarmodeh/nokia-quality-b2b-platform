@@ -12,7 +12,7 @@ const ViolationThresholdBadge = ({ count }) => {
       backgroundColor: `rgba(${count >= 3 ? '244, 67, 54' :
         count === 2 ? '255, 152, 0' : '76, 175, 80'
         }, 0.4)`,
-      color: "white",
+      color: "var(--text)",
       padding: "4px 8px",
       fontWeight: 'bold',
       fontSize: '0.8rem'

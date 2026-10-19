@@ -91,7 +91,7 @@ const AssessmentList = ({
             startAdornment: <Search sx={{ color: colors.textSecondary, mr: 1, fontSize: 20 }} />,
             sx: {
               borderRadius: '12px',
-              backgroundColor: 'rgba(255,255,255,0.03)',
+              backgroundColor: 'var(--overlay-subtle)',
               border: `1px solid ${colors.border}`,
               color: colors.textPrimary,
               width: { xs: '100%', md: 320 },
@@ -120,7 +120,7 @@ const AssessmentList = ({
                   <TableRow
                     key={assessment._id}
                     sx={{
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+                      '&:hover': { bgcolor: 'var(--overlay-subtle)' },
                       transition: 'background-color 0.2s',
                     }}
                   >
@@ -161,7 +161,7 @@ const AssessmentList = ({
                             sx={{
                               height: 4,
                               borderRadius: 2,
-                              bgcolor: 'rgba(255,255,255,0.05)',
+                              bgcolor: 'var(--overlay-subtle)',
                               '& .MuiLinearProgress-bar': {
                                 bgcolor: colors[getPerformanceColor(assessment.overallScore)] || colors.primary
                               }

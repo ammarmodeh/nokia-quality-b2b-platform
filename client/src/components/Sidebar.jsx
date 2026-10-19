@@ -301,7 +301,7 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
               },
               minHeight: '48px !important',
               "&:hover": {
-                backgroundColor: '#333',
+                backgroundColor: 'var(--surface-hover)',
               }
             }}
             onClick={(e) => {
@@ -334,8 +334,8 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
                     className={clsx(
                       "block px-3 py-2 rounded-md text-sm",
                       active
-                        ? "text-[#3ea6ff] font-bold bg-[#333]"
-                        : "text-gray-400 hover:text-[#3ea6ff] hover:bg-[#333]"
+                        ? "text-[#3ea6ff] font-bold bg-[var(--surface-hover)]"
+                        : "text-[var(--text-muted)] hover:text-[#3ea6ff] hover:bg-[var(--surface-hover)]"
                     )}
                   >
                     {sub.label}
@@ -352,8 +352,8 @@ const NavLink = ({ el, onClick, isCollapsed }) => {
           className={clsx(
             "w-full flex gap-2 px-3 py-2 rounded-md items-center text-base transition-colors duration-200",
             location.pathname === `/${el.link}`
-              ? "text-[#3ea6ff] font-bold bg-[#333]"
-              : "text-gray-300 hover:bg-[#333]",
+              ? "text-[#3ea6ff] font-bold bg-[var(--surface-hover)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]",
             isCollapsed && !isMobileOrMediumScreen ? "justify-center" : "",
           )}
         >
@@ -381,7 +381,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
 
   return (
     <div className={clsx(
-      "flex flex-col h-screen bg-[#121212] transition-all duration-300",
+      "flex flex-col h-screen bg-[var(--bg)] transition-all duration-300",
     )}>
       <div className="h-[55px] flex items-center justify-between p-2">
         <div className="flex gap-2 items-center">
@@ -391,14 +391,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
             </div>
           </div>
           {(!isCollapsed || isMobileOrMediumScreen) && (
-            <span className="text-l font-bold text-white">
+            <span className="text-l font-bold text-[var(--text)]">
               <strong style={{ fontSize: '20px' }}>T</strong>rack<strong style={{ fontSize: '20px' }}>Y</strong>our<strong style={{ fontSize: '20px' }}>T</strong>asks
             </span>
           )}
         </div>
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-md hover:bg-[#333] text-gray-300"
+          className="p-2 rounded-md hover:bg-[var(--surface-hover)] text-[var(--text-secondary)]"
           aria-label="Toggle Sidebar"
         >
           {isCollapsed ? "»" : "«"}
@@ -410,7 +410,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
           {categories.map((category) => (
             <div key={category.title} className="flex flex-col gap-y-1">
               {(!isCollapsed || isMobileOrMediumScreen) && (
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-3 mb-1">
+                <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider px-3 mb-1">
                   {category.title}
                 </span>
               )}
@@ -429,12 +429,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar, setSidebarOpen }) => {
         </div>
 
         <div className="mt-auto">
-          <hr className="mx-4 border-[#444]" />
+          <hr className="mx-4 border-[var(--border)]" />
           <div className="p-4">
             <Link
               to="/settings"
               className={clsx(
-                "w-full flex gap-2 p-2 items-center text-lg text-gray-300 rounded-md transition-colors duration-200 hover:bg-[#333]",
+                "w-full flex gap-2 p-2 items-center text-lg text-[var(--text-secondary)] rounded-md transition-colors duration-200 hover:bg-[var(--surface-hover)]",
                 isCollapsed && !isMobileOrMediumScreen ? "justify-center" : ""
               )}
               onClick={closeSidebar}

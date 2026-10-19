@@ -1,49 +1,7 @@
+import { alpha } from "../theme/colorFns";
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TextField,
-  InputAdornment,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  useMediaQuery,
-  useTheme,
-  Divider,
-  TablePagination,
-  Tooltip,
-  Chip,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-  Stack,
-  Grid,
-  Collapse,
-  ButtonGroup,
-  Autocomplete,
-  alpha,
-  Card,
-  CardContent,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  LinearProgress,
-  Radio,
-  RadioGroup,
-  FormControlLabel
-} from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, InputAdornment, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Stack, Grid, Collapse, ButtonGroup, Autocomplete, Card, CardContent, Accordion, AccordionSummary, AccordionDetails, LinearProgress, Radio, RadioGroup, FormControlLabel } from '@mui/material';
 import { MoonLoader } from 'react-spinners';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
@@ -721,7 +679,7 @@ const AllTasksList = () => {
       backdropFilter: 'blur(10px)',
       border: `1px solid ${alpha(color, 0.3)}`,
       borderRadius: '24px',
-      color: '#fff',
+      color: 'var(--text)',
       height: '100%',
       position: 'relative',
       overflow: 'hidden',
@@ -765,7 +723,7 @@ const AllTasksList = () => {
             </Typography>
           )}
         </Box>
-        <Typography variant="h3" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: '-1.5px', color: '#fff' }}>
+        <Typography variant="h3" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: '-1.5px', color: 'var(--text)' }}>
           {value}
         </Typography>
         <Typography variant="subtitle2" sx={{ color: alpha('#fff', 0.6), fontWeight: 700, mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -10550,7 +10508,7 @@ const AllTasksList = () => {
       default:
         return (
           <Tooltip title="Pending">
-            <IconButton size="small" sx={{ color: '#7b68ee', p: 0.5, cursor: 'default' }}>
+            <IconButton size="small" sx={{ color: 'var(--accent-text)', p: 0.5, cursor: 'default' }}>
               <MdHourglassEmpty size={20} />
             </IconButton>
           </Tooltip>
@@ -10628,7 +10586,7 @@ const AllTasksList = () => {
         {icon}
         <Typography variant="body2" fontWeight="bold">{label}</Typography>
       </Box>
-      <Typography variant="h4" fontWeight="900" sx={{ color: '#fff' }}>
+      <Typography variant="h4" fontWeight="900" sx={{ color: 'var(--text)' }}>
         {value}
       </Typography>
       {subLabel && <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), mt: 0.5 }}>{subLabel}</Typography>}
@@ -10636,7 +10594,7 @@ const AllTasksList = () => {
   );
 
   const MiniTable = ({ title, data, color, category }) => (
-    <Box sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, p: 2, height: '100%' }}>
+    <Box sx={{ bgcolor: 'var(--overlay-subtle)', borderRadius: 2, p: 2, height: '100%' }}>
       <Typography variant="subtitle2" sx={{ color: color, fontWeight: 'bold', mb: 2, borderBottom: `1px solid ${alpha(color, 0.2)}`, pb: 1 }}>
         {title}
       </Typography>
@@ -10657,7 +10615,7 @@ const AllTasksList = () => {
             }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ color: '#fff', fontWeight: 500 }}>{item.name}</Typography>
+              <Typography variant="caption" sx={{ color: 'var(--text)', fontWeight: 500 }}>{item.name}</Typography>
               <Typography variant="caption" sx={{ color: color }}>{item.count} ({item.percentage}%)</Typography>
             </Box>
             <LinearProgress
@@ -10666,7 +10624,7 @@ const AllTasksList = () => {
               sx={{
                 height: 4,
                 borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.1)',
+                bgcolor: 'var(--overlay-subtle)',
                 '& .MuiLinearProgress-bar': { bgcolor: color }
               }}
             />
@@ -10705,7 +10663,7 @@ const AllTasksList = () => {
       px: isMobile ? 0 : undefined
     }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
+        color: 'var(--accent-text)',
         fontWeight: 'bold',
         fontSize: isMobile ? '1.2rem' : '1.5rem',
         mb: 2
@@ -10725,7 +10683,7 @@ const AllTasksList = () => {
             <StatBar
               label="Total Samples"
               value={loadingSamples ? "..." : totalSamples}
-              color="#7b68ee"
+              color="var(--accent-text)"
               icon={<MdHistory />}
             // subLabel={`Actual Audits: ${actualAudits}`}
             />
@@ -10736,17 +10694,17 @@ const AllTasksList = () => {
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-            <StatBar label="Total Tasks" value={totalTasks} color="#7b68ee" icon={<MdAssignmentTurnedIn />} />
-            <StatBar label="Total Issues" value={totalIssues} color="#7b68ee" icon={<MdAssignmentTurnedIn />} />
+            <StatBar label="Total Tasks" value={totalTasks} color="var(--accent-text)" icon={<MdAssignmentTurnedIn />} />
+            <StatBar label="Total Issues" value={totalIssues} color="var(--accent-text)" icon={<MdAssignmentTurnedIn />} />
             <StatBar label="Detractors" value={detractorsCount} color="#f44336" icon={<MdError />} />
             <StatBar label="Neutrals" value={neutralsCount} color="#ff9800" icon={<MdRadioButtonUnchecked />} />
           </Stack>
 
           {/* Expandable Detailed Stats */}
-          <Accordion sx={{ bgcolor: 'rgba(255,255,255,0.02)', color: '#fff', '&:before': { display: 'none' }, boxShadow: 'none' }}>
-            <AccordionSummary expandIcon={<MdExpandMore style={{ color: '#fff' }} />} sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <Accordion sx={{ bgcolor: 'var(--overlay-subtle)', color: '#fff', '&:before': { display: 'none' }, boxShadow: 'none' }}>
+            <AccordionSummary expandIcon={<MdExpandMore style={{ color: 'var(--text)' }} />} sx={{ borderBottom: '1px solid var(--border)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MdBarChart style={{ color: '#7b68ee' }} />
+                <MdBarChart style={{ color: 'var(--accent-text)' }} />
                 <Typography fontWeight="bold">Detailed Breakdown (Top 5 Results)</Typography>
               </Box>
             </AccordionSummary>
@@ -10778,10 +10736,10 @@ const AllTasksList = () => {
 
       {/* Search and Export Bar */}
       <Box sx={{
-        backgroundColor: '#2d2d2d',
+        backgroundColor: 'var(--surface)',
         p: 2,
         borderRadius: '8px',
-        border: '1px solid #3d3d3d',
+        border: '1px solid var(--border)',
         mb: 2,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
@@ -10791,12 +10749,12 @@ const AllTasksList = () => {
         overflowX: 'auto',
         overflowY: 'hidden',
         '&::-webkit-scrollbar': { height: '4px' },
-        '&::-webkit-scrollbar-track': { background: '#1e1e1e' },
+        '&::-webkit-scrollbar-track': { background: 'var(--surface)' },
         '&::-webkit-scrollbar-thumb': { background: '#555', borderRadius: '4px' }
       }}>
         {/* Date Filters Merged */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-          <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#7b68ee', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <MdDateRange /> Date:
           </Typography>
           <Box sx={{
@@ -10812,13 +10770,13 @@ const AllTasksList = () => {
               textTransform: 'none',
               fontSize: '0.72rem',
               fontWeight: 600,
-              backgroundColor: '#1e1e1e',
-              borderColor: '#3d3d3d',
-              color: '#b3b3b3',
-              '&:hover': { borderColor: '#7b68ee', backgroundColor: 'rgba(123, 104, 238, 0.08)' },
+              backgroundColor: 'var(--surface)',
+              borderColor: 'var(--border)',
+              color: 'var(--text-secondary)',
+              '&:hover': { borderColor: 'var(--accent)', backgroundColor: 'rgba(123, 104, 238, 0.08)' },
               '&.MuiButton-contained': {
-                backgroundColor: '#7b68ee',
-                color: '#fff',
+                backgroundColor: 'var(--accent)',
+                color: 'var(--text)',
                 '&:hover': { backgroundColor: '#6854d9' }
               }
             }
@@ -10869,12 +10827,12 @@ const AllTasksList = () => {
                       width: 110,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: 'var(--surface)',
                         borderRadius: '12px',
-                        color: '#fff'
+                        color: 'var(--text)'
                       },
-                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#b3b3b3' },
-                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #3d3d3d' }
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: 'var(--text-secondary)' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid var(--border)' }
                     }
                   }
                 }}
@@ -10890,12 +10848,12 @@ const AllTasksList = () => {
                       width: 110,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: 'var(--surface)',
                         borderRadius: '12px',
-                        color: '#fff'
+                        color: 'var(--text)'
                       },
-                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#b3b3b3' },
-                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #3d3d3d' }
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: 'var(--text-secondary)' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid var(--border)' }
                     }
                   }
                 }}
@@ -10911,7 +10869,7 @@ const AllTasksList = () => {
                   textTransform: 'none',
                   flexShrink: 0,
                   fontSize: '0.75rem',
-                  backgroundColor: '#7b68ee',
+                  backgroundColor: 'var(--accent)',
                   '&:hover': { backgroundColor: '#6854d9' }
                 }}
               >
@@ -10921,7 +10879,7 @@ const AllTasksList = () => {
           </LocalizationProvider>
         </Box>
 
-        <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'var(--border)' }} />
 
         {/* Dedicated Cumulative & Escalation Analysis Date Filter Bar */}
         <Box sx={{
@@ -10951,13 +10909,13 @@ const AllTasksList = () => {
               textTransform: 'none',
               fontSize: '0.72rem',
               fontWeight: 600,
-              backgroundColor: '#1e1e1e',
-              borderColor: '#3d3d3d',
-              color: '#b3b3b3',
+              backgroundColor: 'var(--surface)',
+              borderColor: 'var(--border)',
+              color: 'var(--text-secondary)',
               '&:hover': { borderColor: '#c084fc', backgroundColor: 'rgba(192, 132, 252, 0.08)' },
               '&.MuiButton-contained': {
                 backgroundColor: '#7c3aed',
-                color: '#fff',
+                color: 'var(--text)',
                 '&:hover': { backgroundColor: '#6d28d9' }
               }
             }
@@ -11013,9 +10971,9 @@ const AllTasksList = () => {
                       width: 110,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: 'var(--surface)',
                         borderRadius: '10px',
-                        color: '#fff'
+                        color: 'var(--text)'
                       },
                       '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#c084fc' },
                       '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #4c1d95' }
@@ -11034,9 +10992,9 @@ const AllTasksList = () => {
                       width: 110,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: 'var(--surface)',
                         borderRadius: '10px',
-                        color: '#fff'
+                        color: 'var(--text)'
                       },
                       '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#c084fc' },
                       '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #4c1d95' }
@@ -11065,13 +11023,13 @@ const AllTasksList = () => {
           </LocalizationProvider>
         </Box>
 
-        <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#3d3d3d' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'var(--border)' }} />
         <Tooltip title="Refresh data">
           <IconButton
             onClick={() => setUpdateRefetchTasks(prev => !prev)}
             disabled={loading}
             sx={{
-              color: '#7b68ee',
+              color: 'var(--accent-text)',
               '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.08)' }
             }}
           >
@@ -11081,7 +11039,7 @@ const AllTasksList = () => {
 
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="filter-select-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="filter-select-label" sx={{ color: 'var(--text-secondary)' }}>
             Eval Score
           </InputLabel>
           <Select
@@ -11091,9 +11049,9 @@ const AllTasksList = () => {
             onChange={(e) => setFilter(e.target.value)}
             label="Filter"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11101,14 +11059,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11135,7 +11093,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="priority-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="priority-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             Feedback Severity
           </InputLabel>
           <Select
@@ -11145,9 +11103,9 @@ const AllTasksList = () => {
             onChange={(e) => setPriorityFilter(e.target.value)}
             label="Feedback Severity"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11155,14 +11113,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11192,7 +11150,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="status-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="status-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             Task Status
           </InputLabel>
           <Select
@@ -11202,9 +11160,9 @@ const AllTasksList = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
             label="Task Status"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11212,14 +11170,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11259,7 +11217,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="governorate-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="governorate-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             Governorate
           </InputLabel>
           <Select
@@ -11269,9 +11227,9 @@ const AllTasksList = () => {
             onChange={(e) => setGovernorateFilter(e.target.value)}
             label="Governorate"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11279,14 +11237,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11299,7 +11257,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="district-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="district-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             District
           </InputLabel>
           <Select
@@ -11309,9 +11267,9 @@ const AllTasksList = () => {
             onChange={(e) => setDistrictFilter(e.target.value)}
             label="District"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11319,14 +11277,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11339,7 +11297,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="subcon-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="subcon-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             Subcon
           </InputLabel>
           <Select
@@ -11349,9 +11307,9 @@ const AllTasksList = () => {
             onChange={(e) => setSubconFilter(e.target.value)}
             label="Subcon"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11359,14 +11317,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11379,7 +11337,7 @@ const AllTasksList = () => {
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="supervisor-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="supervisor-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             Supervisor
           </InputLabel>
           <Select
@@ -11389,9 +11347,9 @@ const AllTasksList = () => {
             onChange={(e) => setSupervisorFilter(e.target.value)}
             label="Supervisor"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11399,14 +11357,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11434,29 +11392,29 @@ const AllTasksList = () => {
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '20px',
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                   '& fieldset': { border: 'none' },
                   '&:hover fieldset': { border: '1px solid #666 !important' },
-                  '&.Mui-focused fieldset': { border: '1px solid #7b68ee !important' },
+                  '&.Mui-focused fieldset': { border: '1px solid var(--accent) !important' },
                 },
-                '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                '& .MuiSvgIcon-root': { color: '#ffffff' }
+                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                '& .MuiSvgIcon-root': { color: 'var(--text)' }
               }}
             />
           )}
           slotProps={{
             paper: {
               sx: {
-                backgroundColor: '#2d2d2d',
-                color: '#ffffff',
+                backgroundColor: 'var(--surface)',
+                color: 'var(--text)',
               }
             }
           }}
         />
 
         <FormControl size="small" sx={{ minWidth: isMobile ? undefined : 120, width: isMobile ? '100%' : undefined }}>
-          <InputLabel id="validation-filter-label" sx={{ color: '#b3b3b3' }}>
+          <InputLabel id="validation-filter-label" sx={{ color: 'var(--text-secondary)' }}>
             Validation
           </InputLabel>
           <Select
@@ -11466,9 +11424,9 @@ const AllTasksList = () => {
             onChange={(e) => setValidationFilter(e.target.value)}
             label="Validation"
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               borderRadius: '20px',
-              backgroundColor: '#2d2d2d',
+              backgroundColor: 'var(--surface)',
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none',
               },
@@ -11476,14 +11434,14 @@ const AllTasksList = () => {
                 border: '1px solid #666 !important',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #7b68ee !important',
+                border: '1px solid var(--accent) !important',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: '#2d2d2d',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                 },
               },
             }}
@@ -11509,7 +11467,7 @@ const AllTasksList = () => {
             onClick={() => setAdvancedSearchOpen(true)}
             sx={{
               bgcolor: activeAdvSearch ? '#4caf50' : '#7b68ee',
-              color: '#fff',
+              color: 'var(--text)',
               borderRadius: '20px',
               px: 3,
               '&:hover': {
@@ -11552,7 +11510,7 @@ const AllTasksList = () => {
               onClick={exportToExcel}
               startIcon={<MdFileDownload />}
               sx={{
-                borderColor: '#3d3d3d',
+                borderColor: 'var(--border)',
                 color: '#1976d2',
                 '&:hover': {
                   backgroundColor: 'rgba(25, 118, 210, 0.08)',
@@ -11574,7 +11532,7 @@ const AllTasksList = () => {
                 onClick={() => setOpenAddTask(true)}
                 startIcon={<IoMdAdd />}
                 sx={{
-                  borderColor: '#3d3d3d',
+                  borderColor: 'var(--border)',
                   color: '#4caf50',
                   '&:hover': {
                     backgroundColor: 'rgba(76, 175, 80, 0.08)',
@@ -11604,11 +11562,11 @@ const AllTasksList = () => {
         mb: 1,
         p: 1,
         borderRadius: 2,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        backgroundColor: 'var(--overlay-subtle)',
+        border: '1px solid var(--border)',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#b3b3b3', fontWeight: 700 }}>Status Summary:</Typography>
+          <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Status Summary:</Typography>
         </Box>
         {[{
           label: 'Closed',
@@ -11631,13 +11589,13 @@ const AllTasksList = () => {
               px: 2,
               py: 0.75,
               borderRadius: 2,
-              bgcolor: 'rgba(255,255,255,0.05)',
+              bgcolor: 'var(--overlay-subtle)',
               border: `1px solid ${item.color}33`,
               minWidth: 120,
               justifyContent: 'space-between'
             }}
           >
-            <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>{item.label}</Typography>
+            <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 600 }}>{item.label}</Typography>
             <Typography variant="subtitle2" sx={{ color: item.color, fontWeight: 800 }}>{item.count}</Typography>
           </Box>
         ))}
@@ -11647,30 +11605,30 @@ const AllTasksList = () => {
           mt: 2,
           maxWidth: '100%',
           overflowX: 'auto',
-          backgroundColor: '#2d2d2d',
-          border: '1px solid #3d3d3d',
+          backgroundColor: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: '0px',
           "& .MuiTable-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
           },
           "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
-              color: "#b3b3b3",
+              color: "var(--text-secondary)",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text)",
             },
             // "& .MuiTableRow-root": {
-            //   backgroundColor: "#2d2d2d",
+            //   backgroundColor: "var(--surface)",
             //   "&:hover": {
-            //     backgroundColor: "#2d2d2d",
+            //     backgroundColor: "var(--surface)",
             //   },
             // }
           },
@@ -11715,7 +11673,7 @@ const AllTasksList = () => {
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Q-OPS Steps</TableCell>
               <TableCell style={{ fontSize: '0.875rem', width: 120 }}>Actions</TableCell>
             </TableRow>
-            <TableRow sx={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <TableRow sx={{ backgroundColor: 'var(--overlay-subtle)' }}>
               {[
                 { key: 'createdAt', placeholder: 'Date' },
                 { key: 'slid', placeholder: 'SLID/REQ' },
@@ -11749,8 +11707,8 @@ const AllTasksList = () => {
                         sx={{
                           '& .MuiInputBase-root': {
                             fontSize: '0.7rem',
-                            color: '#fff',
-                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            color: 'var(--text)',
+                            backgroundColor: 'var(--overlay-subtle)',
                             borderRadius: '4px'
                           },
                           '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
@@ -11778,8 +11736,8 @@ const AllTasksList = () => {
                         sx={{
                           '& .MuiInputBase-root': {
                             fontSize: '0.7rem',
-                            color: '#fff',
-                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            color: 'var(--text)',
+                            backgroundColor: 'var(--overlay-subtle)',
                             borderRadius: '4px'
                           },
                           '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
@@ -11808,8 +11766,8 @@ const AllTasksList = () => {
                         sx={{
                           '& .MuiInputBase-root': {
                             fontSize: '0.7rem',
-                            color: '#fff',
-                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            color: 'var(--text)',
+                            backgroundColor: 'var(--overlay-subtle)',
                             borderRadius: '4px'
                           },
                           '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
@@ -11848,23 +11806,23 @@ const AllTasksList = () => {
                         '&:hover': { backgroundColor: '#f5f5f5' }
                       }}
                     >
-                      <TableCell style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      <TableCell style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {task.createdAt ? new Date(task.createdAt).toLocaleDateString() : '-'}
                       </TableCell>
                       <TableCell>
                         <Box display="flex" flexDirection="column" gap={0.5}>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{task.slid || "-"}</Typography>
-                          <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 'bold' }}>
+                          <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 'bold' }}>
                             REQ: {task.requestNumber || "-"}
                           </Typography>
                           {task.validationStatus === 'Validated' ? (
                             <Chip
                               label="Validated"
                               size="small"
-                              icon={<MdCheckCircle style={{ color: '#ffffff' }} />}
+                              icon={<MdCheckCircle style={{ color: 'var(--text)' }} />}
                               sx={{
                                 backgroundColor: '#4caf50',
-                                color: '#ffffff',
+                                color: 'var(--text)',
                                 height: '20px',
                                 fontSize: '0.65rem',
                                 '& .MuiChip-icon': { fontSize: '14px' }
@@ -11874,10 +11832,10 @@ const AllTasksList = () => {
                             <Chip
                               label="Not Validated"
                               size="small"
-                              icon={<MdError style={{ color: '#ffffff' }} />}
+                              icon={<MdError style={{ color: 'var(--text)' }} />}
                               sx={{
                                 backgroundColor: '#ff9800',
-                                color: '#ffffff',
+                                color: 'var(--text)',
                                 height: '20px',
                                 fontSize: '0.65rem',
                                 '& .MuiChip-icon': { fontSize: '14px' }
@@ -11923,7 +11881,7 @@ const AllTasksList = () => {
                                         p: 0,
                                         ml: 1,
                                         textTransform: 'none',
-                                        color: '#7b68ee',
+                                        color: 'var(--accent-text)',
                                         fontSize: '0.75rem',
                                         fontWeight: 'bold',
                                         '&:hover': { background: 'transparent', textDecoration: 'underline' }
@@ -11936,7 +11894,7 @@ const AllTasksList = () => {
                                   feedback
                                 );
                               }
-                              return <Typography variant="caption" sx={{ color: '#aaa' }}>-</Typography>;
+                              return <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>-</Typography>;
                             })()}
                           </Typography>
                         </Box>
@@ -11998,7 +11956,7 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#7b68ee' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'var(--accent-text)' }}>
                             {task.teamName || "-"}
                           </Typography>
                           <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
@@ -12024,7 +11982,7 @@ const AllTasksList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold', fontSize: '0.7rem', color: '#7b68ee' }}>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold', fontSize: '0.7rem', color: 'var(--accent-text)' }}>
                           {Array.isArray(task.responsible) ? task.responsible.join(", ") : (task.responsible || "-")}
                         </Typography>
                       </TableCell>
@@ -12108,7 +12066,7 @@ const AllTasksList = () => {
                                 p: 0,
                                 mt: 0.5,
                                 textTransform: 'none',
-                                color: '#7b68ee',
+                                color: 'var(--accent-text)',
                                 fontSize: '0.75rem',
                                 fontWeight: 'bold',
                                 '&:hover': { background: 'transparent', textDecoration: 'underline' }
@@ -12155,8 +12113,8 @@ const AllTasksList = () => {
                           sx={{
                             fontSize: '0.7rem',
                             textTransform: 'none',
-                            borderColor: '#7b68ee',
-                            color: '#7b68ee',
+                            borderColor: 'var(--accent)',
+                            color: 'var(--accent-text)',
                             '&:hover': {
                               borderColor: '#6854d9',
                               backgroundColor: 'rgba(123, 104, 238, 0.08)'
@@ -12242,7 +12200,7 @@ const AllTasksList = () => {
                                 setSelectedTask(task);
                                 setViewDialogOpen(true);
                               }}
-                              sx={{ color: '#7b68ee' }}
+                              sx={{ color: 'var(--accent-text)' }}
                             >
                               <MdVisibility />
                             </IconButton>
@@ -12289,7 +12247,7 @@ const AllTasksList = () => {
                 })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'var(--text)' }}>
                   {activeAdvSearch ? 'No matching tasks found for your advanced search' : 'No tasks available'}
                 </TableCell>
               </TableRow>
@@ -12305,10 +12263,10 @@ const AllTasksList = () => {
         mt: 0,
         width: '100%',
         '& .MuiTablePagination-root': {
-          color: '#ffffff',
+          color: 'var(--text)',
         },
         '& .MuiTablePagination-selectIcon': {
-          color: '#ffffff',
+          color: 'var(--text)',
         }
       }}>
         <TablePagination
@@ -12321,26 +12279,26 @@ const AllTasksList = () => {
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
           rowsPerPageOptions={[5, 10, 25, 50]}
           sx={{
-            // borderTop: '1px solid #e5e7eb',
-            backgroundColor: '#2d2d2d',
+            // borderTop: '1px solid var(--border)',
+            backgroundColor: 'var(--surface)',
             display: 'flex',
             justifyContent: 'flex-start',
             width: '100%',
-            color: '#ffffff',
+            color: 'var(--text)',
             '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-              color: '#ffffff',
+              color: 'var(--text)',
               marginBottom: 0
             },
             '& .MuiSelect-select, & .MuiInputBase-root': {
-              color: '#ffffff',
+              color: 'var(--text)',
             },
             '& .MuiSvgIcon-root': {
-              color: '#ffffff',
+              color: 'var(--text)',
             },
             '& .MuiButtonBase-root': {
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:disabled': {
-                color: '#666666'
+                color: 'var(--text-muted)'
               }
             }
           }}
@@ -12388,10 +12346,10 @@ const AllTasksList = () => {
         maxWidth="lg"
         PaperProps={{
           sx: {
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--bg)',
             backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
             borderRadius: '24px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--border)',
             minHeight: '60vh'
           }
         }}
@@ -12401,17 +12359,17 @@ const AllTasksList = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           pb: 1,
-          borderBottom: '1px solid rgba(255,255,255,0.1)'
+          borderBottom: '1px solid var(--border)'
         }}>
           <Box>
-            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 0.5 }}>
+            <Typography variant="h5" sx={{ color: 'var(--text)', fontWeight: 900, mb: 0.5 }}>
               Detailed Breakdown Tasks
             </Typography>
-            <Typography variant="caption" sx={{ color: '#7b68ee', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
               {drillDownState.title} ({drillDownState.tasks.length} Tasks)
             </Typography>
           </Box>
-          <IconButton onClick={() => setDrillDownState(prev => ({ ...prev, open: false }))} sx={{ color: '#fff' }}>
+          <IconButton onClick={() => setDrillDownState(prev => ({ ...prev, open: false }))} sx={{ color: 'var(--text)' }}>
             <MdClose />
           </IconButton>
         </DialogTitle>
@@ -12419,31 +12377,31 @@ const AllTasksList = () => {
           <TableContainer>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.02)' }}>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Date</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Verbatim</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Team Name</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
-                  <TableCell sx={{ color: '#aaa', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Date</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Verbatim</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Team Name</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {drillDownState.tasks.map((task) => (
-                  <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>
+                  <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
+                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
                       {task.interviewDate ? format(new Date(task.interviewDate), 'dd/MM/yyyy') : '-'}
                     </TableCell>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>
+                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
                       {task.interviewDate ? getWeekDisplay(task.interviewDate) : '-'}
                     </TableCell>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
                     <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem', maxWidth: 280, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                       {task.customerFeedback || task.feedback || task.verbatim || '-'}
                     </TableCell>
@@ -12453,7 +12411,7 @@ const AllTasksList = () => {
                     <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
                       {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || task.technicalDetails?.rootCause || '-'}
                     </TableCell>
-                    <TableCell sx={{ color: '#fff', fontSize: '0.8rem' }}>{task.teamName || '-'}</TableCell>
+                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.teamName || '-'}</TableCell>
                     <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
                       {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
                     </TableCell>
@@ -12484,7 +12442,7 @@ const AllTasksList = () => {
                         }}
                         sx={{
                           textTransform: 'none',
-                          color: '#7b68ee',
+                          color: 'var(--accent-text)',
                           fontWeight: 'bold',
                           '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
                         }}
@@ -12509,10 +12467,10 @@ const AllTasksList = () => {
         fullScreen={isMobile}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
             boxShadow: 'none',
             borderRadius: isMobile ? 0 : '12px',
-            border: '1px solid #3d3d3d'
+            border: '1px solid var(--border)'
           }
         }}
       >
@@ -12520,9 +12478,9 @@ const AllTasksList = () => {
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           color: '#f44336',
-          borderBottom: '1px solid #3d3d3d',
+          borderBottom: '1px solid var(--border)',
           padding: isMobile ? '12px 16px' : '20px 24px',
         }}>
           <MdDelete size={28} />
@@ -12532,12 +12490,12 @@ const AllTasksList = () => {
         </DialogTitle>
 
         <DialogContent sx={{
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           padding: isMobile ? '16px' : '24px 24px',
         }}>
           <Stack spacing={3}>
             <Box>
-              <Typography variant="body1" sx={{ color: '#ffffff', mb: 1.5, fontWeight: 500 }}>
+              <Typography variant="body1" sx={{ color: 'var(--text)', mb: 1.5, fontWeight: 500 }}>
                 Are you sure you want to delete this task?
               </Typography>
               <Box sx={{
@@ -12551,10 +12509,10 @@ const AllTasksList = () => {
                 justifyContent: 'space-between',
                 mb: 2
               }}>
-                <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 900, textTransform: 'uppercase' }}>Target SLID:</Typography>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 900, textTransform: 'uppercase' }}>Target SLID:</Typography>
                 <Typography variant="h6" sx={{ color: '#f44336', fontWeight: 900, fontFamily: 'monospace' }}>{taskToDelete?.slid}</Typography>
               </Box>
-              <Typography variant="body2" sx={{ color: '#aaa' }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                 This action will move the task and all its technical sub-logs to the trash. It will no longer appear in active dashboards.
               </Typography>
             </Box>
@@ -12575,13 +12533,13 @@ const AllTasksList = () => {
                 helperText="Enter the exact SLID displayed above to enable deletion."
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
+                    color: 'var(--text)',
                     '& fieldset': { borderColor: alpha('#fff', 0.2) },
                     '&:hover fieldset': { borderColor: '#f44336' },
                     '&.Mui-focused fieldset': { borderColor: '#f44336' }
                   },
-                  '& .MuiInputLabel-root': { color: '#aaa' },
-                  '& .MuiFormHelperText-root': { color: '#888' }
+                  '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                  '& .MuiFormHelperText-root': { color: 'var(--text-muted)' }
                 }}
               />
             </Paper>
@@ -12590,15 +12548,15 @@ const AllTasksList = () => {
 
         <DialogActions sx={{
           backgroundColor: alpha('#000', 0.2),
-          borderTop: '1px solid #3d3d3d',
+          borderTop: '1px solid var(--border)',
           padding: isMobile ? '8px 16px' : '16px 24px',
         }}>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
             sx={{
-              color: '#aaa',
+              color: 'var(--text-secondary)',
               fontWeight: 900,
-              '&:hover': { color: '#fff' }
+              '&:hover': { color: 'var(--text)' }
             }}
           >
             ABORT
@@ -12641,17 +12599,17 @@ const AllTasksList = () => {
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: '#2d2d2d',
-            color: '#fff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             borderRadius: 2
           }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid #444' }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)' }}>
           {dialogTitle}
           <IconButton
             onClick={() => setDialogOpen(false)}
-            sx={{ position: 'absolute', right: 8, top: 8, color: '#aaa' }}
+            sx={{ position: 'absolute', right: 8, top: 8, color: 'var(--text-secondary)' }}
           >
             <MdClose />
           </IconButton>
@@ -12665,8 +12623,8 @@ const AllTasksList = () => {
             {dialogContent || "No content available."}
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid #444' }}>
-          <Button onClick={() => setDialogOpen(false)} sx={{ color: '#fff' }}>Close</Button>
+        <DialogActions sx={{ borderTop: '1px solid var(--border)' }}>
+          <Button onClick={() => setDialogOpen(false)} sx={{ color: 'var(--text)' }}>Close</Button>
         </DialogActions>
       </Dialog>
 

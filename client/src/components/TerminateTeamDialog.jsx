@@ -43,7 +43,7 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
       maxWidth="md"
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           boxShadow: 'none',
           borderRadius: isMobile ? 0 : '8px',
           border: isMobile ? 'none' : '1px solid #e5e7eb',
@@ -54,9 +54,9 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
       }}
     >
       <DialogTitle sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
-        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
+        borderBottom: '1px solid var(--border)',
         padding: isMobile ? '12px 16px' : '16px 24px',
         fontWeight: 500,
         position: 'sticky',
@@ -66,8 +66,8 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
         Terminate Team
       </DialogTitle>
       <DialogContent sx={{
-        backgroundColor: '#2d2d2d',
-        color: '#ffffff',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
         padding: isMobile ? '12px 16px' : '20px 24px',
         '&::-webkit-scrollbar': {
           width: '4px',
@@ -90,28 +90,28 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
             sx={{
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: '#3d3d3d',
+                  borderColor: 'var(--border)',
                 },
                 '&:hover fieldset': {
-                  borderColor: '#7b68ee',
+                  borderColor: 'var(--accent)',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: '#7b68ee',
+                  borderColor: 'var(--accent)',
                 },
               },
               '& .MuiInputBase-input': {
-                color: '#ffffff',
+                color: 'var(--text)',
               },
               '& .MuiInputLabel-root': {
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
               },
             }}
           />
         </form>
       </DialogContent>
       <DialogActions sx={{
-        backgroundColor: '#2d2d2d',
-        borderTop: '1px solid #e5e7eb',
+        backgroundColor: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
         padding: isMobile ? '8px 16px' : '12px 24px',
         position: 'sticky',
         bottom: 0
@@ -120,9 +120,9 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
           onClick={onClose}
           size={isMobile ? "small" : "medium"}
           sx={{
-            color: '#ffffff',
+            color: 'var(--text)',
             '&:hover': {
-              backgroundColor: '#2a2a2a',
+              backgroundColor: 'var(--surface)',
             }
           }}
         >
@@ -133,7 +133,7 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
           variant="contained"
           size={isMobile ? "small" : "medium"}
           sx={{
-            backgroundColor: '#7b68ee',
+            backgroundColor: 'var(--accent)',
             color: '#f9fafb',
             '&:hover': {
               backgroundColor: '#1d4ed8'

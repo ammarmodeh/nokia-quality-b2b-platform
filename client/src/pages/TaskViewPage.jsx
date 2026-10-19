@@ -1,12 +1,8 @@
+import { alpha } from "../theme/colorFns";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import {
-  Paper, Typography, Avatar, Chip, Stack, Box, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, IconButton,
-  useMediaQuery, useTheme, alpha, Tabs, Tab, Divider, TextField, MenuItem,
-  List, ListItem, ListItemText, ListItemAvatar, Grid
-} from "@mui/material";
+import { Paper, Typography, Avatar, Chip, Stack, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, IconButton, useMediaQuery, useTheme, Tabs, Tab, Divider, TextField, MenuItem, List, ListItem, ListItemText, ListItemAvatar, Grid } from "@mui/material";
 import { useSelector } from "react-redux";
 import { FaEdit, FaHistory, FaTools, FaInfoCircle, FaClipboardList } from "react-icons/fa";
 import { MdClose, MdDeleteForever, MdContentCopy, MdVisibility, MdAdd, MdCheckCircle, MdSchedule } from "react-icons/md";
@@ -252,7 +248,7 @@ const TaskViewPage = () => {
                 <DetailItem label="GAIA Content" value={task.gaiaContent} fullWidth direction="ltr" />
               </DetailGrid>
 
-              <Divider sx={{ my: 4, borderColor: 'rgba(255,255,255,0.05)' }} />
+              <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
 
               <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
                 ROOT CAUSE ANALYSIS
@@ -426,8 +422,8 @@ const DetailItem = ({ label, value, fullWidth, direction }) => (
               py: 0.5,
               whiteSpace: 'normal',
               textAlign: 'left',
-              bgcolor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              bgcolor: 'var(--overlay-subtle)',
+              border: '1px solid var(--border)'
             }}
           />
         ))}

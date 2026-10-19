@@ -1,24 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import React, { useState, useMemo } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  IconButton,
-  Box,
-  Chip,
-  useTheme,
-  useMediaQuery,
-  Tooltip,
-  Tabs,
-  Tab,
-  Grid,
-  Paper,
-  alpha,
-  Fade
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, IconButton, Box, Chip, useTheme, useMediaQuery, Tooltip, Tabs, Tab, Grid, Paper, Fade } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { MdClose, MdTableChart, MdBarChart, MdCategory, MdPieChart } from 'react-icons/md';
 import { SupportAgent, BugReport, Dangerous } from '@mui/icons-material';
@@ -41,9 +23,9 @@ import {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
 
 const PREM_COLORS = {
-  background: '#0f172a',
+  background: 'var(--bg)',
   surface: 'rgba(30, 41, 59, 0.5)',
-  border: 'rgba(255, 255, 255, 0.08)',
+  border: 'var(--border)',
   textPrimary: '#f8fafc',
   textSecondary: '#94a3b8',
   primary: '#8b5cf6',
@@ -62,16 +44,16 @@ const CustomTooltip = ({ active, payload, label }) => {
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         minWidth: '150px'
       }}>
-        <Typography variant="subtitle2" color="#f8fafc" fontWeight="700" mb={1} sx={{ borderBottom: `1px solid ${PREM_COLORS.border}`, pb: 1 }}>
+        <Typography variant="subtitle2" color="var(--text)" fontWeight="700" mb={1} sx={{ borderBottom: `1px solid ${PREM_COLORS.border}`, pb: 1 }}>
           {label || payload[0]?.name}
         </Typography>
         {payload.map((entry, index) => (
           <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: entry.color || entry.fill }} />
-              <Typography variant="body2" color="#e2e8f0">{entry.name}:</Typography>
+              <Typography variant="body2" color="var(--text-secondary)">{entry.name}:</Typography>
             </Box>
-            <Typography variant="body2" fontWeight="bold" color="#f8fafc" ml={2}>
+            <Typography variant="body2" fontWeight="bold" color="var(--text)" ml={2}>
               {entry.value}
             </Typography>
           </Box>
@@ -145,7 +127,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
-        let color = '#94a3b8';
+        let color = 'var(--text-secondary)';
         let bg = 'transparent';
         if (params.value <= 6) { color = '#ef4444'; bg = 'rgba(239, 68, 68, 0.1)'; }
         else if (params.value <= 8) { color = '#f59e0b'; bg = 'rgba(245, 158, 11, 0.1)'; }
@@ -179,7 +161,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
       headerName: 'Team Name',
       width: 160,
       renderCell: (params) => (
-        <Typography variant="body2" color="#e2e8f0">{params.value || '-'}</Typography>
+        <Typography variant="body2" color="var(--text-secondary)">{params.value || '-'}</Typography>
       )
     },
     {
@@ -187,7 +169,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
       headerName: 'Customer',
       width: 180,
       renderCell: (params) => (
-        <Typography variant="body2" color="#e2e8f0">{params.value || '-'}</Typography>
+        <Typography variant="body2" color="var(--text-secondary)">{params.value || '-'}</Typography>
       )
     },
     {
@@ -197,7 +179,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
       minWidth: 250,
       renderCell: (params) => (
         <Tooltip title={params.value || ''} arrow placement="top">
-          <Typography variant="body2" noWrap sx={{ color: '#cbd5e1', fontStyle: params.value ? 'normal' : 'italic' }}>
+          <Typography variant="body2" noWrap sx={{ color: 'var(--text-secondary)', fontStyle: params.value ? 'normal' : 'italic' }}>
             {params.value || 'No feedback'}
           </Typography>
         </Tooltip>
@@ -224,7 +206,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
       headerName: 'Owner',
       width: 130,
       renderCell: (params) => (
-        <Typography variant="body2" fontWeight="500" color="#f1f5f9">
+        <Typography variant="body2" fontWeight="500" color="var(--text)">
           {params.value || 'N/A'}
         </Typography>
       )
@@ -235,9 +217,9 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
       width: 120,
       renderCell: (params) => {
         const dateVal = params.value?.$date || params.value;
-        if (!dateVal) return <Typography variant="body2" color="#64748b">-</Typography>;
+        if (!dateVal) return <Typography variant="body2" color="var(--text-muted)">-</Typography>;
         return (
-          <Typography variant="body2" color="#94a3b8">
+          <Typography variant="body2" color="var(--text-secondary)">
             {newFormatDate(dateVal)}
           </Typography>
         );
@@ -275,7 +257,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
             <Icon size={22} />
           </Box>
         )}
-        <Typography variant="h6" fontWeight="700" color="#f8fafc" letterSpacing="0.5px">
+        <Typography variant="h6" fontWeight="700" color="var(--text)" letterSpacing="0.5px">
           {title}
         </Typography>
       </Box>
@@ -319,19 +301,19 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
         backdropFilter: 'blur(10px)'
       }}>
         <Box>
-          <Typography variant="h5" fontWeight="800" color="#f8fafc" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="h5" fontWeight="800" color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <MdPieChart color="#a78bfa" /> {title}
           </Typography>
-          <Typography variant="body2" sx={{ color: '#94a3b8', mt: 0.5, fontWeight: 500 }}>
+          <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mt: 0.5, fontWeight: 500 }}>
             {tasks.length} tasks matching this criteria
           </Typography>
         </Box>
         <IconButton 
           onClick={onClose} 
           sx={{ 
-            color: '#94a3b8', 
-            bgcolor: 'rgba(255,255,255,0.05)',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', transform: 'rotate(90deg)' },
+            color: 'var(--text-secondary)', 
+            bgcolor: 'var(--overlay-subtle)',
+            '&:hover': { bgcolor: 'var(--overlay-subtle)', color: '#fff', transform: 'rotate(90deg)' },
             transition: 'all 0.3s ease'
           }}
         >
@@ -373,7 +355,7 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
         overflow: 'auto',
         '&::-webkit-scrollbar': { width: '8px' },
         '&::-webkit-scrollbar-track': { background: 'transparent' },
-        '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.2)', borderRadius: '10px' },
+        '&::-webkit-scrollbar-thumb': { background: 'var(--overlay-subtle)', borderRadius: '10px' },
         '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(255,255,255,0.3)' }
       }}>
         {activeTab === 0 && (
@@ -395,35 +377,35 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
               disableRowSelectionOnClick
               sx={{
                 border: 'none',
-                color: '#f8fafc',
+                color: 'var(--text)',
                 '& .MuiDataGrid-cell': {
                   borderColor: PREM_COLORS.border,
-                  color: '#e2e8f0',
+                  color: 'var(--text-secondary)',
                 },
                 '& .MuiDataGrid-columnHeaders': {
                   backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                  color: '#f8fafc',
+                  color: 'var(--text)',
                   borderBottom: `1px solid ${PREM_COLORS.border}`,
                   '& .MuiDataGrid-columnHeaderTitle': { fontWeight: 700 }
                 },
                 '& .MuiDataGrid-footerContainer': {
                   borderTop: `1px solid ${PREM_COLORS.border}`,
-                  color: '#e2e8f0',
+                  color: 'var(--text-secondary)',
                 },
                 '& .MuiTablePagination-root': {
-                  color: '#e2e8f0',
+                  color: 'var(--text-secondary)',
                 },
                 '& .MuiDataGrid-toolbarContainer': {
                   padding: 2,
                   gap: 2,
                   '& button': { color: '#a78bfa' },
-                  '& input': { color: '#f8fafc' },
-                  '& .MuiInput-underline:before': { borderBottomColor: 'rgba(255,255,255,0.2)' },
+                  '& input': { color: 'var(--text)' },
+                  '& .MuiInput-underline:before': { borderBottomColor: 'var(--border)' },
                   '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottomColor: 'rgba(255,255,255,0.4)' },
                   '& .MuiInput-underline:after': { borderBottomColor: '#a78bfa' }
                 },
                 '& .MuiDataGrid-row:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  backgroundColor: 'var(--overlay-subtle)',
                 }
               }}
             />
@@ -443,9 +425,9 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} angle={-45} textAnchor="end" height={80} interval={0} />
-                    <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} angle={-45} textAnchor="end" height={80} interval={0} />
+                    <YAxis stroke="#94a3b8" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'var(--overlay-subtle)' }} />
                     <Bar dataKey="value" fill="url(#colorOwner)" radius={[6, 6, 0, 0]} animationDuration={1000} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -492,9 +474,9 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} angle={-45} textAnchor="end" height={80} interval={0} />
-                    <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} angle={-45} textAnchor="end" height={80} interval={0} />
+                    <YAxis stroke="#94a3b8" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'var(--overlay-subtle)' }} />
                     <Bar dataKey="value" fill="url(#colorSub)" radius={[6, 6, 0, 0]} animationDuration={1000} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -513,9 +495,9 @@ const NPSDetailsDialog = ({ open, onClose, title, tasks = [] }) => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} angle={-45} textAnchor="end" height={80} interval={0} />
-                    <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} angle={-45} textAnchor="end" height={80} interval={0} />
+                    <YAxis stroke="#94a3b8" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                    <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'var(--overlay-subtle)' }} />
                     <Bar dataKey="value" fill="url(#colorRoot)" radius={[6, 6, 0, 0]} animationDuration={1000} />
                   </BarChart>
                 </ResponsiveContainer>

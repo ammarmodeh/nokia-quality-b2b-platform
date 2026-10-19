@@ -828,7 +828,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </FormControl>
           </Stack>
 
-          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)' }}>
+          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'var(--overlay-subtle)' }}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>FMC Closure</Typography>
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -905,7 +905,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </Stack>
           </Box>
 
-          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)' }}>
+          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'var(--overlay-subtle)' }}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>Custom Yes/No Fields</Typography>
             <Stack spacing={2}>
               {customFields.map((field, index) => (
@@ -946,7 +946,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
             </Stack>
           </Box>
 
-          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)' }}>
+          <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'var(--overlay-subtle)' }}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>Second Call Details</Typography>
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

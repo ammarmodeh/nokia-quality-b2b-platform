@@ -41,15 +41,15 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
       fullScreen={fullScreen}
       sx={{
         "& .MuiDialog-paper": {
-          backgroundColor: "#2d2d2d",
-          color: "#ffffff",
+          backgroundColor: "var(--surface)",
+          color: "var(--text)",
           borderRadius: fullScreen ? "0px" : "8px",
         },
       }}
     >
       <DialogTitle
         sx={{
-          borderBottom: "1px solid #4b5563",
+          borderBottom: "1px solid var(--border)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -68,7 +68,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
       <DialogContent sx={{ mt: 2 }}>
         <Stack spacing={2}>
           <Box>
-            <Typography variant="caption" color="#9ca3af" display="block">
+            <Typography variant="caption" color="var(--text-secondary)" display="block">
               Title
             </Typography>
             <Typography variant="body1" fontWeight="500">
@@ -78,7 +78,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
 
           <Box sx={{ display: "flex", gap: 4 }}>
             <Box>
-              <Typography variant="caption" color="#9ca3af" display="block">
+              <Typography variant="caption" color="var(--text-secondary)" display="block">
                 Date
               </Typography>
               <Typography variant="body2">
@@ -86,7 +86,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="#9ca3af" display="block">
+              <Typography variant="caption" color="var(--text-secondary)" display="block">
                 Type
               </Typography>
               <Typography variant="body2">{session.sessionType || "N/A"}</Typography>
@@ -95,13 +95,13 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
 
           <Box sx={{ display: "flex", gap: 4 }}>
             <Box>
-              <Typography variant="caption" color="#9ca3af" display="block">
+              <Typography variant="caption" color="var(--text-secondary)" display="block">
                 Duration
               </Typography>
               <Typography variant="body2">{session.duration || "N/A"}</Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="#9ca3af" display="block">
+              <Typography variant="caption" color="var(--text-secondary)" display="block">
                 Location
               </Typography>
               <Typography variant="body2">{session.location || "N/A"}</Typography>
@@ -109,7 +109,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
           </Box>
 
           <Box>
-            <Typography variant="caption" color="#9ca3af" display="block">
+            <Typography variant="caption" color="var(--text-secondary)" display="block">
               Conducted By
             </Typography>
             <Typography variant="body2">
@@ -122,7 +122,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
           <Divider sx={{ backgroundColor: "#4b5563" }} />
 
           <Box>
-            <Typography variant="subtitle2" color="#7b68ee" gutterBottom>
+            <Typography variant="subtitle2" color="var(--accent-text)" gutterBottom>
               Training Outlines
             </Typography>
             {session.outlines && Array.isArray(session.outlines) ? (
@@ -135,7 +135,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
                     {outline.subTopics && outline.subTopics.length > 0 && (
                       <Box sx={{ pl: 2, mt: 0.5 }}>
                         {outline.subTopics.map((sub, sIdx) => (
-                          <Typography key={sIdx} variant="caption" color="#9ca3af" display="block">
+                          <Typography key={sIdx} variant="caption" color="var(--text-secondary)" display="block">
                             • {sub}
                           </Typography>
                         ))}
@@ -147,13 +147,13 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
             ) : typeof session.outlines === 'string' ? (
               <Typography variant="body2">{session.outlines}</Typography>
             ) : (
-              <Typography variant="body2" color="#6b7280">No outline provided.</Typography>
+              <Typography variant="body2" color="var(--text-muted)">No outline provided.</Typography>
             )}
           </Box>
 
           {session.notes && (
             <Box>
-              <Typography variant="caption" color="#9ca3af" display="block">
+              <Typography variant="caption" color="var(--text-secondary)" display="block">
                 Notes
               </Typography>
               <Typography variant="body2">{session.notes}</Typography>
@@ -180,7 +180,7 @@ const SessionDetailsDialog = ({ open, onClose, session }) => {
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, borderTop: "1px solid #4b5563" }}>
+      <DialogActions sx={{ p: 2, borderTop: "1px solid var(--border)" }}>
         <Button onClick={onClose} variant="contained" sx={{ backgroundColor: "#4b5563", "&:hover": { backgroundColor: "#374151" } }}>
           Close
         </Button>

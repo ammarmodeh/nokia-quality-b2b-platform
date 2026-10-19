@@ -138,7 +138,7 @@ const Favourite = () => {
         mx: 'auto',
       }}>
         <Typography variant="h5" gutterBottom sx={{
-          color: '#7b68ee',
+          color: 'var(--accent-text)',
           fontWeight: 'bold',
           mb: 2
         }}>
@@ -148,25 +148,25 @@ const Favourite = () => {
         {/* Favorites Table */}
         <TableContainer component={Paper} sx={{
           mt: 2,
-          backgroundColor: '#2d2d2d',
-          border: '1px solid #3d3d3d',
+          backgroundColor: 'var(--surface)',
+          border: '1px solid var(--border)',
           "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
-              color: "#b3b3b3",
+              color: "var(--text-secondary)",
               fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text)",
             },
             "& .MuiTableRow-root": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "var(--surface)",
               },
             }
           },
@@ -220,7 +220,7 @@ const Favourite = () => {
                             size="small"
                             color="info"
                             onClick={() => handleViewTask(task)}
-                            sx={{ color: '#7b68ee' }}
+                            sx={{ color: 'var(--accent-text)' }}
                           >
                             <MdVisibility />
                           </IconButton>
@@ -239,7 +239,7 @@ const Favourite = () => {
                             <IconButton
                               size="small"
                               onClick={(e) => handleMenuOpen(e, task)}
-                              sx={{ color: '#b3b3b3' }}
+                              sx={{ color: 'var(--text-secondary)' }}
                             >
                               <MdMoreVert />
                             </IconButton>
@@ -250,7 +250,7 @@ const Favourite = () => {
                   ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#ffffff' }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'var(--text)' }}>
                     No favorite tasks found
                   </TableCell>
                 </TableRow>
@@ -265,7 +265,7 @@ const Favourite = () => {
           justifyContent: 'center',
           mt: 2,
           '& .MuiTablePagination-root': {
-            color: '#ffffff',
+            color: 'var(--text)',
           }
         }}>
           <TablePagination
@@ -286,14 +286,14 @@ const Favourite = () => {
           onClose={handleMenuClose}
           sx={{
             "& .MuiPaper-root": {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
             }
           }}
         >
           <MenuItem onClick={() => currentTask && handleViewTask(currentTask)}>
             <ListItemIcon>
-              <MdVisibility fontSize="small" style={{ color: '#7b68ee' }} />
+              <MdVisibility fontSize="small" style={{ color: 'var(--accent-text)' }} />
             </ListItemIcon>
             <ListItemText>View Details</ListItemText>
           </MenuItem>

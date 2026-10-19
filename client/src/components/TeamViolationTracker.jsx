@@ -1039,33 +1039,33 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated }) 
 
         {/* Info Card - Now Collapsible */}
         <Collapse in={showLimitsInfo}>
-          <Paper sx={{ p: 2, backgroundColor: '#1e1e1e', border: '1px solid #333', mb: 1 }}>
-            <Typography variant="h6" sx={{ color: '#fff', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
+          <Paper sx={{ p: 2, backgroundColor: 'var(--surface)', border: '1px solid var(--border)', mb: 1 }}>
+            <Typography variant="h6" sx={{ color: 'var(--text)', mb: 2, fontSize: '1rem', fontWeight: 600 }}>
               📊 {calculationBreakdown?.modelName || "Year-to-Date Dynamic Limits"}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Box>
-                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
                   <strong style={{ color: '#4caf50' }}>✓ Model Math:</strong> {calculationBreakdown?.note}
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
-                  <strong style={{ color: '#7b68ee' }}>⚖️ Justice Baseline:</strong> Every team is guaranteed a grace limit of {calculationBreakdown?.baselineDetractors} Detractor(s) & {calculationBreakdown?.baselineNeutrals} Neutral(s) to protect against low-volume random sample variance.
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
+                  <strong style={{ color: 'var(--accent-text)' }}>⚖️ Justice Baseline:</strong> Every team is guaranteed a grace limit of {calculationBreakdown?.baselineDetractors} Detractor(s) & {calculationBreakdown?.baselineNeutrals} Neutral(s) to protect against low-volume random sample variance.
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
                   <strong style={{ color: '#f44336' }}>⚠️ Violation:</strong> Team's YTD violations exceed their fair-share allowed limit.
                 </Typography>
               </Box>
-              <Box sx={{ borderLeft: '1px solid #444', pl: 2 }}>
-                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
-                  Global Total Samples: <strong style={{ color: '#fff' }}>{calculationBreakdown?.ytdTotal}</strong> | Active Teams: <strong style={{ color: '#fff' }}>{calculationBreakdown?.activeTeams}</strong>
+              <Box sx={{ borderLeft: '1px solid var(--border)', pl: 2 }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>
+                  Global Total Samples: <strong style={{ color: 'var(--text)' }}>{calculationBreakdown?.ytdTotal}</strong> | Active Teams: <strong style={{ color: 'var(--text)' }}>{calculationBreakdown?.activeTeams}</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
-                  Fair Share Allocation: <strong style={{ color: '#fff' }}>{calculationBreakdown?.activeTeams ? (calculationBreakdown.ytdTotal / calculationBreakdown.activeTeams).toFixed(1) : 0} samples / team</strong>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>
+                  Fair Share Allocation: <strong style={{ color: 'var(--text)' }}>{calculationBreakdown?.activeTeams ? (calculationBreakdown.ytdTotal / calculationBreakdown.activeTeams).toFixed(1) : 0} samples / team</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 0.5 }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 0.5 }}>
                   Global Targets: <strong style={{ color: '#f44336' }}>≤{(calculationBreakdown?.targetDetractor * 100).toFixed(0)}% Detractors</strong> | <strong style={{ color: '#ff9800' }}>≤{(calculationBreakdown?.targetNeutral * 100).toFixed(0)}% Neutrals</strong>
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                   Per-Team Enforced Limit: <strong style={{ color: '#f44336' }}>{teamDetractorLimit} Detractors</strong> | <strong style={{ color: '#ff9800' }}>{teamNeutralLimit} Neutrals</strong>
                 </Typography>
               </Box>

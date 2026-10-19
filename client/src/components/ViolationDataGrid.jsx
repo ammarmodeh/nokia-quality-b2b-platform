@@ -100,7 +100,7 @@ const ViolationDataGrid = ({
         <Button
           onClick={() => onTeamNameClick(params.value)}
           sx={{
-            color: '#7b68ee',
+            color: 'var(--accent-text)',
             textTransform: 'none',
             '&:hover': { backgroundColor: 'rgba(62, 166, 255, 0.1)' }
           }}
@@ -165,7 +165,7 @@ const ViolationDataGrid = ({
     //   headerName: "Neutral %",
     //   width: 120,
     //   renderCell: (params) => (
-    //     <Box sx={{ color: '#fff', fontWeight: '500' }}>
+    //     <Box sx={{ color: 'var(--text)', fontWeight: '500' }}>
     //       {params.value}%
     //     </Box>
     //   ),
@@ -335,7 +335,7 @@ const ViolationDataGrid = ({
       headerName: "How Reached",
       width: 200,
       renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto', color: '#cbd5e1' }}>
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto', color: 'var(--text-secondary)' }}>
           {params.value}
         </Typography>
       )
@@ -380,7 +380,7 @@ const ViolationDataGrid = ({
       headerName: "Notes",
       width: 250,
       renderCell: (params) => (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto', color: '#cbd5e1' }}>
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'left', px: 1, overflowX: 'auto', color: 'var(--text-secondary)' }}>
           {params.value}
         </Typography>
       )
@@ -552,7 +552,7 @@ const ViolationDataGrid = ({
               sx={{
                 color: '#4caf50',
                 '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
-                '&.Mui-disabled': { color: '#666' }
+                '&.Mui-disabled': { color: 'var(--text-muted)' }
               }}
             >
               <MdAdd />
@@ -566,7 +566,7 @@ const ViolationDataGrid = ({
               sx={{
                 color: '#f44336',
                 '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
-                '&.Mui-disabled': { color: '#666' }
+                '&.Mui-disabled': { color: 'var(--text-muted)' }
               }}
             >
               <MdReport />
@@ -657,10 +657,10 @@ const ViolationDataGrid = ({
           }}
           sx={{
             border: 0,
-            color: "#cbd5e1", // Light gray for dark theme
+            color: "var(--text-secondary)", // Light gray for dark theme
             fontFamily: "'Inter', sans-serif",
             "& .MuiDataGrid-overlay": {
-              color: "#64748b",
+              color: "var(--text-muted)",
             },
             "& .MuiDataGrid-columnHeaders": {
               backgroundColor: "#f8fafc",
@@ -669,7 +669,7 @@ const ViolationDataGrid = ({
               fontWeight: "600",
               textTransform: "uppercase",
               letterSpacing: "0.5px",
-              borderBottom: "1px solid #e2e8f0",
+              borderBottom: "1px solid var(--border)",
             },
             "& .MuiDataGrid-columnHeader": {
               backgroundColor: "#f8fafc",
@@ -683,7 +683,7 @@ const ViolationDataGrid = ({
               },
             },
             "& .MuiDataGrid-footerContainer": {
-              borderTop: "1px solid #e2e8f0",
+              borderTop: "1px solid var(--border)",
               // backgroundColor: "#ffffff",
               color: "#475569",
             },
@@ -692,11 +692,11 @@ const ViolationDataGrid = ({
             },
             "& .MuiDataGrid-toolbarContainer": {
               padding: "12px",
-              borderBottom: "1px solid #e2e8f0",
+              borderBottom: "1px solid var(--border)",
               // backgroundColor: "#ffffff",
               gap: 2,
               "& .MuiButton-root": {
-                color: "#64748b",
+                color: "var(--text-muted)",
                 fontSize: "0.80rem",
               }
             }

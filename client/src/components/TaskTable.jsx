@@ -355,7 +355,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           disableTouchRipple
           disableFocusRipple
           sx={{
-            color: '#7b68ee',
+            color: 'var(--accent-text)',
             textTransform: 'none',
             '&:hover': {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
@@ -390,8 +390,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)', // Translucent light
-            color: '#cbd5e1', // Light gray
+            backgroundColor: 'var(--overlay-subtle)', // Translucent light
+            color: 'var(--text-secondary)', // Light gray
             borderRadius: '50%',
             width: 30,
             height: 30,
@@ -575,7 +575,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                 p: 0,
                 mt: 0.5,
                 textTransform: 'none',
-                color: '#7b68ee',
+                color: 'var(--accent-text)',
                 fontSize: '0.7rem',
                 fontWeight: 'bold',
                 '&:hover': { background: 'transparent', textDecoration: 'underline' }
@@ -660,7 +660,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#cbd5e1', // Light gray for dark theme
+            color: 'var(--text-secondary)', // Light gray for dark theme
             fontWeight: 'bold'
           }}>
             {teamEvaluationScore}
@@ -678,7 +678,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         <Button
           onClick={() => navigate(`/tasks/view-task/${params.row.status}`)}
           sx={{
-            color: '#7b68ee',
+            color: 'var(--accent-text)',
             textTransform: 'none',
             '&:hover': {
               backgroundColor: 'rgba(62, 166, 255, 0.1)'
@@ -855,10 +855,10 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           }}
           sx={{
             border: 0,
-            color: "#cbd5e1", // Light gray for dark theme
+            color: "var(--text-secondary)", // Light gray for dark theme
             fontFamily: "'Inter', sans-serif",
             "& .MuiDataGrid-overlay": {
-              color: "#64748b",
+              color: "var(--text-muted)",
             },
             "& .MuiDataGrid-columnHeaders": {
               backgroundColor: "#f8fafc",
@@ -867,7 +867,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               fontWeight: "600",
               textTransform: "uppercase",
               letterSpacing: "0.5px",
-              borderBottom: "1px solid #e2e8f0",
+              borderBottom: "1px solid var(--border)",
             },
             "& .MuiDataGrid-columnHeader": {
               backgroundColor: "#f8fafc",
@@ -881,7 +881,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               },
             },
             "& .MuiDataGrid-footerContainer": {
-              borderTop: "1px solid #e2e8f0",
+              borderTop: "1px solid var(--border)",
               // backgroundColor: "#ffffff",
               color: "#475569",
             },
@@ -890,11 +890,11 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             },
             "& .MuiDataGrid-toolbarContainer": {
               padding: "12px",
-              borderBottom: "1px solid #e2e8f0",
+              borderBottom: "1px solid var(--border)",
               // backgroundColor: "#ffffff",
               gap: 2,
               "& .MuiButton-root": {
-                color: "#64748b",
+                color: "var(--text-muted)",
                 fontSize: "0.80rem",
               }
             }
@@ -909,7 +909,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         fullScreen
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
             boxShadow: 'none',
             borderRadius: fullScreen ? '0px' : '8px',
           }
@@ -919,9 +919,9 @@ const TaskTable = ({ tasks, fieldTeams }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
           padding: '16px 24px',
         }}>
           <Typography variant="h6" component="div">
@@ -938,9 +938,9 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                 onClick={() => handleCopyTaskData(selectedTask)}
                 sx={{
                   mr: 1,
-                  color: '#ffffff',
+                  color: 'var(--text)',
                   '&:hover': {
-                    backgroundColor: '#2a2a2a',
+                    backgroundColor: 'var(--surface)',
                   }
                 }}
               >
@@ -950,9 +950,9 @@ const TaskTable = ({ tasks, fieldTeams }) => {
             <IconButton
               onClick={handleClose}
               sx={{
-                color: '#ffffff',
+                color: 'var(--text)',
                 '&:hover': {
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--surface)',
                 }
               }}
             >
@@ -964,8 +964,8 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent dividers sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
           padding: '20px 24px',
         }}>
           {selectedTask && (
@@ -973,11 +973,11 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               {/* Basic Information Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 2,
-                border: '1px solid #3d3d3d'
+                border: '1px solid var(--border)'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'var(--accent-text)' }}>
                   Basic Information
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -996,11 +996,11 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               {/* Location Information Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 2,
-                border: '1px solid #3d3d3d'
+                border: '1px solid var(--border)'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'var(--accent-text)' }}>
                   Location Information
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -1012,11 +1012,11 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               {/* Team Information Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 2,
-                border: '1px solid #3d3d3d'
+                border: '1px solid var(--border)'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'var(--accent-text)' }}>
                   Team Information
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -1028,11 +1028,11 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               {/* Team Status Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 2,
-                border: '1px solid #3d3d3d'
+                border: '1px solid var(--border)'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'var(--accent-text)' }}>
                   Team Status
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -1042,7 +1042,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                       <Chip
                         label={selectedTask.teamData?.isActive ? 'Active' : 'Inactive'}
                         sx={{
-                          color: '#ffffff',
+                          color: 'var(--text)',
                           backgroundColor: selectedTask.teamData?.isActive ? '#4caf50' : '#f44336',
                           fontWeight: 'bold'
                         }}
@@ -1055,7 +1055,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                       <Chip
                         label={selectedTask.teamData?.isEvaluated ? 'Evaluated' : 'Not Evaluated'}
                         sx={{
-                          color: '#ffffff',
+                          color: 'var(--text)',
                           backgroundColor: selectedTask.teamData?.isEvaluated ? '#4caf50' : '#f44336',
                           fontWeight: 'bold'
                         }}
@@ -1068,10 +1068,10 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                       label="Last Session"
                       value={
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body1" sx={{ color: '#ffffff' }}>
+                          <Typography variant="body1" sx={{ color: 'var(--text)' }}>
                             {selectedTask.teamData.sessionHistory[0].sessionTitle}
                           </Typography>
-                          <Typography variant="body2" sx={{ color: '#b3b3b3' }}>
+                          <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                             {moment(selectedTask.teamData.sessionHistory[0].sessionDate).format('YYYY-MM-DD')}
                           </Typography>
                         </Box>
@@ -1084,11 +1084,11 @@ const TaskTable = ({ tasks, fieldTeams }) => {
               {/* Evaluation Section */}
               <Paper elevation={0} sx={{
                 p: 2,
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 2,
-                border: '1px solid #3d3d3d'
+                border: '1px solid var(--border)'
               }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'var(--accent-text)' }}>
                   Evaluation
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -1101,7 +1101,7 @@ const TaskTable = ({ tasks, fieldTeams }) => {
                             selectedTask.evaluationScore >= 7 ? 'Neutral' : 'Detractor'
                             })`}
                           sx={{
-                            color: '#ffffff',
+                            color: 'var(--text)',
                             backgroundColor:
                               selectedTask.evaluationScore >= 9 ? '#4caf50' :
                                 selectedTask.evaluationScore >= 7 ? '#6b7280' : '#f44336',
@@ -1124,16 +1124,16 @@ const TaskTable = ({ tasks, fieldTeams }) => {
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
           padding: '12px 24px',
         }}>
           <Button
             onClick={handleClose}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               }
             }}
           >
@@ -1153,7 +1153,7 @@ const DetailRow = ({ label, value, direction }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#b3b3b3'
+        color: 'var(--text-secondary)'
       }}
     >
       {label}
@@ -1163,7 +1163,7 @@ const DetailRow = ({ label, value, direction }) => (
         variant="body1"
         component="div"
         sx={{
-          color: '#ffffff',
+          color: 'var(--text)',
           wordBreak: 'break-word',
           textAlign: direction === 'ltr' ? 'left' : 'inherit'
         }}

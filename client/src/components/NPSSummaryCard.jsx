@@ -1,21 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import React, { useState, useMemo } from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Stack,
-  FormControl,
-  Select,
-  MenuItem,
-  Grid,
-  Divider,
-  useTheme,
-  alpha,
-  Button,
-  ToggleButton,
-  ToggleButtonGroup
-} from '@mui/material';
+import { Card, CardContent, Typography, Box, Stack, FormControl, Select, MenuItem, Grid, Divider, useTheme, Button, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import {
   FaSmile,
   FaMeh,
@@ -350,7 +335,7 @@ const NPSSummaryCard = ({ tasks = [], samplesData = [], teamsData = [], settings
                 size="small"
                 sx={{
                   // bgcolor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--border)',
                   '& .MuiToggleButton-root': { border: 'none', px: 2, py: 0.5, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }
                 }}
               >

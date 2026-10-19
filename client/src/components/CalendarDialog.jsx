@@ -140,14 +140,14 @@ const CalendarDialog = ({ open, onClose }) => {
       }}
     >
       <DialogTitle sx={{
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: '1px solid var(--border)',
         padding: '16px 24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <CalendarToday sx={{ color: '#7b68ee', fontSize: 28 }} />
+          <CalendarToday sx={{ color: 'var(--accent-text)', fontSize: 28 }} />
           <Typography variant="h6" sx={{ color: '#1f2937', fontWeight: 600 }}>
             Yearly Calendar
           </Typography>
@@ -167,7 +167,7 @@ const CalendarDialog = ({ open, onClose }) => {
 
       <DialogContent dividers sx={{ p: 3 }}>
         <Box sx={{ mb: 3, display: 'flex', flexDirection: fullScreen ? 'column' : 'row', alignItems: fullScreen ? 'flex-start' : 'center', justifyContent: 'space-between', gap: 2 }}>
-          <Typography variant="body2" sx={{ color: '#6b7280' }}>
+          <Typography variant="body2" sx={{ color: 'var(--text-muted)' }}>
             Custom week standard • Weeks start on {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][weekStartDay]}
           </Typography>
 
@@ -200,7 +200,7 @@ const CalendarDialog = ({ open, onClose }) => {
                 cursor: week.isSpent ? 'default' : 'pointer',
                 transition: 'all 0.15s ease',
                 '&:hover': week.isSpent ? {} : {
-                  borderColor: '#7b68ee',
+                  borderColor: 'var(--accent)',
                   backgroundColor: 'rgba(123, 104, 238, 0.02)',
                   transform: 'translateX(4px)',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
@@ -219,7 +219,7 @@ const CalendarDialog = ({ open, onClose }) => {
                   >
                     Week {week.weekNumber}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '0.8125rem' }}>
+                  <Typography variant="body2" sx={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
                     {week.formattedRange}
                   </Typography>
                 </Box>
@@ -232,8 +232,8 @@ const CalendarDialog = ({ open, onClose }) => {
                       px: 1.5,
                       py: 0.5,
                       borderRadius: '4px',
-                      backgroundColor: '#7b68ee',
-                      color: 'white',
+                      backgroundColor: 'var(--accent)',
+                      color: 'var(--text)',
                       fontSize: '0.6875rem',
                       fontWeight: 600,
                       textTransform: 'uppercase',
@@ -249,7 +249,7 @@ const CalendarDialog = ({ open, onClose }) => {
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: '1px solid #e5e7eb', padding: '12px 24px', justifyContent: 'space-between' }}>
+      <DialogActions sx={{ borderTop: '1px solid var(--border)', padding: '12px 24px', justifyContent: 'space-between' }}>
         <Button
           variant="outlined"
           startIcon={<Share />}
@@ -266,7 +266,7 @@ const CalendarDialog = ({ open, onClose }) => {
           Share to WhatsApp
         </Button>
 
-        <Button onClick={onClose} sx={{ color: '#6b7280' }}>
+        <Button onClick={onClose} sx={{ color: 'var(--text-muted)' }}>
           Close
         </Button>
       </DialogActions>

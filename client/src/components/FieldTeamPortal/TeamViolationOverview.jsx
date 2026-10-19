@@ -923,7 +923,7 @@ const TeamViolationOverview = ({
     : '0.0';
 
   const teamTasksColumns = useMemo(() => [
-    { field: 'teamName', headerName: 'Team', minWidth: 180, flex: 1, renderCell: (params) => <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{params.value}</span> },
+    { field: 'teamName', headerName: 'Team', minWidth: 180, flex: 1, renderCell: (params) => <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>{params.value}</span> },
     {
       field: 'cohort',
       headerName: 'Cohort',
@@ -957,7 +957,7 @@ const TeamViolationOverview = ({
         />
       )
     },
-    { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 120, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ fontWeight: 700, color: '#fff' }}>{params.value}</span> },
+    { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 120, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ fontWeight: 700, color: 'var(--text)' }}>{params.value}</span> },
     {
       field: 'reachOwnershipPct',
       headerName: 'Acc. %',
@@ -1003,7 +1003,7 @@ const TeamViolationOverview = ({
       width: 130,
       headerClassName: 'weekly-group-header',
       cellClassName: 'weekly-group-cell',
-      renderCell: (params) => <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{params.value}</span>
+      renderCell: (params) => <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{params.value}</span>
     },
     { field: 'weeklyTotal', headerName: 'Wk Total', type: 'number', width: 90, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell' },
     { field: 'weeklyDetractors', headerName: 'Wk Det.', type: 'number', width: 80, headerClassName: 'weekly-group-header', cellClassName: 'weekly-group-cell' },
@@ -1021,7 +1021,7 @@ const TeamViolationOverview = ({
       width: 120,
       headerClassName: 'monthly-group-header',
       cellClassName: 'monthly-group-cell',
-      renderCell: (params) => <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{params.value}</span>
+      renderCell: (params) => <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{params.value}</span>
     },
     { field: 'monthlyTotal', headerName: 'Mo Total', type: 'number', width: 90, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell' },
     { field: 'monthlyDetractors', headerName: 'Mo Det.', type: 'number', width: 80, headerClassName: 'monthly-group-header', cellClassName: 'monthly-group-cell' },
@@ -1056,7 +1056,7 @@ const TeamViolationOverview = ({
         </Tooltip>
       )
     },
-    { field: 'latestSession', headerName: 'Latest Session', width: 140, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
+    { field: 'latestSession', headerName: 'Latest Session', width: 140, align: 'center', headerAlign: 'center', renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.value}</span> },
 
     // Snapshot - Post Session Group (Purple)
     { field: 'postSessionTotal', headerName: 'Post Total', type: 'number', width: 95, headerClassName: 'post-group-header', cellClassName: 'post-group-cell' },
@@ -1132,7 +1132,7 @@ const TeamViolationOverview = ({
         </Stack>
       ),
       renderCell: (params) => {
-        if (!params.row.trained) return <span style={{ color: '#94a3b8' }}>-</span>;
+        if (!params.row.trained) return <span style={{ color: 'var(--text-secondary)' }}>-</span>;
         return <span style={{ color: params.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>{params.value > 0 ? '+' : ''}{params.value}%</span>;
       }
     },
@@ -1187,7 +1187,7 @@ const TeamViolationOverview = ({
               size="small"
               variant="outlined"
               onClick={() => handleExportTeamViolations(params.row.analyticsTeam || params.row)}
-              sx={{ minWidth: 40, py: 0.5, px: 1, color: '#94a3b8', borderColor: 'rgba(148, 163, 184, 0.3)' }}
+              sx={{ minWidth: 40, py: 0.5, px: 1, color: 'var(--text-secondary)', borderColor: 'rgba(148, 163, 184, 0.3)' }}
             >
               <FaFileExcel />
             </Button>
@@ -1198,38 +1198,38 @@ const TeamViolationOverview = ({
   ], [handleOpenSessionDetail, handleExportTeamViolations]);
 
   const segmentColumns = useMemo(() => [
-    { field: 'teamName', headerName: 'Team Name', minWidth: 180, flex: 1, renderCell: (params) => <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{params.value}</span> },
-    { field: 'company', headerName: 'Company', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
-    { field: 'cohort', headerName: 'Cohort', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.value}</span> },
-    { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 110, renderCell: (params) => <span style={{ color: '#fff' }}>{params.value}</span> },
+    { field: 'teamName', headerName: 'Team Name', minWidth: 180, flex: 1, renderCell: (params) => <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{params.value}</span> },
+    { field: 'company', headerName: 'Company', width: 140, renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.value}</span> },
+    { field: 'cohort', headerName: 'Cohort', width: 120, renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.value}</span> },
+    { field: 'totalTasks', headerName: 'Total Tasks', type: 'number', width: 110, renderCell: (params) => <span style={{ color: 'var(--text)' }}>{params.value}</span> },
     { field: 'reachOwnershipPct', headerName: 'Acc. %', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#3b82f6' }}>{params.value}%</span> },
     { field: 'detractorsCount', headerName: 'Detractors', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.value}</span> },
     { field: 'neutralsCount', headerName: 'Neutrals', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#f59e0b' }}>{params.value}</span> },
-    { field: 'tasksBeforeLatestSessionSamePeriod', headerName: 'Before Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
-    { field: 'tasksAfterLatestSession', headerName: 'After Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
-    { field: 'daysBeforeAfter', headerName: 'Days Before/After', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? `${params.row.daysBeforeSession} / ${params.row.daysSinceSession}` : 'N/A'}</span> },
+    { field: 'tasksBeforeLatestSessionSamePeriod', headerName: 'Before Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
+    { field: 'tasksAfterLatestSession', headerName: 'After Tasks', type: 'number', width: 120, renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
+    { field: 'daysBeforeAfter', headerName: 'Days Before/After', width: 140, renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.row.trained ? `${params.row.daysBeforeSession} / ${params.row.daysSinceSession}` : 'N/A'}</span> },
     {
       field: 'improvementRate', headerName: 'Improve %', type: 'number', width: 110, renderCell: (params) => {
-        if (!params.row.trained) return <span style={{ color: '#94a3b8' }}>N/A</span>;
+        if (!params.row.trained) return <span style={{ color: 'var(--text-secondary)' }}>N/A</span>;
         return <span style={{ color: params.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>{(params.value >= 0 ? '+' : '') + (params.value?.toFixed(1) || 0) + '%'}</span>;
       }
     },
     { field: 'postSessionViolationsCount', headerName: 'Post Viols', type: 'number', width: 100, renderCell: (params) => <span style={{ color: '#ef4444' }}>{params.row.trained ? (params.value ?? 'N/A') : 'N/A'}</span> },
-    { field: 'latestSession', headerName: 'Latest Session', width: 140, renderCell: (params) => <span style={{ color: '#94a3b8' }}>{params.row.trained ? (params.value || 'No session') : 'No sessions'}</span> },
+    { field: 'latestSession', headerName: 'Latest Session', width: 140, renderCell: (params) => <span style={{ color: 'var(--text-secondary)' }}>{params.row.trained ? (params.value || 'No session') : 'No sessions'}</span> },
   ], []);
 
   const renderCohortMiniStats = (data) => (
-    <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+    <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid var(--border)' }}>
       <Stack spacing={0.8}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="caption" color="#94a3b8" sx={{ fontSize: '0.68rem' }}>New to Activation</Typography>
-          <Typography variant="caption" fontWeight={700} color="#fff" sx={{ fontSize: '0.72rem' }}>
+          <Typography variant="caption" color="var(--text-secondary)" sx={{ fontSize: '0.68rem' }}>New to Activation</Typography>
+          <Typography variant="caption" fontWeight={700} color="var(--text)" sx={{ fontSize: '0.72rem' }}>
             {data.newToActivation.count} <Box component="span" sx={{ color: '#8b5cf6', ml: 0.5 }}>({data.newToActivation.pct}%)</Box>
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="caption" color="#94a3b8" sx={{ fontSize: '0.68rem' }}>New to Installation & Act.</Typography>
-          <Typography variant="caption" fontWeight={700} color="#fff" sx={{ fontSize: '0.72rem' }}>
+          <Typography variant="caption" color="var(--text-secondary)" sx={{ fontSize: '0.68rem' }}>New to Installation & Act.</Typography>
+          <Typography variant="caption" fontWeight={700} color="var(--text)" sx={{ fontSize: '0.72rem' }}>
             {data.newToInstAct.count} <Box component="span" sx={{ color: '#8b5cf6', ml: 0.5 }}>({data.newToInstAct.pct}%)</Box>
           </Typography>
         </Box>
@@ -1242,10 +1242,10 @@ const TeamViolationOverview = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
           <Box>
-            <Typography variant="h5" fontWeight={700} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h5" fontWeight={700} color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FaChartLine /> {title}
             </Typography>
-            <Typography variant="body2" color="#94a3b8">
+            <Typography variant="body2" color="var(--text-secondary)">
               Team task risk profile plus Reach ownership and training effectiveness. Latest session comparisons are based on PIS date.
             </Typography>
           </Box>
@@ -1263,26 +1263,26 @@ const TeamViolationOverview = ({
 
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)', height: '100%' }}>
-              <Typography variant="subtitle2" color="#94a3b8" gutterBottom>Total Teams</Typography>
-              <Typography variant="h4" fontWeight={800} color="#fff">{teamRows.length}</Typography>
-              <Typography variant="caption" color="#6b7280" display="block" sx={{ mb: 1 }}>Active team profiles from fieldteams.</Typography>
+            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid var(--border)', height: '100%' }}>
+              <Typography variant="subtitle2" color="var(--text-secondary)" gutterBottom>Total Teams</Typography>
+              <Typography variant="h4" fontWeight={800} color="var(--text)">{teamRows.length}</Typography>
+              <Typography variant="caption" color="var(--text-muted)" display="block" sx={{ mb: 1 }}>Active team profiles from fieldteams.</Typography>
               {renderCohortMiniStats(summaryStats.total)}
             </Paper>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)', height: '100%' }}>
-              <Typography variant="subtitle2" color="#94a3b8" gutterBottom>Trained</Typography>
+            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid var(--border)', height: '100%' }}>
+              <Typography variant="subtitle2" color="var(--text-secondary)" gutterBottom>Trained</Typography>
               <Typography variant="h4" fontWeight={800} color="#10b981">{trainedCount}</Typography>
-              <Typography variant="caption" color="#6b7280" display="block" sx={{ mb: 1 }}>Teams with recorded training sessions.</Typography>
+              <Typography variant="caption" color="var(--text-muted)" display="block" sx={{ mb: 1 }}>Teams with recorded training sessions.</Typography>
               {renderCohortMiniStats(summaryStats.trained)}
             </Paper>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)', height: '100%' }}>
-              <Typography variant="subtitle2" color="#94a3b8" gutterBottom>Untrained</Typography>
+            <Paper sx={{ p: 2, ...colors.glass, borderRadius: 3, border: '1px solid var(--border)', height: '100%' }}>
+              <Typography variant="subtitle2" color="var(--text-secondary)" gutterBottom>Untrained</Typography>
               <Typography variant="h4" fontWeight={800} color="#ef4444">{untrainedCount}</Typography>
-              <Typography variant="caption" color="#6b7280" display="block" sx={{ mb: 1 }}>Teams without a recorded session.</Typography>
+              <Typography variant="caption" color="var(--text-muted)" display="block" sx={{ mb: 1 }}>Teams without a recorded session.</Typography>
               {renderCohortMiniStats(summaryStats.untrained)}
             </Paper>
           </Grid>
@@ -1290,14 +1290,14 @@ const TeamViolationOverview = ({
       </Box>
 
 
-      <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+      <Paper sx={{ p: 2.5, ...colors.glass, borderRadius: 3, border: '1px solid var(--border)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
           <Box>
-            <Typography variant="h6" fontWeight={700} color="#fff">Team Tasks Table</Typography>
-            <Typography variant="body2" color="#94a3b8" sx={{ mb: 1.5 }}>Detailed task profile for each field team, including Team Accountability and session-aware counts.</Typography>
+            <Typography variant="h6" fontWeight={700} color="var(--text)">Team Tasks Table</Typography>
+            <Typography variant="body2" color="var(--text-secondary)" sx={{ mb: 1.5 }}>Detailed task profile for each field team, including Team Accountability and session-aware counts.</Typography>
 
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 600 }} />
+              <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'var(--overlay-subtle)', color: '#fff', fontWeight: 600 }} />
               <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600 }} />
               <Chip size="small" label={`Inactive: ${teamStatusStats.inactive}`} sx={{ bgcolor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }} />
               {teamStatusStats.onLeave > 0 && <Chip size="small" label={`On Leave: ${teamStatusStats.onLeave}`} sx={{ bgcolor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }} />}
@@ -1307,33 +1307,33 @@ const TeamViolationOverview = ({
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(0,0,0,0.2)', px: 2, py: 1, borderRadius: 2, border: '1px solid rgba(255,255,255,0.08)', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(0,0,0,0.2)', px: 2, py: 1, borderRadius: 2, border: '1px solid var(--border)', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>From:</Typography>
+                <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>From:</Typography>
                 <TextField
                   type="date"
                   size="small"
                   value={dateFilter.start}
                   onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
                   sx={{
-                    bgcolor: 'rgba(255,255,255,0.05)',
+                    bgcolor: 'var(--overlay-subtle)',
                     borderRadius: 1,
-                    '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                    '& input': { color: 'var(--text)', fontSize: '0.8rem', p: '6px 8px' },
                     '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                   }}
                 />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem' }}>To:</Typography>
+                <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>To:</Typography>
                 <TextField
                   type="date"
                   size="small"
                   value={dateFilter.end}
                   onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
                   sx={{
-                    bgcolor: 'rgba(255,255,255,0.05)',
+                    bgcolor: 'var(--overlay-subtle)',
                     borderRadius: 1,
-                    '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                    '& input': { color: 'var(--text)', fontSize: '0.8rem', p: '6px 8px' },
                     '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                   }}
                 />
@@ -1346,16 +1346,16 @@ const TeamViolationOverview = ({
             </Box>
 
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel sx={{ color: '#94a3b8' }}>Month</InputLabel>
+              <InputLabel sx={{ color: 'var(--text-secondary)' }}>Month</InputLabel>
               <Select
                 value={tableMonthFilter}
                 label="Month"
                 onChange={(e) => setTableMonthFilter(e.target.value)}
                 sx={{
-                  color: '#fff',
+                  color: 'var(--text)',
                   bgcolor: 'rgba(0,0,0,0.2)',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.08)' },
-                  '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+                  '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                 }}
               >
                 <MenuItem value="all">All Months</MenuItem>
@@ -1366,16 +1366,16 @@ const TeamViolationOverview = ({
             </FormControl>
 
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel sx={{ color: '#94a3b8' }}>Week</InputLabel>
+              <InputLabel sx={{ color: 'var(--text-secondary)' }}>Week</InputLabel>
               <Select
                 value={tableWeekFilter}
                 label="Week"
                 onChange={(e) => setTableWeekFilter(e.target.value)}
                 sx={{
-                  color: '#fff',
+                  color: 'var(--text)',
                   bgcolor: 'rgba(0,0,0,0.2)',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.08)' },
-                  '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+                  '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                 }}
               >
                 <MenuItem value="all">All Weeks</MenuItem>
@@ -1415,12 +1415,12 @@ const TeamViolationOverview = ({
             disableRowSelectionOnClick
             sx={{
               border: 0,
-              color: '#cbd5e1',
-              '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
-              '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(255,255,255,0.08)' },
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' },
-              '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' },
-              '& .MuiTablePagination-root': { color: '#94a3b8' },
+              color: 'var(--text-secondary)',
+              '& .MuiDataGrid-row:hover': { bgcolor: 'var(--overlay-subtle)' },
+              '& .MuiDataGrid-cell': { borderBottom: '1px solid var(--border)' },
+              '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' },
+              '& .MuiDataGrid-footerContainer': { borderTop: '1px solid var(--border)', color: 'var(--text-secondary)' },
+              '& .MuiTablePagination-root': { color: 'var(--text-secondary)' },
               '& .MuiDataGrid-toolbarContainer': { p: 1 },
 
               // Custom Weekly Snapshot Styles
@@ -1441,16 +1441,16 @@ const TeamViolationOverview = ({
 
       {/* Team Performance Segments Table */}
       <Paper sx={{ p: 3, mt: 3, bgcolor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 2 }}>
-        <Typography variant="h6" color="#fff" fontWeight={700} gutterBottom>
+        <Typography variant="h6" color="var(--text)" fontWeight={700} gutterBottom>
           Team Performance Segments
         </Typography>
-        <Typography variant="body2" color="#94a3b8" sx={{ mb: 2 }}>
+        <Typography variant="body2" color="var(--text-secondary)" sx={{ mb: 2 }}>
           Categorized view of teams based on training status and post-session performance.
         </Typography>
 
         {/* Filters */}
         <Paper sx={{ p: 2, mb: 2, bgcolor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" color="#fff" fontWeight={600} sx={{ mb: 1 }}>Filters & Queries</Typography>
+          <Typography variant="subtitle2" color="var(--text)" fontWeight={600} sx={{ mb: 1 }}>Filters & Queries</Typography>
           <Box sx={{ mb: 2 }}>
             <TextField
               fullWidth
@@ -1459,9 +1459,9 @@ const TeamViolationOverview = ({
               value={performanceSearch}
               onChange={(e) => setPerformanceSearch(e.target.value)}
               sx={{
-                '& .MuiInputLabel-root': { color: '#94a3b8' },
+                '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
                 '& .MuiOutlinedInput-root': {
-                  color: '#fff',
+                  color: 'var(--text)',
                   '& fieldset': { borderColor: 'rgba(59,130,246,0.3)' },
                   '&:hover fieldset': { borderColor: 'rgba(59,130,246,0.5)' }
                 }
@@ -1471,16 +1471,16 @@ const TeamViolationOverview = ({
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: '#94a3b8' }}>Company</InputLabel>
+                <InputLabel sx={{ color: 'var(--text-secondary)' }}>Company</InputLabel>
                 <Select
                   value={performanceFilterCompany}
                   label="Company"
                   onChange={(e) => setPerformanceFilterCompany(e.target.value)}
                   sx={{
-                    color: '#fff',
+                    color: 'var(--text)',
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.3)' },
                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.5)' },
-                    '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                    '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                   }}
                 >
                   <MenuItem value="all">All Companies</MenuItem>
@@ -1492,16 +1492,16 @@ const TeamViolationOverview = ({
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: '#94a3b8' }}>Cohort</InputLabel>
+                <InputLabel sx={{ color: 'var(--text-secondary)' }}>Cohort</InputLabel>
                 <Select
                   value={performanceFilterCohort}
                   label="Cohort"
                   onChange={(e) => setPerformanceFilterCohort(e.target.value)}
                   sx={{
-                    color: '#fff',
+                    color: 'var(--text)',
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.3)' },
                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.5)' },
-                    '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                    '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                   }}
                 >
                   <MenuItem value="all">All Cohorts</MenuItem>
@@ -1520,9 +1520,9 @@ const TeamViolationOverview = ({
                 value={performanceFilterMinTasks}
                 onChange={(e) => setPerformanceFilterMinTasks(Number(e.target.value))}
                 sx={{
-                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
+                    color: 'var(--text)',
                     '& fieldset': { borderColor: 'rgba(59,130,246,0.3)' },
                     '&:hover fieldset': { borderColor: 'rgba(59,130,246,0.5)' }
                   }
@@ -1531,16 +1531,16 @@ const TeamViolationOverview = ({
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: '#94a3b8' }}>Training Status</InputLabel>
+                <InputLabel sx={{ color: 'var(--text-secondary)' }}>Training Status</InputLabel>
                 <Select
                   value={performanceFilterTrained}
                   label="Training Status"
                   onChange={(e) => setPerformanceFilterTrained(e.target.value)}
                   sx={{
-                    color: '#fff',
+                    color: 'var(--text)',
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.3)' },
                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.5)' },
-                    '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                    '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                   }}
                 >
                   <MenuItem value="all">All Teams</MenuItem>
@@ -1557,7 +1557,7 @@ const TeamViolationOverview = ({
             value={performanceTab}
             onChange={(e, v) => setPerformanceTab(v)}
             sx={{
-              '& .MuiTab-root': { color: '#94a3b8', textTransform: 'none', fontWeight: 600 },
+              '& .MuiTab-root': { color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600 },
               '& .Mui-selected': { color: '#3b82f6' },
               '& .MuiTabs-indicator': { backgroundColor: '#3b82f6' }
             }}
@@ -1571,7 +1571,7 @@ const TeamViolationOverview = ({
         {/* Improved Teams Tab */}
         {performanceTab === 0 && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" color="var(--text-secondary)" sx={{ mb: 1 }}>
               Teams that improved after training using average daily tasks before year start through session and after session to today.
             </Typography>
             <Box sx={{ height: 400, width: '100%' }}>
@@ -1584,12 +1584,12 @@ const TeamViolationOverview = ({
                 slotProps={{ toolbar: { showQuickFilter: true, quickFilterProps: { debounceMs: 500 } } }}
                 disableRowSelectionOnClick
                 sx={{
-                  border: 0, color: '#cbd5e1',
-                  '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
-                  '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(255,255,255,0.08)' },
-                  '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' },
-                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' },
-                  '& .MuiTablePagination-root': { color: '#94a3b8' },
+                  border: 0, color: 'var(--text-secondary)',
+                  '& .MuiDataGrid-row:hover': { bgcolor: 'var(--overlay-subtle)' },
+                  '& .MuiDataGrid-cell': { borderBottom: '1px solid var(--border)' },
+                  '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' },
+                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid var(--border)', color: 'var(--text-secondary)' },
+                  '& .MuiTablePagination-root': { color: 'var(--text-secondary)' },
                 }}
               />
             </Box>
@@ -1599,7 +1599,7 @@ const TeamViolationOverview = ({
         {/* Untrained Teams Tab */}
         {performanceTab === 2 && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" color="var(--text-secondary)" sx={{ mb: 1 }}>
               Teams that have not received training sessions yet.
             </Typography>
             <Box sx={{ height: 400, width: '100%' }}>
@@ -1612,12 +1612,12 @@ const TeamViolationOverview = ({
                 slotProps={{ toolbar: { showQuickFilter: true, quickFilterProps: { debounceMs: 500 } } }}
                 disableRowSelectionOnClick
                 sx={{
-                  border: 0, color: '#cbd5e1',
-                  '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
-                  '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(255,255,255,0.08)' },
-                  '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' },
-                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' },
-                  '& .MuiTablePagination-root': { color: '#94a3b8' },
+                  border: 0, color: 'var(--text-secondary)',
+                  '& .MuiDataGrid-row:hover': { bgcolor: 'var(--overlay-subtle)' },
+                  '& .MuiDataGrid-cell': { borderBottom: '1px solid var(--border)' },
+                  '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' },
+                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid var(--border)', color: 'var(--text-secondary)' },
+                  '& .MuiTablePagination-root': { color: 'var(--text-secondary)' },
                 }}
               />
             </Box>
@@ -1627,7 +1627,7 @@ const TeamViolationOverview = ({
         {/* Post-Session Violations Tab */}
         {performanceTab === 1 && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" color="var(--text-secondary)" sx={{ mb: 1 }}>
               Trained teams that still committed violations after their latest session.
             </Typography>
             <Box sx={{ height: 400, width: '100%' }}>
@@ -1640,12 +1640,12 @@ const TeamViolationOverview = ({
                 slotProps={{ toolbar: { showQuickFilter: true, quickFilterProps: { debounceMs: 500 } } }}
                 disableRowSelectionOnClick
                 sx={{
-                  border: 0, color: '#cbd5e1',
-                  '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
-                  '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(255,255,255,0.08)' },
-                  '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' },
-                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' },
-                  '& .MuiTablePagination-root': { color: '#94a3b8' },
+                  border: 0, color: 'var(--text-secondary)',
+                  '& .MuiDataGrid-row:hover': { bgcolor: 'var(--overlay-subtle)' },
+                  '& .MuiDataGrid-cell': { borderBottom: '1px solid var(--border)' },
+                  '& .MuiDataGrid-columnHeaders': { bgcolor: '#111827', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' },
+                  '& .MuiDataGrid-footerContainer': { borderTop: '1px solid var(--border)', color: 'var(--text-secondary)' },
+                  '& .MuiTablePagination-root': { color: 'var(--text-secondary)' },
                 }}
               />
             </Box>
@@ -1661,7 +1661,7 @@ const TeamViolationOverview = ({
         fullWidth
         PaperProps={{
           sx: {
-            bgcolor: '#0f172a',
+            bgcolor: 'var(--bg)',
             backgroundImage: 'linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(16,185,129,0.05) 100%)',
             border: '1px solid rgba(59,130,246,0.2)',
             borderRadius: 2,
@@ -1669,7 +1669,7 @@ const TeamViolationOverview = ({
           }
         }}
       >
-        <DialogTitle sx={{ color: '#fff', fontWeight: 700, borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
+        <DialogTitle sx={{ color: 'var(--text)', fontWeight: 700, borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
           {selectedTeamDetail?.teamName ? `${selectedTeamDetail.teamName} - Advanced Team Analytics` : 'Team Analytics'}
         </DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 2 }}>
@@ -1681,7 +1681,7 @@ const TeamViolationOverview = ({
                   value={detailTab}
                   onChange={(e, v) => setDetailTab(v)}
                   sx={{
-                    '& .MuiTab-root': { color: '#94a3b8', textTransform: 'none', fontWeight: 600 },
+                    '& .MuiTab-root': { color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600 },
                     '& .Mui-selected': { color: '#3b82f6' },
                     '& .MuiTabs-indicator': { backgroundColor: '#3b82f6' }
                   }}
@@ -1695,10 +1695,10 @@ const TeamViolationOverview = ({
               {/* TAB 0: Team Trend - Monthly Overview */}
               {detailTab === 0 && (
                 <Box>
-                  <Typography variant="h6" color="#fff" fontWeight={700} gutterBottom>
+                  <Typography variant="h6" color="var(--text)" fontWeight={700} gutterBottom>
                     {selectedTeamDetail.teamName} - Monthly Task Trends
                   </Typography>
-                  <Typography variant="body2" color="#94a3b8" sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="var(--text-secondary)" sx={{ mb: 2 }}>
                     This view is scoped to the selected team only, showing monthly counts, detractors, and neutrals.
                   </Typography>
                   {monthlyChartData && monthlyChartData.length > 0 ? (
@@ -1707,29 +1707,29 @@ const TeamViolationOverview = ({
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                         <XAxis
                           dataKey="month"
-                          tick={{ fill: '#94a3b8', fontSize: 11 }}
+                          tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
                           angle={-45}
                           textAnchor="end"
                           height={80}
                           axisLine={false}
                           tickLine={false}
                         />
-                        <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
                         <RechartsTooltip
                           wrapperStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10 }}
                           contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, color: '#fff', padding: '8px 12px' }}
                           cursor={{ fill: 'rgba(59,130,246,0.1)' }}
-                          formatter={(value) => <span style={{ color: '#e2e8f0' }}>{value}</span>}
-                          labelFormatter={(label) => <span style={{ color: '#94a3b8', fontWeight: 600 }}>{label}</span>}
+                          formatter={(value) => <span style={{ color: 'var(--text-secondary)' }}>{value}</span>}
+                          labelFormatter={(label) => <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{label}</span>}
                         />
-                        <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '0.85rem', paddingTop: '20px' }} />
+                        <Legend wrapperStyle={{ color: 'var(--text-secondary)', fontSize: '0.85rem', paddingTop: '20px' }} />
                         <Line type="monotone" dataKey="totalTasks" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} name="Total Tasks" />
                         <Line type="monotone" dataKey="detractors" stroke="#ef4444" strokeWidth={2} dot={{ fill: '#ef4444', r: 4 }} name="Detractors (≤6)" />
                         <Line type="monotone" dataKey="neutrals" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} name="Neutrals (7-8)" />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <Typography color="#94a3b8">No monthly data available</Typography>
+                    <Typography color="var(--text-secondary)">No monthly data available</Typography>
                   )}
                 </Box>
               )}
@@ -1737,10 +1737,10 @@ const TeamViolationOverview = ({
               {/* TAB 1: Session Impact - After Training */}
               {detailTab === 1 && (
                 <Box>
-                  <Typography variant="h6" color="#fff" fontWeight={700} gutterBottom>
+                  <Typography variant="h6" color="var(--text)" fontWeight={700} gutterBottom>
                     {selectedTeamDetail.teamName} - Session Impact Summary
                   </Typography>
-                  <Typography variant="body2" color="#94a3b8" sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="var(--text-secondary)" sx={{ mb: 2 }}>
                     Only tasks for this team are shown, with post-session counts and detractor/neural breakdowns.
                   </Typography>
                   {sessionBreakdown.length > 0 ? (
@@ -1748,25 +1748,25 @@ const TeamViolationOverview = ({
                       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 2, mb: 3 }}>
                         <Card sx={{ bgcolor: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
                           <CardContent sx={{ py: 1 }}>
-                            <Typography color="#94a3b8" variant="caption">Sessions Reviewed</Typography>
-                            <Typography color="#fff" variant="h6" fontWeight={700}>{sessionBreakdown.length}</Typography>
+                            <Typography color="var(--text-secondary)" variant="caption">Sessions Reviewed</Typography>
+                            <Typography color="var(--text)" variant="h6" fontWeight={700}>{sessionBreakdown.length}</Typography>
                           </CardContent>
                         </Card>
                         <Card sx={{ bgcolor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                           <CardContent sx={{ py: 1 }}>
-                            <Typography color="#94a3b8" variant="caption">Post-Session Tasks</Typography>
+                            <Typography color="var(--text-secondary)" variant="caption">Post-Session Tasks</Typography>
                             <Typography color="#ef4444" variant="h6" fontWeight={700}>{sessionTaskCount}</Typography>
                           </CardContent>
                         </Card>
                         <Card sx={{ bgcolor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                           <CardContent sx={{ py: 1 }}>
-                            <Typography color="#94a3b8" variant="caption">Detractors After Session</Typography>
+                            <Typography color="var(--text-secondary)" variant="caption">Detractors After Session</Typography>
                             <Typography color="#ef4444" variant="h6" fontWeight={700}>{sessionDetractors}</Typography>
                           </CardContent>
                         </Card>
                         <Card sx={{ bgcolor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
                           <CardContent sx={{ py: 1 }}>
-                            <Typography color="#94a3b8" variant="caption">Neutrals After Session</Typography>
+                            <Typography color="var(--text-secondary)" variant="caption">Neutrals After Session</Typography>
                             <Typography color="#f59e0b" variant="h6" fontWeight={700}>{sessionNeutrals}</Typography>
                           </CardContent>
                         </Card>
@@ -1775,22 +1775,22 @@ const TeamViolationOverview = ({
                         <Table size="small">
                           <TableHead>
                             <TableRow sx={{ bgcolor: '#111827' }}>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Session Date</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Status</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Total Tasks</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. Tasks</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. %</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Detractors</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Acc. Detractors</TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontWeight: 700 }}>Neutrals</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Session Date</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Status</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Total Tasks</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Acc. Tasks</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Acc. %</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Detractors</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Acc. Detractors</TableCell>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Neutrals</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {sessionReachAnalytics.map((session, index) => (
-                              <TableRow key={index} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' } }}>
-                                <TableCell sx={{ color: '#e2e8f0' }}>{session.sessionDate}</TableCell>
-                                <TableCell sx={{ color: '#94a3b8' }}>{sessionBreakdown[index]?.status || 'Completed'}</TableCell>
-                                <TableCell sx={{ color: '#fff', fontWeight: 700 }}>{session.total}</TableCell>
+                              <TableRow key={index} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
+                                <TableCell sx={{ color: 'var(--text-secondary)' }}>{session.sessionDate}</TableCell>
+                                <TableCell sx={{ color: 'var(--text-secondary)' }}>{sessionBreakdown[index]?.status || 'Completed'}</TableCell>
+                                <TableCell sx={{ color: 'var(--text)', fontWeight: 700 }}>{session.total}</TableCell>
                                 <TableCell sx={{ color: '#3b82f6', fontWeight: 700 }}>{session.reach}</TableCell>
                                 <TableCell sx={{ color: '#3b82f6', fontWeight: 700 }}>{session.reachPct}%</TableCell>
                                 <TableCell sx={{ color: '#ef4444', fontWeight: 700 }}>{sessionBreakdown[index]?.detractorsCount || 0}</TableCell>
@@ -1803,7 +1803,7 @@ const TeamViolationOverview = ({
                       </TableContainer>
                     </>
                   ) : (
-                    <Typography color="#94a3b8">No session breakdown data available for this team.</Typography>
+                    <Typography color="var(--text-secondary)">No session breakdown data available for this team.</Typography>
                   )}
                 </Box>
               )}
@@ -1811,63 +1811,63 @@ const TeamViolationOverview = ({
               {/* TAB 2: Detailed Analysis - Root Cause */}
               {detailTab === 2 && (
                 <Box>
-                  <Typography variant="h6" color="#fff" fontWeight={700} gutterBottom>
+                  <Typography variant="h6" color="var(--text)" fontWeight={700} gutterBottom>
                     Detailed Task Analysis - Root Cause & Weakness Points
                   </Typography>
-                  <Typography variant="body2" color="#94a3b8" sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="var(--text-secondary)" sx={{ mb: 2 }}>
                     Root cause counts by reach ownership show which issues are still falling outside Reach-controlled tasks.
                   </Typography>
 
                   {rootCauseChartData.length > 0 ? (
                     <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 2 }}>
-                      <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 1 }}>Root Cause Breakdown (Reach vs Non-Reach)</Typography>
+                      <Typography variant="subtitle2" color="var(--text-secondary)" sx={{ mb: 1 }}>Root Cause Breakdown (Reach vs Non-Reach)</Typography>
                       <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={rootCauseChartData} margin={{ top: 10, right: 10, left: 0, bottom: 50 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" />
-                          <XAxis dataKey="rootCause" tick={{ fill: '#94a3b8', fontSize: 11 }} angle={-35} textAnchor="end" interval={0} height={80} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
+                          <XAxis dataKey="rootCause" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} angle={-35} textAnchor="end" interval={0} height={80} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
                           <RechartsTooltip wrapperStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10 }} contentStyle={{ backgroundColor: '#111827', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, color: '#fff' }} formatter={(value) => [value, 'Tasks']} />
-                          <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '0.85rem' }} />
+                          <Legend wrapperStyle={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }} />
                           <Bar dataKey="reach" name="Team Accountable" fill="#3b82f6" stackId="a" radius={[6, 6, 0, 0]} />
                           <Bar dataKey="nonReach" name="Non-Accountable" fill="#f59e0b" stackId="a" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </Paper>
                   ) : (
-                    <Typography color="#94a3b8" sx={{ mb: 3 }}>No root cause data available for the selected filters.</Typography>
+                    <Typography color="var(--text-secondary)" sx={{ mb: 3 }}>No root cause data available for the selected filters.</Typography>
                   )}
 
                   {/* Reach Ownership Summary */}
                   <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(15,23,42,0.9)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 2 }}>
-                    <Typography variant="subtitle2" color="#94a3b8" sx={{ mb: 2 }}>Reach Ownership Analysis</Typography>
+                    <Typography variant="subtitle2" color="var(--text-secondary)" sx={{ mb: 2 }}>Reach Ownership Analysis</Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 2, mb: 2 }}>
                       <Card sx={{ bgcolor: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Total Tasks</Typography>
-                          <Typography color="#fff" variant="h6" fontWeight={700}>{reachAnalytics.totalFilteredTasks}</Typography>
+                          <Typography color="var(--text-secondary)" variant="caption">Total Tasks</Typography>
+                          <Typography color="var(--text)" variant="h6" fontWeight={700}>{reachAnalytics.totalFilteredTasks}</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Team Accountable</Typography>
+                          <Typography color="var(--text-secondary)" variant="caption">Team Accountable</Typography>
                           <Typography color="#3b82f6" variant="h6" fontWeight={700}>{reachAnalytics.filteredReachCount} ({reachAnalytics.filteredReachPct}%)</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.1)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Non-Accountable Tasks</Typography>
+                          <Typography color="var(--text-secondary)" variant="caption">Non-Accountable Tasks</Typography>
                           <Typography color="#f59e0b" variant="h6" fontWeight={700}>{reachAnalytics.filteredNonReachCount} ({reachAnalytics.filteredNonReachPct}%)</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Acc. Detractors</Typography>
+                          <Typography color="var(--text-secondary)" variant="caption">Acc. Detractors</Typography>
                           <Typography color="#ef4444" variant="h6" fontWeight={700}>{reachAnalytics.reachDetractors} ({reachAnalytics.reachDetractorsPct}%)</Typography>
                         </CardContent>
                       </Card>
                       <Card sx={{ bgcolor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
                         <CardContent sx={{ py: 1 }}>
-                          <Typography color="#94a3b8" variant="caption">Acc. Neutrals</Typography>
+                          <Typography color="var(--text-secondary)" variant="caption">Acc. Neutrals</Typography>
                           <Typography color="#f59e0b" variant="h6" fontWeight={700}>{reachAnalytics.reachNeutrals} ({reachAnalytics.reachNeutralsPct}%)</Typography>
                         </CardContent>
                       </Card>
@@ -1877,11 +1877,11 @@ const TeamViolationOverview = ({
                   {/* Advanced Filters */}
                   <Paper sx={{ p: 2, bgcolor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 2, mb: 2 }}>
                     <Stack spacing={2}>
-                      <Typography variant="body2" fontWeight={700} color="#fff">Query & Filters</Typography>
+                      <Typography variant="body2" fontWeight={700} color="var(--text)">Query & Filters</Typography>
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         {/* Evaluation Score Slider */}
                         <FormControl sx={{ flex: 1 }}>
-                          <Typography variant="caption" color="#94a3b8">Evaluation Score Range</Typography>
+                          <Typography variant="caption" color="var(--text-secondary)">Evaluation Score Range</Typography>
                           <Box sx={{ px: 1, py: 1 }}>
                             <Slider
                               value={filterScore}
@@ -1903,7 +1903,7 @@ const TeamViolationOverview = ({
                                 '& .MuiSlider-rail': { bgcolor: 'rgba(148,163,184,0.3)' }
                               }}
                             />
-                            <Typography variant="caption" color="#94a3b8" sx={{ mt: 0.5 }}>
+                            <Typography variant="caption" color="var(--text-secondary)" sx={{ mt: 0.5 }}>
                               {`Showing: ${filterScore[0]} - ${filterScore[1]}`}
                             </Typography>
                           </Box>
@@ -1911,16 +1911,16 @@ const TeamViolationOverview = ({
 
                         {/* Month Filter */}
                         <FormControl sx={{ minWidth: 140 }}>
-                          <InputLabel sx={{ color: '#94a3b8' }}>Month</InputLabel>
+                          <InputLabel sx={{ color: 'var(--text-secondary)' }}>Month</InputLabel>
                           <Select
                             value={filterMonth}
                             label="Month"
                             onChange={(e) => setFilterMonth(e.target.value)}
                             sx={{
-                              color: '#fff',
+                              color: 'var(--text)',
                               '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.3)' },
                               '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.5)' },
-                              '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                              '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                             }}
                           >
                             <MenuItem value="all">All Months</MenuItem>
@@ -1932,16 +1932,16 @@ const TeamViolationOverview = ({
 
                         {/* Sort By */}
                         <FormControl sx={{ minWidth: 140 }}>
-                          <InputLabel sx={{ color: '#94a3b8' }}>Sort By</InputLabel>
+                          <InputLabel sx={{ color: 'var(--text-secondary)' }}>Sort By</InputLabel>
                           <Select
                             value={sortBy}
                             label="Sort By"
                             onChange={(e) => setSortBy(e.target.value)}
                             sx={{
-                              color: '#fff',
+                              color: 'var(--text)',
                               '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.3)' },
                               '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.5)' },
-                              '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                              '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                             }}
                           >
                             <MenuItem value="date-desc">Newest First</MenuItem>
@@ -1966,21 +1966,21 @@ const TeamViolationOverview = ({
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow sx={{ bgcolor: '#111827' }}>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Date</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Score</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Category</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Reason</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Sub-Reason</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Root Cause</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }}>Owner</TableCell>
-                          <TableCell sx={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.8rem' }} align="center">Action</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Date</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Score</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Category</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Reason</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Sub-Reason</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Root Cause</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }}>Owner</TableCell>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.8rem' }} align="center">Action</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {filteredDetailedTasks.length > 0 ? (
                           filteredDetailedTasks.map((task, idx) => (
-                            <TableRow key={idx} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' } }}>
-                              <TableCell sx={{ color: '#e2e8f0', fontSize: '0.75rem' }}>
+                            <TableRow key={idx} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                                 {task.date?.toLocaleDateString() || '-'}
                               </TableCell>
                               <TableCell sx={{ fontSize: '0.75rem' }}>
@@ -1996,16 +1996,16 @@ const TeamViolationOverview = ({
                               <TableCell sx={{ color: task.sentiment === 'Detractor' ? '#ef4444' : task.sentiment === 'Neutral' ? '#f59e0b' : '#10b981', fontSize: '0.75rem', fontWeight: 600 }}>
                                 {task.sentiment}
                               </TableCell>
-                              <TableCell sx={{ color: '#e2e8f0', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 <Tooltip title={task.reason}><span>{task.reason}</span></Tooltip>
                               </TableCell>
-                              <TableCell sx={{ color: '#e2e8f0', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 <Tooltip title={task.subReason}><span>{task.subReason}</span></Tooltip>
                               </TableCell>
-                              <TableCell sx={{ color: '#e2e8f0', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', bgcolor: task.rootCause !== '-' ? 'rgba(239,68,68,0.1)' : 'transparent' }}>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', bgcolor: task.rootCause !== '-' ? 'rgba(239,68,68,0.1)' : 'transparent' }}>
                                 <Tooltip title={task.rootCause}><span>{task.rootCause}</span></Tooltip>
                               </TableCell>
-                              <TableCell sx={{ color: '#94a3b8', fontSize: '0.75rem', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 <Tooltip title={task.owner}><span>{task.owner}</span></Tooltip>
                               </TableCell>
                               <TableCell sx={{ fontSize: '0.75rem' }} align="center">
@@ -2025,7 +2025,7 @@ const TeamViolationOverview = ({
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ color: '#94a3b8', py: 3 }}>
+                            <TableCell colSpan={8} align="center" sx={{ color: 'var(--text-secondary)', py: 3 }}>
                               No tasks match the selected filters
                             </TableCell>
                           </TableRow>
@@ -2039,7 +2039,7 @@ const TeamViolationOverview = ({
           )}
         </DialogContent>
         <DialogActions sx={{ borderTop: '1px solid rgba(59,130,246,0.15)', p: 2 }}>
-          <Button onClick={handleCloseSessionDetail} sx={{ color: '#94a3b8' }}>
+          <Button onClick={handleCloseSessionDetail} sx={{ color: 'var(--text-secondary)' }}>
             Close
           </Button>
         </DialogActions>

@@ -64,7 +64,7 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
     width: '100%',
     background: 'transparent',
     border: 'none',
-    color: '#fff',
+    color: 'var(--text)',
     textAlign: 'center',
     fontSize: '0.875rem',
     outline: 'none',
@@ -86,11 +86,11 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
   const handleInputChange = (field, value) => onChange(index, field, value);
 
   return (
-    <TableRow hover sx={{ '&:hover': { backgroundColor: '#333' } }}>
-      <TableCell sx={{ color: '#ccc', borderBottom: '1px solid #333', py: 1, px: 2 }}>
+    <TableRow hover sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>
+      <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', py: 1, px: 2 }}>
         week {row.weekNum}
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', p: 0 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
         <input
           style={{ ...inputStyle, color: getPromoterColor(row.promoters), fontWeight: parseFloat(row.promoters) >= 75 ? 'bold' : 'normal' }}
           value={row.promoters}
@@ -99,7 +99,7 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
           placeholder="%"
         />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', p: 0 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
         <input
           style={{ ...inputStyle, color: getDetractorColor(row.detractors), fontWeight: parseFloat(row.detractors) > 9 ? 'bold' : 'normal' }}
           value={row.detractors}
@@ -108,10 +108,10 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
           placeholder="%"
         />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', color: '#fff', textAlign: 'center', py: 1 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', color: 'var(--text)', textAlign: 'center', py: 1 }}>
         {row.nps}
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', p: 0 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
         <input
           style={inputStyle}
           value={row.itnRelated}
@@ -119,10 +119,10 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
           type="number"
         />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', color: '#fff', textAlign: 'center', py: 1 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', color: 'var(--text)', textAlign: 'center', py: 1 }}>
         {row.itnRelatedPercent ? `${row.itnRelatedPercent}%` : ''}
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', p: 0 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
         <input
           style={inputStyle}
           value={row.sampleSize}
@@ -130,7 +130,7 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
           type="number"
         />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid #333', p: 0 }}>
+      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
         <input
           style={{ ...inputStyle, textAlign: 'left', paddingLeft: '8px' }}
           value={row.note}
@@ -667,14 +667,14 @@ const SamplesTokenDialog = ({ open, onClose }) => {
       fullWidth
       PaperProps={{
         sx: {
-          backgroundColor: '#1e1e1e',
-          color: '#ffffff',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
           minHeight: '80vh'
         }
       }}
     >
       {/* ── Header ── */}
-      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', pb: 1 }}>
+      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h6" component="div">Samples Token</Typography>
           <FormControl size="small" variant="standard" sx={{ minWidth: 80 }}>
@@ -682,10 +682,10 @@ const SamplesTokenDialog = ({ open, onClose }) => {
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               sx={{
-                color: '#fff',
-                '.MuiSelect-icon': { color: '#fff' },
+                color: 'var(--text)',
+                '.MuiSelect-icon': { color: 'var(--text)' },
                 '&:before': { borderBottomColor: '#aaa' },
-                '&:after':  { borderBottomColor: '#7b68ee' }
+                '&:after':  { borderBottomColor: 'var(--accent)' }
               }}
             >
               {years.map(year => (
@@ -705,23 +705,23 @@ const SamplesTokenDialog = ({ open, onClose }) => {
               minWidth: '100px'
             }}
           >
-            {saving ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : saveSuccess ? '✓ Saved' : 'Save'}
+            {saving ? <CircularProgress size={20} sx={{ color: 'var(--text)' }} /> : saveSuccess ? '✓ Saved' : 'Save'}
           </Button>
-          <IconButton onClick={onClose} sx={{ color: '#9e9e9e' }}>
+          <IconButton onClick={onClose} sx={{ color: 'var(--text-muted)' }}>
             <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
 
       {/* ── Tabs ── */}
-      <Box sx={{ borderBottom: '1px solid #333', backgroundColor: '#252525' }}>
+      <Box sx={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <Tabs
           value={tab}
           onChange={(_, v) => setTab(v)}
-          TabIndicatorProps={{ style: { backgroundColor: '#7b68ee' } }}
+          TabIndicatorProps={{ style: { backgroundColor: 'var(--accent)' } }}
           sx={{
-            '& .MuiTab-root': { color: '#aaa', textTransform: 'none', fontWeight: 600 },
-            '& .Mui-selected': { color: '#fff' }
+            '& .MuiTab-root': { color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600 },
+            '& .Mui-selected': { color: 'var(--text)' }
           }}
         >
           <Tab label="📊 Weekly Data" />
@@ -733,7 +733,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                   <Chip
                     label={grandMonthlyTotal.toLocaleString()}
                     size="small"
-                    sx={{ backgroundColor: '#7b68ee33', color: '#7b68ee', fontWeight: 'bold', height: 18, fontSize: '0.65rem' }}
+                    sx={{ backgroundColor: '#7b68ee33', color: 'var(--accent-text)', fontWeight: 'bold', height: 18, fontSize: '0.65rem' }}
                   />
                 )}
               </Box>
@@ -785,7 +785,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#fff', fontWeight: 'bold' }}>Week#</TableCell>
+                  <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text)', fontWeight: 'bold' }}>Week#</TableCell>
                   <TableCell sx={{ backgroundColor: '#90EE90', color: '#000', fontWeight: 'bold' }}>Promoters (%) (&ge;75%)</TableCell>
                   <TableCell sx={{ backgroundColor: '#FF6347', color: '#fff', fontWeight: 'bold' }}>Detractors (%) (&le;9%)</TableCell>
                   <TableCell sx={{ backgroundColor: '#FFFFE0', color: '#000', fontWeight: 'bold' }}>NPS</TableCell>
@@ -812,21 +812,21 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         {/* ══ TAB 1: Monthly Totals ════════════════════════════════════════ */}
         {tab === 1 && (
           <Box sx={{ p: 3 }}>
-            <Typography variant="body2" sx={{ color: '#aaa', mb: 2, lineHeight: 1.7 }}>
-              Enter the <strong style={{ color: '#fff' }}>official monthly total samples</strong> for each month.
-              When NPS Performance is filtered by <strong style={{ color: '#7b68ee' }}>Month</strong>, it will use these values
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2, lineHeight: 1.7 }}>
+              Enter the <strong style={{ color: 'var(--text)' }}>official monthly total samples</strong> for each month.
+              When NPS Performance is filtered by <strong style={{ color: 'var(--accent-text)' }}>Month</strong>, it will use these values
               instead of summing weekly sample sizes.
             </Typography>
 
-            <TableContainer component={Paper} sx={{ backgroundColor: '#2a2a2a', borderRadius: 2, overflow: 'hidden' }}>
+            <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 160 }}>Month</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold' }}>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 160 }}>Month</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
                       Total Monthly Samples
                     </TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 120, textAlign: 'center' }}>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 120, textAlign: 'center' }}>
                       Status
                     </TableCell>
                   </TableRow>
@@ -840,11 +840,11 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                         key={m.month}
                         hover
                         sx={{
-                          '&:hover': { backgroundColor: '#333' },
+                          '&:hover': { backgroundColor: 'var(--surface-hover)' },
                           backgroundColor: idx % 2 === 0 ? '#252525' : '#2a2a2a'
                         }}
                       >
-                        <TableCell sx={{ color: '#e0e0e0', fontWeight: 600, py: 1.5, fontSize: '0.9rem' }}>
+                        <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 600, py: 1.5, fontSize: '0.9rem' }}>
                           {m.name}
                         </TableCell>
                         <TableCell sx={{ py: 1 }}>
@@ -855,8 +855,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                             onChange={(e) => handleMonthlyChange(idx, e.target.value)}
                             placeholder="Enter total samples…"
                             style={{
-                              background: '#1e1e1e',
-                              border: `1px solid ${hasData ? '#7b68ee' : '#444'}`,
+                              background: 'var(--surface)',
+                              border: `1px solid ${hasData ? 'var(--accent)' : 'var(--border)'}`,
                               borderRadius: 6,
                               color: hasData ? '#fff' : '#666',
                               fontSize: '0.9rem',
@@ -908,8 +908,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                   border: '1px solid rgba(123, 104, 238, 0.3)'
                 }}
               >
-                <Typography variant="body2" sx={{ color: '#aaa' }}>Year Total (all months entered):</Typography>
-                <Typography variant="h6" sx={{ color: '#7b68ee', fontWeight: 800 }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>Year Total (all months entered):</Typography>
+                <Typography variant="h6" sx={{ color: 'var(--accent-text)', fontWeight: 800 }}>
                   {grandMonthlyTotal.toLocaleString()} samples
                 </Typography>
               </Stack>
@@ -921,8 +921,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         {tab === 2 && (
           <Box sx={{ p: 3 }}>
             <Box sx={{ mb: 2.5 }}>
-              <Typography variant="body2" sx={{ color: '#aaa', mb: 1.5, lineHeight: 1.7 }}>
-                Enter the <strong style={{ color: '#fff' }}>total sample token for each team</strong> per month.
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.5, lineHeight: 1.7 }}>
+                Enter the <strong style={{ color: 'var(--text)' }}>total sample token for each team</strong> per month.
                 These team tokens are directly reflected in the <strong style={{ color: '#10b981' }}>NPS Analysis and Feedback</strong> Excel export,
                 where non-accountable detractors and neutrals will be deducted from the sample tokens to compute final total samples, promoters, and NPS.
               </Typography>
@@ -937,7 +937,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                   pb: 1,
                   pt: 0.5,
                   '&::-webkit-scrollbar': { height: 6 },
-                  '&::-webkit-scrollbar-thumb': { backgroundColor: '#444', borderRadius: 3 }
+                  '&::-webkit-scrollbar-thumb': { backgroundColor: 'var(--surface-hover)', borderRadius: 3 }
                 }}
               >
                 {MONTHS.map(m => {
@@ -960,7 +960,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                         color: isSelected ? '#fff' : '#ccc',
                         '&:hover': {
                           backgroundColor: isSelected ? '#6a58de' : '#333',
-                          borderColor: '#7b68ee'
+                          borderColor: 'var(--accent)'
                         },
                         display: 'flex',
                         flexDirection: 'column',
@@ -991,9 +991,9 @@ const SamplesTokenDialog = ({ open, onClose }) => {
               sx={{
                 p: 2,
                 mb: 2,
-                backgroundColor: '#252525',
+                backgroundColor: 'var(--surface)',
                 borderRadius: 2,
-                border: '1px solid #383838',
+                border: '1px solid var(--border)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -1002,12 +1002,12 @@ const SamplesTokenDialog = ({ open, onClose }) => {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <GroupsIcon sx={{ color: '#7b68ee', fontSize: 28 }} />
+                <GroupsIcon sx={{ color: 'var(--accent-text)', fontSize: 28 }} />
                 <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#fff' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'var(--text)' }}>
                     {MONTHS.find(m => m.month === selectedTeamMonth)?.name} {selectedYear} — Team Samples
                   </Typography>
-                  <Typography variant="caption" sx={{ color: '#888' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
                     {filteredFieldTeams.length} teams listed | {Object.keys(teamMonthlyData[selectedTeamMonth] || {}).length} configured
                   </Typography>
                 </Box>
@@ -1044,17 +1044,17 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchIcon sx={{ color: '#777', fontSize: 18 }} />
+                        <SearchIcon sx={{ color: 'var(--text-muted)', fontSize: 18 }} />
                       </InputAdornment>
                     ),
                     sx: {
-                      backgroundColor: '#1e1e1e',
-                      color: '#fff',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text)',
                       borderRadius: 2,
                       fontSize: '0.85rem',
-                      '& fieldset': { borderColor: '#444' },
-                      '&:hover fieldset': { borderColor: '#7b68ee' },
-                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                      '& fieldset': { borderColor: 'var(--border)' },
+                      '&:hover fieldset': { borderColor: 'var(--accent)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                       height: 36
                     }
                   }}
@@ -1077,22 +1077,22 @@ const SamplesTokenDialog = ({ open, onClose }) => {
             </Paper>
 
             {/* Team Samples Table */}
-            <TableContainer component={Paper} sx={{ backgroundColor: '#2a2a2a', borderRadius: 2, overflow: 'hidden' }}>
+            <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: '60px' }}>#</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: '220px' }}>Team Name</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: '130px' }}>Team Code</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: '130px' }}>Company</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: '180px' }}>Monthly Sample Size</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: '120px', textAlign: 'center' }}>Status</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: '60px' }}>#</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: '220px' }}>Team Name</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: '130px' }}>Team Code</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: '130px' }}>Company</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: '180px' }}>Monthly Sample Size</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: '120px', textAlign: 'center' }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredFieldTeams.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: '#888' }}>
+                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: 'var(--text-muted)' }}>
                         {fieldTeams.length === 0 ? 'No field teams loaded from database.' : 'No teams found matching search.'}
                       </TableCell>
                     </TableRow>
@@ -1106,20 +1106,20 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                           key={team._id || team.teamName || idx}
                           hover
                           sx={{
-                            '&:hover': { backgroundColor: '#333' },
+                            '&:hover': { backgroundColor: 'var(--surface-hover)' },
                             backgroundColor: idx % 2 === 0 ? '#252525' : '#2a2a2a'
                           }}
                         >
-                          <TableCell sx={{ color: '#888', fontWeight: 600, py: 1 }}>
+                          <TableCell sx={{ color: 'var(--text-muted)', fontWeight: 600, py: 1 }}>
                             {idx + 1}
                           </TableCell>
-                          <TableCell sx={{ color: '#fff', fontWeight: 600, py: 1 }}>
+                          <TableCell sx={{ color: 'var(--text)', fontWeight: 600, py: 1 }}>
                             {team.teamName}
                           </TableCell>
-                          <TableCell sx={{ color: '#aaa', py: 1, fontSize: '0.82rem' }}>
+                          <TableCell sx={{ color: 'var(--text-secondary)', py: 1, fontSize: '0.82rem' }}>
                             {team.teamLeader || '—'}
                           </TableCell>
-                          <TableCell sx={{ color: '#aaa', py: 1, fontSize: '0.82rem' }}>
+                          <TableCell sx={{ color: 'var(--text-secondary)', py: 1, fontSize: '0.82rem' }}>
                             {team.subcontractor || '—'}
                           </TableCell>
                           <TableCell sx={{ py: 1 }}>
@@ -1130,8 +1130,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                               onChange={(e) => handleTeamSampleChange(selectedTeamMonth, team.teamName, e.target.value)}
                               placeholder="Sample size"
                               style={{
-                                background: '#1e1e1e',
-                                border: `1px solid ${hasVal ? '#10b981' : '#444'}`,
+                                background: 'var(--surface)',
+                                border: `1px solid ${hasVal ? '#10b981' : 'var(--border)'}`,
                                 borderRadius: 4,
                                 color: hasVal ? '#fff' : '#666',
                                 fontSize: '0.85rem',
@@ -1182,13 +1182,13 @@ const SamplesTokenDialog = ({ open, onClose }) => {
               }}
             >
               <Box>
-                <Typography variant="caption" sx={{ color: '#aaa' }}>Year Grand Total Team Samples ({selectedYear}):</Typography>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Year Grand Total Team Samples ({selectedYear}):</Typography>
                 <Typography variant="h6" sx={{ color: '#10b981', fontWeight: 800 }}>
                   {grandTeamSamplesTotal.toLocaleString()} team sample tokens across 12 months
                 </Typography>
               </Box>
 
-              <Typography variant="caption" sx={{ color: '#888', fontStyle: 'italic' }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
                 Tip: Click "Save" at the top right to persist all weekly, monthly, and team monthly tokens.
               </Typography>
             </Stack>
@@ -1198,13 +1198,13 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         {/* ══ TAB 3: Daily Online & Samples Data ═══════════════════════════ */}
         {tab === 3 && (
           <Box sx={{ p: 3 }}>
-            <Typography variant="body2" sx={{ color: '#aaa', mb: 2, lineHeight: 1.7 }}>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2, lineHeight: 1.7 }}>
               Enter the <strong style={{ color: '#38bdf8' }}>Daily Online transaction volume</strong> and the <strong style={{ color: '#10b981' }}>Daily Samples Taken (Token on PIS Basis)</strong> for each day.
               This allows correlating daily online volume with daily sample token size and actual DVOC incidents in the exported Excel sheet.
             </Typography>
 
             {/* Month Selection Bar */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2.5, p: 1.5, backgroundColor: '#252525', borderRadius: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2.5, p: 1.5, backgroundColor: 'var(--surface)', borderRadius: 2 }}>
               {MONTHS.map(m => {
                 const isSelected = selectedOnlineMonth === m.month;
                 const mOnline = dailyOnlineMonthTotals[m.month] || 0;
@@ -1272,7 +1272,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
             {/* Quick Actions & Search */}
             <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ color: 'var(--text)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <span>{MONTHS[selectedOnlineMonth - 1]?.name} {selectedYear}</span>
                 </Typography>
                 <Chip
@@ -1296,16 +1296,16 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <SearchIcon sx={{ color: '#888', fontSize: 18 }} />
+                        <SearchIcon sx={{ color: 'var(--text-muted)', fontSize: 18 }} />
                       </InputAdornment>
                     ),
                     sx: {
-                      backgroundColor: '#252525',
-                      color: '#fff',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text)',
                       fontSize: '0.85rem',
                       height: 36,
                       borderRadius: 1.5,
-                      '& fieldset': { borderColor: '#444' },
+                      '& fieldset': { borderColor: 'var(--border)' },
                       '&:hover fieldset': { borderColor: '#0891b2' },
                       '&.Mui-focused fieldset': { borderColor: '#0891b2' }
                     }
@@ -1354,23 +1354,23 @@ const SamplesTokenDialog = ({ open, onClose }) => {
             </Stack>
 
             {/* Daily Online & Samples Table */}
-            <TableContainer component={Paper} sx={{ backgroundColor: '#2a2a2a', borderRadius: 2, overflow: 'hidden' }}>
+            <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 70 }}>Day #</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 110 }}>Date</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 75 }}>Day</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 180 }}>Daily Online Volume</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 180 }}>Daily Samples Token (PIS)</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold' }}>Notes / Context</TableCell>
-                    <TableCell sx={{ backgroundColor: '#333', color: '#aaa', fontWeight: 'bold', width: 140, textAlign: 'center' }}>Status</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 70 }}>Day #</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 110 }}>Date</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 75 }}>Day</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 180 }}>Daily Online Volume</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 180 }}>Daily Samples Token (PIS)</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Notes / Context</TableCell>
+                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: 'bold', width: 140, textAlign: 'center' }}>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {daysInSelectedOnlineMonth.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4, color: '#888' }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4, color: 'var(--text-muted)' }}>
                         No days found matching search.
                       </TableCell>
                     </TableRow>
@@ -1385,16 +1385,16 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                           key={dayObj.dateStr}
                           hover
                           sx={{
-                            '&:hover': { backgroundColor: '#333' },
+                            '&:hover': { backgroundColor: 'var(--surface-hover)' },
                             backgroundColor: dayObj.isWeekend
                               ? 'rgba(255, 255, 255, 0.03)'
                               : (idx % 2 === 0 ? '#252525' : '#2a2a2a')
                           }}
                         >
-                          <TableCell sx={{ color: '#888', fontWeight: 600, py: 1 }}>
+                          <TableCell sx={{ color: 'var(--text-muted)', fontWeight: 600, py: 1 }}>
                             Day {String(dayObj.day).padStart(2, '0')}
                           </TableCell>
-                          <TableCell sx={{ color: '#e0e0e0', fontWeight: 600, py: 1, fontSize: '0.85rem' }}>
+                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 600, py: 1, fontSize: '0.85rem' }}>
                             {dayObj.dateStr}
                           </TableCell>
                           <TableCell sx={{ color: dayObj.isWeekend ? '#fbbf24' : '#94a3b8', fontWeight: 500, py: 1 }}>
@@ -1408,8 +1408,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                               onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'onlineSamples', e.target.value)}
                               placeholder="Online volume..."
                               style={{
-                                background: '#1e1e1e',
-                                border: `1px solid ${hasOnline ? '#0891b2' : '#444'}`,
+                                background: 'var(--surface)',
+                                border: `1px solid ${hasOnline ? '#0891b2' : 'var(--border)'}`,
                                 borderRadius: 6,
                                 color: hasOnline ? '#fff' : '#666',
                                 fontSize: '0.85rem',
@@ -1430,8 +1430,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                               onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'samplesToken', e.target.value)}
                               placeholder="Samples taken..."
                               style={{
-                                background: '#1e1e1e',
-                                border: `1px solid ${hasSamples ? '#10b981' : '#444'}`,
+                                background: 'var(--surface)',
+                                border: `1px solid ${hasSamples ? '#10b981' : 'var(--border)'}`,
                                 borderRadius: 6,
                                 color: hasSamples ? '#fff' : '#666',
                                 fontSize: '0.85rem',
@@ -1451,10 +1451,10 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                               onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'note', e.target.value)}
                               placeholder="Optional note..."
                               style={{
-                                background: '#1e1e1e',
-                                border: '1px solid #444',
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
                                 borderRadius: 6,
-                                color: '#e0e0e0',
+                                color: 'var(--text-secondary)',
                                 fontSize: '0.85rem',
                                 padding: '5px 10px',
                                 outline: 'none',
@@ -1520,20 +1520,20 @@ const SamplesTokenDialog = ({ open, onClose }) => {
             >
               <Stack direction="row" spacing={4}>
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#aaa' }}>Year Total Daily Online ({selectedYear}):</Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Year Total Daily Online ({selectedYear}):</Typography>
                   <Typography variant="h6" sx={{ color: '#38bdf8', fontWeight: 800 }}>
                     {grandDailyOnlineTotal.toLocaleString()} online
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#aaa' }}>Year Total Samples Taken ({selectedYear}):</Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Year Total Samples Taken ({selectedYear}):</Typography>
                   <Typography variant="h6" sx={{ color: '#34d399', fontWeight: 800 }}>
                     {grandDailySamplesTokenTotal.toLocaleString()} samples taken
                   </Typography>
                 </Box>
               </Stack>
 
-              <Typography variant="caption" sx={{ color: '#888', fontStyle: 'italic' }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
                 Tip: Click "Save" at the top right to persist all weekly, monthly, team, and daily tokens.
               </Typography>
             </Stack>

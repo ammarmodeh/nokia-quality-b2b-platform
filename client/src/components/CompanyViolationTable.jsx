@@ -65,7 +65,7 @@ const DetailRow = ({ label, value }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#b3b3b3',
+        color: 'var(--text-secondary)',
       }}
     >
       {label}
@@ -75,7 +75,7 @@ const DetailRow = ({ label, value }) => (
         variant="body1"
         component="div"
         sx={{
-          color: '#ffffff',
+          color: 'var(--text)',
           wordBreak: 'break-word',
           textAlign: label === "Customer Feedback" ? "right" : "left",
           direction: label === "Customer Feedback" ? "rtl" : "ltr"
@@ -141,7 +141,7 @@ export const CompanyViolationTable = ({ tasks }) => {
           onClick={() => handleCompanyClick(params.value, params.row.tasks)}
           sx={{
             textTransform: 'none',
-            color: '#ffffff',
+            color: 'var(--text)',
             padding: 0,
             minWidth: 0,
             '&:hover': {
@@ -244,7 +244,7 @@ export const CompanyViolationTable = ({ tasks }) => {
             onClick={() => setOpen(true)}
             sx={{
               backgroundColor: "#a00101",
-              color: "#ffffff",
+              color: "var(--text)",
               width: 24,
               height: 24,
               ml: 1,
@@ -267,14 +267,14 @@ export const CompanyViolationTable = ({ tasks }) => {
             fullWidth
             PaperProps={{
               sx: {
-                backgroundColor: "#2d2d2d", // Dark background
-                color: "#ffffff",           // White text
+                backgroundColor: "var(--surface)", // Dark background
+                color: "var(--text)",           // White text
                 borderRadius: 2,
                 p: 2,
               },
             }}
           >
-            <DialogTitle sx={{ color: "#ffffff", fontSize: "18px", fontWeight: "bold" }}>
+            <DialogTitle sx={{ color: "var(--text)", fontSize: "18px", fontWeight: "bold" }}>
               Statistics Disclaimer
             </DialogTitle>
             <DialogContent>
@@ -304,7 +304,7 @@ export const CompanyViolationTable = ({ tasks }) => {
       <Paper sx={{
         height: 370,
         width: "100%",
-        backgroundColor: "#2d2d2d",
+        backgroundColor: "var(--surface)",
         overflow: "hidden" // Prevent double scrollbars
       }}>
         <DataGrid
@@ -317,30 +317,30 @@ export const CompanyViolationTable = ({ tasks }) => {
           onPaginationModelChange={setPaginationModel}
           sx={{
             border: 0,
-            color: "#ffffff",
+            color: "var(--text)",
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#2d2d2d",
-              color: "#b3b3b3",
+              backgroundColor: "var(--surface)",
+              color: "var(--text-secondary)",
               fontSize: "0.875rem",
               fontWeight: "bold",
             },
             "& .MuiDataGrid-columnHeader": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
             },
             "& .MuiDataGrid-cell": {
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             },
             "& .MuiDataGrid-row": {
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "var(--surface)",
               },
             },
             "& .MuiDataGrid-footerContainer": {
               minHeight: "64px",
-              backgroundColor: "#2d2d2d",
-              color: "#ffffff",
+              backgroundColor: "var(--surface)",
+              color: "var(--text)",
               "& .MuiTablePagination-root": {
-                color: "#ffffff",
+                color: "var(--text)",
               },
             },
             "& .MuiDataGrid-virtualScroller": {
@@ -357,7 +357,7 @@ export const CompanyViolationTable = ({ tasks }) => {
               },
             },
             "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
             },
           }}
         />
@@ -372,7 +372,7 @@ export const CompanyViolationTable = ({ tasks }) => {
         fullScreen={fullScreen}
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
             boxShadow: 'none',
             borderRadius: fullScreen ? '0px' : '8px',
           }
@@ -382,9 +382,9 @@ export const CompanyViolationTable = ({ tasks }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
           padding: '16px 24px',
         }}>
           <Typography variant="h6" component="div">
@@ -393,9 +393,9 @@ export const CompanyViolationTable = ({ tasks }) => {
           <IconButton
             onClick={() => setDialogOpen(false)}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               }
             }}
           >
@@ -406,8 +406,8 @@ export const CompanyViolationTable = ({ tasks }) => {
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogContent dividers sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
           padding: '20px 24px',
         }}>
           <Stack spacing={3}>
@@ -417,12 +417,12 @@ export const CompanyViolationTable = ({ tasks }) => {
                 elevation={0}
                 sx={{
                   p: 3,
-                  backgroundColor: '#2d2d2d',
+                  backgroundColor: 'var(--surface)',
                   borderRadius: 2,
-                  border: '1px solid #3d3d3d'
+                  border: '1px solid var(--border)'
                 }}
               >
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: '#7b68ee' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold', color: 'var(--accent-text)' }}>
                   Task {index + 1}
                 </Typography>
 
@@ -442,7 +442,7 @@ export const CompanyViolationTable = ({ tasks }) => {
                         <Chip
                           label={task.evaluationScore}
                           sx={{
-                            color: '#ffffff',
+                            color: 'var(--text)',
                             backgroundColor:
                               task.evaluationScore >= 9 ? '#4caf50' :
                                 task.evaluationScore >= 7 ? '#6b7280' : '#f44336',
@@ -469,18 +469,18 @@ export const CompanyViolationTable = ({ tasks }) => {
                 {/* Subtasks section */}
                 {task.subTasks && task.subTasks.length > 0 && (
                   <Box sx={{ mt: 3 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#7b68ee', mb: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'var(--accent-text)', mb: 1 }}>
                       Subtasks
                     </Typography>
                     <Box sx={{
-                      backgroundColor: '#2d2d2d',
+                      backgroundColor: 'var(--surface)',
                       p: 2,
                       borderRadius: 1,
-                      border: '1px solid #3d3d3d'
+                      border: '1px solid var(--border)'
                     }}>
                       {task.subTasks.map((sub, index) => (
                         <Box key={index} sx={{ mb: 1 }}>
-                          <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                          <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                             <strong>Step {index + 1}:</strong> {sub.title} {sub.note && `- ${sub.note}`}
                           </Typography>
                         </Box>
@@ -495,7 +495,7 @@ export const CompanyViolationTable = ({ tasks }) => {
                   justifyContent: 'space-between',
                   mt: 3,
                   pt: 2,
-                  borderTop: '1px solid #e5e7eb',
+                  borderTop: '1px solid var(--border)',
                   flexWrap: 'wrap',
                   gap: 2
                 }}>
@@ -515,8 +515,8 @@ export const CompanyViolationTable = ({ tasks }) => {
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
           padding: '12px 24px',
         }}>
           <Button
@@ -525,7 +525,7 @@ export const CompanyViolationTable = ({ tasks }) => {
             startIcon={<MdFileDownload />}
             sx={{
               backgroundColor: '#1d4ed8',
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
                 backgroundColor: '#1e40af',
               }
@@ -536,9 +536,9 @@ export const CompanyViolationTable = ({ tasks }) => {
           <Button
             onClick={() => setDialogOpen(false)}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               }
             }}
           >

@@ -8,7 +8,7 @@ import AIInsightDialog from './AIInsightDialog';
 const AIInsightButton = ({
   title = "Deep AI Executive Analysis",
   size = "medium",
-  color = "#ffffff"
+  color = "var(--text)"
 }) => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -90,21 +90,21 @@ const AIInsightButton = ({
         onClose={handleCloseMenu}
         PaperProps={{
           style: {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
-            border: '1px solid #3d3d3d'
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)'
           },
         }}
         MenuListProps={{
           'aria-labelledby': 'basic-button',
         }}
       >
-        <MenuItem onClick={() => handleAnalyze('ytd')} sx={{ '&:hover': { backgroundColor: '#3d3d3d' } }}>YTD Report</MenuItem>
-        <MenuItem onClick={() => handleAnalyze('last_month')} sx={{ '&:hover': { backgroundColor: '#3d3d3d' } }}>Last Month</MenuItem>
-        <MenuItem onClick={() => handleAnalyze('current_month')} sx={{ '&:hover': { backgroundColor: '#3d3d3d' } }}>Current Month</MenuItem>
-        <MenuItem onClick={() => handleAnalyze('last_week')} sx={{ '&:hover': { backgroundColor: '#3d3d3d' } }}>Last Week</MenuItem>
-        <MenuItem onClick={() => handleAnalyze('current_week')} sx={{ '&:hover': { backgroundColor: '#3d3d3d' } }}>Current Week</MenuItem>
-        <MenuItem onClick={() => { handleCloseMenu(); setCustomRangeOpen(true); }} sx={{ '&:hover': { backgroundColor: '#3d3d3d' } }}>Custom Range...</MenuItem>
+        <MenuItem onClick={() => handleAnalyze('ytd')} sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>YTD Report</MenuItem>
+        <MenuItem onClick={() => handleAnalyze('last_month')} sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>Last Month</MenuItem>
+        <MenuItem onClick={() => handleAnalyze('current_month')} sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>Current Month</MenuItem>
+        <MenuItem onClick={() => handleAnalyze('last_week')} sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>Last Week</MenuItem>
+        <MenuItem onClick={() => handleAnalyze('current_week')} sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>Current Week</MenuItem>
+        <MenuItem onClick={() => { handleCloseMenu(); setCustomRangeOpen(true); }} sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>Custom Range...</MenuItem>
       </Menu>
 
       {data && (

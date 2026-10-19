@@ -34,7 +34,7 @@ const IssueCategoriesDialog = () => {
         <IconButton
           onClick={handleOpen}
           size="small"
-          sx={{ color: '#ffffff', ml: 0.5 }}
+          sx={{ color: 'var(--text)', ml: 0.5 }}
         >
           <Info fontSize="small" />
         </IconButton>
@@ -48,10 +48,10 @@ const IssueCategoriesDialog = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #3d3d3d',
+            border: '1px solid var(--border)',
           },
         }}
       >
@@ -59,11 +59,11 @@ const IssueCategoriesDialog = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--border)',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="var(--accent-text)" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontSize: isMobile ? 13 : 20 }}>
               Issue Categorization Guide
             </Typography>
@@ -72,9 +72,9 @@ const IssueCategoriesDialog = () => {
             onClick={handleClose}
             size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'var(--overlay-subtle)',
               }
             }}
           >
@@ -93,7 +93,7 @@ const IssueCategoriesDialog = () => {
           },
         }}>
           <Box sx={{ mb: 3 }}>
-            <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               To maintain high-quality service delivery and fair evaluation, we categorize customer feedback into three main areas. These categories help us identify the root cause of issues and take appropriate action.
             </Typography>
           </Box>
@@ -102,62 +102,62 @@ const IssueCategoriesDialog = () => {
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Customer Education" sx={{
-                backgroundColor: '#7b68ee',
-                color: '#ffffff',
+                backgroundColor: 'var(--accent)',
+                color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
                 py: 1
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Definition:
             </Typography>
-            <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               When the customer is unaware of speed limitations, Wi-Fi bands (2.4G/5G), or basic troubleshooting, and no technical issues are found with the service.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Customer doesn't understand the difference between 2.4GHz and 5GHz bands" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Customer expects higher speeds than their plan provides" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Unrealistic expectations about Wi-Fi range (through multiple thick walls)" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Maximum supported speeds of customer's devices" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Wi-Fi standards compatibility" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Common VPN Misconceptions" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Customer using wireless extender correctly placed but unaware of inherent 50% speed reduction" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Wired (Ethernet) backhaul connection maintains full speed" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Technically proper single-router setup in large home where customer expects full coverage without extenders" />
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="No technical issues are found" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="The comment is clear and falls within customer education" />
               </ListItem>
             </List>
@@ -170,52 +170,52 @@ const IssueCategoriesDialog = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Lack of Technical Expertise" sx={{
                 backgroundColor: '#f44336',
-                color: '#ffffff',
+                color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
                 py: 1
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Definition:
             </Typography>
-            <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               When the issue arises from installation mistakes, incorrect troubleshooting, or poor network setup by the technician.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Improper cable splicing or poor signal levels" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Incorrect router configuration" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Failed to test internet before leaving" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Skipped signal strength testing in all rooms" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Incorrect Router or Extender Placement" />
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Feedback is validated through an on-site visit" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Clear evidence of technician error exists" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="The issue required rework" />
               </ListItem>
             </List>
@@ -228,54 +228,54 @@ const IssueCategoriesDialog = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Knowledge Gap" sx={{
                 backgroundColor: '#ff9800',
-                color: '#ffffff',
+                color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
                 py: 1
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Definition:
             </Typography>
-            <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               When the issue could be due to either technical shortcomings or customer awareness, but the comment is unclear or lacks sufficient information.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Vague complaints like 'Internet doesn't work well'" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Feedback that could point to either technical or education issues" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Reports that lack specific details about the problem" />
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="The comment is unclear or ambiguous" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Could reasonably be either customer education or technical issue" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Acts as a placeholder until more information is available" />
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3' }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)' }}>
               Note:
             </Typography>
-            <ListItem sx={{ pl: 1, color: '#ffffff' }}>
+            <ListItem sx={{ pl: 1, color: 'var(--text)' }}>
               <ListItemText primary='Tickets labeled as "Knowledge gap" are initially categorized based on limited information and serve as placeholders. The categorization may be updated once additional details are gathered or after on-site validation confirms the issue&apos;s nature.' />
             </ListItem>
           </Box>
@@ -288,40 +288,40 @@ const IssueCategoriesDialog = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Bad Team Behavior" sx={{
                 backgroundColor: '#9c27b0',
-                color: '#ffffff',
+                color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
                 py: 1
               }} />
             </Box>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Definition:
             </Typography>
-            <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               When the customer reports issues with the technician&apos;s conduct rather than technical service.
             </Typography>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               Examples:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Rudeness or unprofessional behavior" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Significant late arrival without notification" />
               </ListItem>
             </List>
 
-            <Typography variant="subtitle2" sx={{ color: '#b3b3b3', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
               When We Use This Category:
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="The complaint is specifically about conduct, not technical issues" />
               </ListItem>
-              <ListItem sx={{ display: 'list-item', p: 0, color: '#ffffff' }}>
+              <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Behavioral issues are reported by the customer" />
               </ListItem>
             </List>
@@ -329,16 +329,16 @@ const IssueCategoriesDialog = () => {
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #e5e7eb',
+          borderTop: '1px solid var(--border)',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
             onClick={handleClose}
             size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'var(--overlay-subtle)',
               }
             }}
           >

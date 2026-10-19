@@ -64,12 +64,12 @@ const AssessmentForm = ({
   const checkpointStyle = {
     p: isMobile ? 1.5 : 3,
     mb: isMobile ? 1.5 : 2.5,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'var(--overlay-subtle)',
     border: `1px solid ${colors.border}`,
     borderRadius: '16px',
     transition: 'all 0.2s ease',
     '&:hover': {
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: 'var(--overlay-subtle)',
       borderColor: colors.primary
     }
   };

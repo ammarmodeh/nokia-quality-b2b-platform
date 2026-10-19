@@ -1,3 +1,4 @@
+import { alpha } from "../theme/colorFns";
 import {
   Paper,
   Stack,
@@ -26,7 +27,7 @@ import { RiFileExcel2Fill } from "react-icons/ri";
 import { MdClose, MdFileDownload, MdTrendingUp, MdBarChart, MdPhotoCamera } from 'react-icons/md';
 import { useState, useMemo, useEffect, memo, useRef } from "react";
 import html2canvas from 'html2canvas';
-import { useTheme, alpha } from '@mui/material';
+import { useTheme } from '@mui/material';
 import {
   ComposedChart,
   Bar,
@@ -62,7 +63,7 @@ const DetailRow = ({ label, value }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#b3b3b3',
+        color: 'var(--text-secondary)',
       }}
     >
       {label}
@@ -72,7 +73,7 @@ const DetailRow = ({ label, value }) => (
         variant="body1"
         component="div"
         sx={{
-          color: '#ffffff',
+          color: 'var(--text)',
           wordBreak: 'break-word',
           textAlign: label === "Customer Feedback" ? "right" : "left",
           direction: label === "Customer Feedback" ? "rtl" : "ltr"
@@ -387,7 +388,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                 px: 3,
                 py: 1,
                 borderRadius: '8px !important',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--border)',
                 mx: 0.5,
                 flexShrink: 0,
                 minWidth: isMobile ? 'max-content' : 'auto',
@@ -468,7 +469,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
           width: "100%",
           borderRadius: "12px",
           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #e2e8f0",
+          border: "1px solid var(--border)",
           overflow: "hidden",
           display: 'flex',
           flexDirection: 'column'
@@ -480,7 +481,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
             alignItems="center"
             sx={{
               padding: "16px 20px",
-              borderBottom: "1px solid #e2e8f0"
+              borderBottom: "1px solid var(--border)"
             }}
           >
             <Box>
@@ -550,10 +551,10 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
             }}
             sx={{
               border: 0,
-              color: "#cbd5e1", // Light gray for dark theme
+              color: "var(--text-secondary)", // Light gray for dark theme
               fontFamily: "'Inter', sans-serif",
               "& .MuiDataGrid-overlay": {
-                color: "#64748b",
+                color: "var(--text-muted)",
               },
               "& .MuiDataGrid-columnHeaders": {
                 backgroundColor: "#f8fafc",
@@ -562,7 +563,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                 fontWeight: "600",
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",
-                borderBottom: "1px solid #e2e8f0",
+                borderBottom: "1px solid var(--border)",
               },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: "#f8fafc",
@@ -576,7 +577,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                 },
               },
               "& .MuiDataGrid-footerContainer": {
-                borderTop: "1px solid #e2e8f0",
+                borderTop: "1px solid var(--border)",
                 // backgroundColor: "#ffffff",
                 color: "#475569",
               },
@@ -585,10 +586,10 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
               },
               "& .MuiDataGrid-toolbarContainer": {
                 padding: "12px",
-                borderBottom: "1px solid #e2e8f0",
+                borderBottom: "1px solid var(--border)",
                 gap: 2,
                 "& .MuiButton-root": {
-                  color: "#64748b !important",
+                  color: "var(--text-muted) !important",
                   fontSize: "0.80rem",
                   textTransform: 'none',
                 }
@@ -625,7 +626,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                   onClick={handleCaptureChart}
                   size="small"
                   sx={{
-                    color: '#7b68ee',
+                    color: 'var(--accent-text)',
                     bgcolor: alpha('#7b68ee', 0.1),
                     '&:hover': {
                       bgcolor: alpha('#7b68ee', 0.2),
@@ -642,7 +643,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                 <XAxis
                   dataKey="name"
                   type="category"
-                  tick={{ fontSize: isMobile ? 9 : 11, fill: '#64748b' }}
+                  tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--text-muted)' }}
                   interval={0}
                   angle={-45}
                   textAnchor="end"
@@ -651,16 +652,16 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                 <YAxis
                   yAxisId="left"
                   type="number"
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  label={{ value: 'Violations', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                  tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                  label={{ value: 'Violations', angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600 } }}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
                   type="number"
                   domain={[0, 100]}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  label={{ value: 'Validation %', angle: 90, position: 'insideRight', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                  tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                  label={{ value: 'Validation %', angle: 90, position: 'insideRight', style: { fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600 } }}
                 />
                 <RechartsTooltip
                   contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
@@ -670,7 +671,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />
                   ))}
-                  <LabelList dataKey="Violations" position="top" style={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+                  <LabelList dataKey="Violations" position="top" style={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} />
                 </Bar>
                 <Line
                   yAxisId="right"
@@ -678,7 +679,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                   dataKey="ValidationRate"
                   stroke="#7b68ee"
                   strokeWidth={3}
-                  dot={{ r: 4, fill: '#7b68ee' }}
+                  dot={{ r: 4, fill: 'var(--accent-text)' }}
                   activeDot={{ r: 6 }}
                   name="Validation Rate (%)"
                 >
@@ -686,7 +687,7 @@ export const AllReasonsTable = memo(({ tasks, onTaskUpdated }) => {
                     dataKey="ValidationRate"
                     position="top"
                     formatter={(val) => `${val}%`}
-                    style={{ fill: '#7b68ee', fontSize: 10, fontWeight: 600 }}
+                    style={{ fill: 'var(--accent-text)', fontSize: 10, fontWeight: 600 }}
                   />
                 </Line>
               </ComposedChart>

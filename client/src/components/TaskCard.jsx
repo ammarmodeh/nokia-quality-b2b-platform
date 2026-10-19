@@ -56,7 +56,7 @@ const statusConfig = {
   Todo: { icon: <HourglassEmpty fontSize="small" />, color: "#eab308", bg: "rgba(234, 179, 8, 0.1)", border: "rgba(234, 179, 8, 0.3)" },
   "In Progress": { icon: <PlayCircle fontSize="small" />, color: "#3b82f6", bg: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.3)" },
   Closed: { icon: <CheckCircle fontSize="small" />, color: "#22c55e", bg: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.3)" },
-  Cancelled: { icon: <Cancel fontSize="small" />, color: "#6b7280", bg: "rgba(107, 116, 128, 0.1)", border: "rgba(107, 116, 128, 0.3)" },
+  Cancelled: { icon: <Cancel fontSize="small" />, color: "var(--text-muted)", bg: "rgba(107, 116, 128, 0.1)", border: "rgba(107, 116, 128, 0.3)" },
 };
 
 const priorityConfig = {
@@ -188,8 +188,8 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
       <Paper
         elevation={0}
         sx={{
-          bgcolor: "#1a1a1a",
-          border: "1px solid #333",
+          bgcolor: "var(--bg)",
+          border: "1px solid var(--border)",
           borderRadius: 3,
           p: 0,
           height: "100%",
@@ -215,10 +215,10 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
           {/* Top Row: SLID & Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Box>
-              <Typography variant="overline" sx={{ color: '#64748b', fontWeight: 800, letterSpacing: 1.5, lineHeight: 1 }}>
+              <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 800, letterSpacing: 1.5, lineHeight: 1 }}>
                 SLID
               </Typography>
-              <Typography variant="h5" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#fff', letterSpacing: -0.5, mt: 0.5 }}>
+              <Typography variant="h5" sx={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text)', letterSpacing: -0.5, mt: 0.5 }}>
                 {task.slid}
               </Typography>
             </Box>
@@ -226,9 +226,9 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               onClick={handleMenuOpen}
               size="small"
               sx={{
-                color: '#64748b',
-                bgcolor: 'rgba(255,255,255,0.05)',
-                '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
+                color: 'var(--text-muted)',
+                bgcolor: 'var(--overlay-subtle)',
+                '&:hover': { color: '#fff', bgcolor: 'var(--overlay-subtle)' },
                 borderRadius: 2
               }}
             >
@@ -238,20 +238,20 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
 
           {/* Customer Info Card */}
           <Box sx={{
-            bgcolor: 'rgba(255,255,255,0.03)',
+            bgcolor: 'var(--overlay-subtle)',
             borderRadius: 2,
             p: 1.5,
-            border: '1px solid rgba(255,255,255,0.05)'
+            border: '1px solid var(--border)'
           }}>
             <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
               <Avatar sx={{ width: 28, height: 28, bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', fontSize: '0.8rem' }}>
                 <CategoryIcon sx={{ fontSize: 16 }} />
               </Avatar>
               <Box>
-                <Typography variant="subtitle2" sx={{ color: '#e2e8f0', fontWeight: 700, lineHeight: 1.2 }}>
+                <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', fontWeight: 700, lineHeight: 1.2 }}>
                   {task.customerName || "Unknown Customer"}
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   {task.governorate} • {task.district}
                 </Typography>
               </Box>
@@ -323,7 +323,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                     fontWeight: 700,
                     bgcolor: validationConfig[task.validationStatus]?.bg || 'rgba(255,255,255,0.05)',
                     color: validationConfig[task.validationStatus]?.color || '#94a3b8',
-                    border: `1px solid ${validationConfig[task.validationStatus]?.border || 'rgba(255,255,255,0.1)'}`
+                    border: `1px solid ${validationConfig[task.validationStatus]?.border || 'var(--border)'}`
                   }}
                 />
               )}
@@ -337,10 +337,10 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                 borderRadius: 1.5,
                 borderRight: `3px solid ${scoreColor}`
               }}>
-                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 800, fontSize: '0.6rem', display: 'block', mb: 0.5, letterSpacing: 0.5 }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.6rem', display: 'block', mb: 0.5, letterSpacing: 0.5 }}>
                   CUSTOMER FEEDBACK
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#cbd5e1', fontSize: '0.75rem', fontStyle: 'italic', lineHeight: 1.3, textAlign: 'right' }}>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontStyle: 'italic', lineHeight: 1.3, textAlign: 'right' }}>
                   "{task.customerFeedback}"
                 </Typography>
               </Box>
@@ -353,32 +353,32 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
           {/* Timeline / Dates Grid */}
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
             <Box sx={{ bgcolor: 'rgba(0,0,0,0.3)', p: 1, borderRadius: 2 }}>
-              <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontSize: '0.65rem', fontWeight: 700 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontSize: '0.65rem', fontWeight: 700 }}>
                 PIS DATE
               </Typography>
-              <Typography variant="body2" sx={{ color: '#cbd5e1', fontWeight: 600, fontSize: '0.8rem' }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.8rem' }}>
                 {task.pisDate ? (
                   <>
-                    {format(new Date(task.pisDate), "MMM dd")} <span style={{ color: '#64748b', fontSize: '0.7rem' }}>(W{getCustomWeekNumber(new Date(task.pisDate), new Date(task.pisDate).getFullYear(), settings)})</span>
+                    {format(new Date(task.pisDate), "MMM dd")} <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>(W{getCustomWeekNumber(new Date(task.pisDate), new Date(task.pisDate).getFullYear(), settings)})</span>
                   </>
                 ) : "N/A"}
               </Typography>
             </Box>
             <Box sx={{ bgcolor: 'rgba(0,0,0,0.3)', p: 1, borderRadius: 2 }}>
-              <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontSize: '0.65rem', fontWeight: 700 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontSize: '0.65rem', fontWeight: 700 }}>
                 INTERVIEW
               </Typography>
-              <Typography variant="body2" sx={{ color: '#cbd5e1', fontWeight: 600, fontSize: '0.8rem' }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.8rem' }}>
                 {task.interviewDate ? (
                   <>
-                    {format(new Date(task.interviewDate), "MMM dd")} <span style={{ color: '#64748b', fontSize: '0.7rem' }}>(W{getCustomWeekNumber(new Date(task.interviewDate), new Date(task.interviewDate).getFullYear(), settings)})</span>
+                    {format(new Date(task.interviewDate), "MMM dd")} <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>(W{getCustomWeekNumber(new Date(task.interviewDate), new Date(task.interviewDate).getFullYear(), settings)})</span>
                   </>
                 ) : "N/A"}
               </Typography>
             </Box>
           </Box>
 
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+          <Divider sx={{ borderColor: 'var(--border)' }} />
 
           {/* Footer Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
@@ -411,7 +411,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
                     height: 32,
                     borderRadius: '50%',
                     bgcolor: 'rgba(148, 163, 184, 0.1)',
-                    color: '#94a3b8',
+                    color: 'var(--text-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -437,11 +437,11 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
             onClose={handleMenuClose}
             PaperProps={{
               sx: {
-                bgcolor: "#1e293b",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                bgcolor: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 2,
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                "& .MuiMenuItem-root": { color: "#e2e8f0", fontSize: '0.85rem', py: 1, "&:hover": { bgcolor: "rgba(255, 255, 255, 0.05)" } },
+                "& .MuiMenuItem-root": { color: "var(--text-secondary)", fontSize: '0.85rem', py: 1, "&:hover": { bgcolor: "var(--overlay-subtle)" } },
               },
             }}
           >
@@ -453,7 +453,7 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
               <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: "#ef4444" }} /></ListItemIcon>
               <ListItemText>Purge Node</ListItemText>
             </MenuItem>
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+            <Divider sx={{ borderColor: 'var(--border)' }} />
             <MenuItem onClick={() => handleAction("view")}>
               <ListItemIcon><VisibilityIcon fontSize="small" sx={{ color: "#10b981" }} /></ListItemIcon>
               <ListItemText>Full Diagnostics</ListItemText>
@@ -477,11 +477,11 @@ const TaskCard = ({ task, users, setUpdateStateDuringSave, handleTaskUpdate, han
             onClose={handleMenuClose}
             PaperProps={{
               sx: {
-                bgcolor: "#1e293b",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                bgcolor: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 2,
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                "& .MuiMenuItem-root": { color: "#e2e8f0", fontSize: '0.85rem', py: 1, "&:hover": { bgcolor: "rgba(255, 255, 255, 0.05)" } },
+                "& .MuiMenuItem-root": { color: "var(--text-secondary)", fontSize: '0.85rem', py: 1, "&:hover": { bgcolor: "var(--overlay-subtle)" } },
               },
             }}
           >

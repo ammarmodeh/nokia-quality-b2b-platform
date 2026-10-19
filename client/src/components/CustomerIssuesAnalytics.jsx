@@ -1,3 +1,5 @@
+import { alpha } from "../theme/colorFns";
+import { tok } from "../theme/tokens";
 import { useMemo, useState } from 'react';
 import {
   Box,
@@ -47,7 +49,7 @@ import { utils, writeFile } from 'xlsx';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import ManagementEmailDialog from './ManagementEmailDialog';
 import { FaEnvelope, FaLanguage } from 'react-icons/fa';
-import { alpha } from '@mui/material/styles';
+
 import { ReportedIssueCardDialog } from './ReportedIssueCardDialog';
 import { Email as EmailIconUI } from '@mui/icons-material';
 import api from '../api/api';
@@ -1018,13 +1020,13 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { color: '#ffffff' } } },
+    plugins: { legend: { position: 'bottom', labels: { color: tok('--text') } } },
     scales: {
-      x: { ticks: { color: '#b3b3b3' }, grid: { color: '#3d3d3d' } },
+      x: { ticks: { color: tok('--text-secondary') }, grid: { color: '#3d3d3d' } },
       y: {
         beginAtZero: true,
         ticks: {
-          color: '#b3b3b3',
+          color: tok('--text-secondary'),
           stepSize: 1,
           precision: 0
         },
@@ -1038,7 +1040,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     maintainAspectRatio: false,
     cutout: '70%',
     plugins: {
-      legend: { position: 'bottom', labels: { color: '#b3b3b3', usePointStyle: true, padding: 20 } },
+      legend: { position: 'bottom', labels: { color: tok('--text-secondary'), usePointStyle: true, padding: 20 } },
       tooltip: {
         callbacks: {
           label: (context) => {
@@ -1052,10 +1054,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
   };
 
   const StatCard = ({ title, value, icon, color, subtext }) => (
-    <Card sx={{ bgcolor: '#2d2d2d', color: '#fff', height: '100%', border: '1px solid #3d3d3d' }}>
+    <Card sx={{ bgcolor: tok('--surface'), color: tok('--text'), height: '100%', border: '1px solid #3d3d3d' }}>
       <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
         <Box>
-          <Typography variant="body2" color="#b3b3b3" gutterBottom>{title}</Typography>
+          <Typography variant="body2" color={tok('--text-secondary')} gutterBottom>{title}</Typography>
           <Typography variant="h4" fontWeight="bold">{value}</Typography>
           {subtext && <Typography variant="caption" color={color}>{subtext}</Typography>}
         </Box>
@@ -1163,33 +1165,33 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
           <Typography variant="h5" fontWeight="bold">Customer Issues Dashboard</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#2d2d2d', px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: tok('--surface'), px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>From:</Typography>
+              <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>From:</Typography>
               <TextField
                 type="date"
                 size="small"
                 value={dateFilter.start}
                 onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
                 sx={{
-                  bgcolor: '#1a1a1a',
+                  bgcolor: tok('--bg'),
                   borderRadius: 1,
-                  '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                  '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
                   '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                 }}
               />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: '#b3b3b3', fontSize: '0.8rem' }}>To:</Typography>
+              <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>To:</Typography>
               <TextField
                 type="date"
                 size="small"
                 value={dateFilter.end}
                 onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
                 sx={{
-                  bgcolor: '#1a1a1a',
+                  bgcolor: tok('--bg'),
                   borderRadius: 1,
-                  '& input': { color: '#fff', fontSize: '0.8rem', p: '6px 8px' },
+                  '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
                   '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                 }}
               />
@@ -1229,48 +1231,48 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       <Box mb={4}>
         <Grid container spacing={4}>
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
               <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
               <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
-                {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                 Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
               </Typography>
-              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+              <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                   * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
                 </Typography>
               </Box>
             </Paper>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
               <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
               <Typography variant="h3" fontWeight="800" color="success.main">
-                {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+                {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                 Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
               </Typography>
-              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+              <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                   * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
                 </Typography>
               </Box>
             </Paper>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: '#1a1a1a', height: '100%', border: '1px solid #3d3d3d' }}>
+            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
               <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
-              <Typography variant="h3" fontWeight="800" color="white">
-                {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: '#888' }}> days</span>
+              <Typography variant="h3" fontWeight="800" color={tok('--text')}>
+                {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                 Total time from <b>Initial Report</b> → <b>Closed/Now</b>
               </Typography>
-              <Box sx={{ p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#888', fontStyle: 'italic', lineHeight: 1.2 }}>
+              <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
                   * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
                 </Typography>
               </Box>
@@ -1284,7 +1286,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               elevation={0}
               sx={{
                 p: 0,
-                bgcolor: '#1e293b',
+                bgcolor: tok('--surface'),
                 borderRadius: 3,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 overflow: 'hidden',
@@ -1298,13 +1300,13 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                background: 'rgba(255, 255, 255, 0.02)'
+                background: tok('--overlay-subtle')
               }}>
                 <Box>
-                  <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                  <Typography variant="h6" fontWeight="700" color={tok('--text')}>
                     Supervisor Performance
                   </Typography>
-                  <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                  <Typography variant="body2" color={tok('--text-secondary')} sx={{ mt: 0.5 }}>
                     Aging impact and workload distribution
                   </Typography>
                 </Box>
@@ -1322,24 +1324,24 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               <Box sx={{ width: '100%', overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                   <thead>
-                    <tr style={{ background: '#0f172a' }}>
-                      <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Supervisor</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Closed</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Open</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <tr style={{ background: tok('--bg') }}>
+                      <th style={{ padding: '16px 24px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Supervisor</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Closed</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Open</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                           Dispatched
                           <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#3b82f6' }} />
                         </Box>
                       </th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                           Undispatched
                           <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b' }} />
                         </Box>
                       </th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                           Rate
                           <Tooltip title="Resolution Rate (%): Percentage of closed issues out of total assigned." arrow>
@@ -1349,7 +1351,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           </Tooltip>
                         </Box>
                       </th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                           Dispatch
                           <Tooltip title="Avg. Dispatch Speed (Days): Average time taken from report date to issue dispatch." arrow>
@@ -1359,7 +1361,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           </Tooltip>
                         </Box>
                       </th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                           Resol.
                           <Tooltip title="Avg. Field Resolution Speed (Days): Average time taken from dispatch to field resolution." arrow>
@@ -1369,7 +1371,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           </Tooltip>
                         </Box>
                       </th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                           Life
                           <Tooltip title="Avg. Total Lifecycle (Days): Total duration from report date to final closure (or now if open)." arrow>
@@ -1379,7 +1381,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           </Tooltip>
                         </Box>
                       </th>
-                      <th style={{ padding: '16px 24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <th style={{ padding: '16px 24px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                           Aging
                           <Tooltip title="Aging Bottlenecks: Count of undispatched issues pending for more than 1 day." arrow>
@@ -1399,7 +1401,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           borderBottom: '1px solid rgba(255,255,255,0.05)',
                           transition: 'background-color 0.2s ease'
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tok('--overlay-subtle')}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <td style={{ padding: '16px 24px' }}>
@@ -1408,15 +1410,15 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                               sx={{
                                 width: 32,
                                 height: 32,
-                                bgcolor: 'rgba(255,255,255,0.05)',
-                                color: '#f8fafc',
+                                bgcolor: tok('--overlay-subtle'),
+                                color: tok('--text'),
                                 fontSize: '0.85rem',
                                 border: '1px solid rgba(255,255,255,0.1)'
                               }}
                             >
                               {sup.name.charAt(0)}
                             </Avatar>
-                            <Typography variant="body2" fontWeight="600" color="#f8fafc">
+                            <Typography variant="body2" fontWeight="600" color={tok('--text')}>
                               {sup.name}
                             </Typography>
                           </Box>
@@ -1425,11 +1427,11 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           <Typography
                             variant="body2"
                             fontWeight="600"
-                            color="#94a3b8"
+                            color={tok('--text-secondary')}
                             sx={{
                               cursor: 'pointer',
                               transition: 'color 0.2s',
-                              '&:hover': { color: '#f8fafc', textDecoration: 'underline' }
+                              '&:hover': { color: tok('--text'), textDecoration: 'underline' }
                             }}
                             onClick={() => handleStatusClick(sup.issuesTotal, `${sup.name} - All Issues`)}
                           >
@@ -1509,7 +1511,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                                 height: 24,
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
-                                bgcolor: 'rgba(255,255,255,0.05)',
+                                bgcolor: tok('--overlay-subtle'),
                                 color: parseFloat(sup.rate) >= 80 ? '#22c55e' : parseFloat(sup.rate) >= 50 ? '#f59e0b' : '#ef4444',
                                 border: `1px solid ${parseFloat(sup.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(sup.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                               }}
@@ -1522,12 +1524,12 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                           </Typography>
                         </td>
                         <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <Typography variant="body2" fontFamily="monospace" color="#94a3b8">
+                          <Typography variant="body2" fontFamily="monospace" color={tok('--text-secondary')}>
                             {sup.avgResolutionSpeed !== 'N/A' ? `${sup.avgResolutionSpeed}d` : '-'}
                           </Typography>
                         </td>
                         <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <Typography variant="body2" fontFamily="monospace" color="#f8fafc">
+                          <Typography variant="body2" fontFamily="monospace" color={tok('--text')}>
                             {sup.avgLifecycleTime !== 'N/A' ? `${sup.avgLifecycleTime}d` : '-'}
                           </Typography>
                         </td>
@@ -1545,7 +1547,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                                 color: '#ef4444'
                               }}
                             />
-                          ) : <Typography variant="caption" color="rgba(255,255,255,0.1)">-</Typography>}
+                          ) : <Typography variant="caption" color={tok('--overlay-subtle')}>-</Typography>}
                         </td>
                       </tr>
                     ))}
@@ -1557,7 +1559,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
           {/* Aging Bottlenecks List - Table Format with Search & Actions */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: '#1a1a1a', color: '#fff', borderRadius: 2, border: '1px solid #f44336', height: '100%' }}>
+            <Paper sx={{ p: 2, bgcolor: tok('--bg'), color: tok('--text'), borderRadius: 2, border: '1px solid #f44336', height: '100%' }}>
               <Stack direction={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "flex-start" : "center"} mb={2} spacing={2}>
                 <Typography variant="h6" fontWeight="bold" color="error">Open Cases (Dispatched + Awaiting Dispatch)</Typography>
                 <Stack direction={isMobile ? "column" : "row"} spacing={1} sx={{ width: isMobile ? '100%' : 'auto' }}>
@@ -1570,10 +1572,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                       }}
                       displayEmpty
                       sx={{
-                        bgcolor: '#2d2d2d',
-                        color: '#fff',
+                        bgcolor: tok('--surface'),
+                        color: tok('--text'),
                         borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') },
                         fontSize: '0.85rem'
                       }}
                     >
@@ -1593,8 +1595,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                       setNegligencePage(0);
                     }}
                     InputProps={{
-                      startAdornment: <FaSearch style={{ marginRight: 8, color: '#666' }} />,
-                      sx: { bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, '& fieldset': { borderColor: '#444' } }
+                      startAdornment: <FaSearch style={{ marginRight: 8, color: tok('--text-muted') }} />,
+                      sx: { bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, '& fieldset': { borderColor: tok('--border') } }
                     }}
                     sx={{ width: isMobile ? '100%' : 250 }}
                   />
@@ -1603,7 +1605,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               <Box sx={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ color: '#b3b3b3', fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
+                    <tr style={{ color: tok('--text-secondary'), fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Created At</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Report Date</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>SLID</th>
@@ -1629,14 +1631,14 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
                         .map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
-                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.originalIssue.createdAt).toLocaleDateString()}</td>
-                            <td style={{ padding: '8px', color: '#b3b3b3', fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px', color: tok('--text-secondary'), fontSize: '0.75rem' }}>{new Date(item.originalIssue.createdAt).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px', color: tok('--text-secondary'), fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
                             <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
                               <Chip label={`${item.age}d`} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
                             </td>
-                            <td style={{ padding: '8px', fontSize: '0.8rem', color: '#ccc' }}>{item.stage}</td>
-                            <td style={{ padding: '8px', fontSize: '0.75rem', color: '#999' }}>
+                            <td style={{ padding: '8px', fontSize: '0.8rem', color: tok('--text-secondary') }}>{item.stage}</td>
+                            <td style={{ padding: '8px', fontSize: '0.75rem', color: tok('--text-muted') }}>
                               T: {item.assignedTo}<br />S: {item.supervisor}
                             </td>
                             <td style={{ padding: '8px', textAlign: 'center' }}>
@@ -1652,7 +1654,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                                     p: 0,
                                     color: '#3d3d3d',
                                     '&.Mui-checked': {
-                                      color: '#7b68ee',
+                                      color: tok('--accent-text'),
                                     },
                                     '&:hover': {
                                       backgroundColor: 'rgba(123, 104, 238, 0.05)',
@@ -1715,7 +1717,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   setNegligencePage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25]}
-                sx={{ color: '#fff' }}
+                sx={{ color: tok('--text') }}
               />
             </Paper>
           </Grid>
@@ -1725,7 +1727,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       <Grid container spacing={3}>
         {/* Trend & Resolution Row */}
         <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -1733,7 +1735,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   <Select
                     value={trendTimeframe}
                     onChange={(e) => setTrendTimeframe(e.target.value)}
-                    sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                    sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
                   >
                     <MenuItem value="day">Daily</MenuItem>
                     <MenuItem value="week">Weekly</MenuItem>
@@ -1744,7 +1746,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                   <Select
                     value={trendChartType}
                     onChange={(e) => setTrendChartType(e.target.value)}
-                    sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' }, fontSize: '0.8rem', height: 32 }}
+                    sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
                   >
                     <MenuItem value="mixed">Mixed</MenuItem>
                     <MenuItem value="bar">Bar</MenuItem>
@@ -1757,13 +1759,13 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           </Paper>
         </Grid>
         <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
             <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Doughnut data={statusData} options={doughnutOptions} />
               <Box sx={{ position: 'absolute', textAlign: 'center' }}>
                 <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
-                <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
+                <Typography variant="caption" color={tok('--text-secondary')}>Resolved</Typography>
               </Box>
             </Box>
           </Paper>
@@ -1771,19 +1773,19 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
         {/* Breakdown Row */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d' }}>
+          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Top Reporters</Typography>
             <Box sx={{ height: 300 }}><Bar data={reporterData} options={commonOptions} /></Box>
           </Paper>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Issue Breakdown (Categories)</Typography>
             <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <Doughnut data={categoryData} options={doughnutOptions} />
               <Box sx={{ position: 'absolute', textAlign: 'center' }}>
                 <Typography variant="h4" fontWeight="bold" sx={{ color: '#4e73df' }}>{categoryData.totalCount}</Typography>
-                <Typography variant="caption" color="#b3b3b3">Total Issues</Typography>
+                <Typography variant="caption" color={tok('--text-secondary')}>Total Issues</Typography>
               </Box>
             </Box>
           </Paper>
@@ -1795,14 +1797,14 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
         {/* Side-by-Side Teams Distribution Row */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Team Performance Distribution (Holistic - Top 10)</Typography>
             <Box sx={{ height: 300 }}><Bar data={installingTeamChartData} options={commonOptions} /></Box>
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: '#2d2d2d', color: '#fff', borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
+          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Issues by From (Main)</Typography>
             <Box sx={{ height: 300 }}><Bar data={teamData} options={commonOptions} /></Box>
           </Paper>
@@ -1814,7 +1816,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
             elevation={0}
             sx={{
               p: 0,
-              bgcolor: '#1e293b',
+              bgcolor: tok('--surface'),
               borderRadius: 3,
               border: '1px solid rgba(255, 255, 255, 0.08)',
               overflow: 'hidden',
@@ -1822,12 +1824,12 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}
           >
-            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', bgcolor: tok('--overlay-subtle'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
               <Box>
-                <Typography variant="h6" fontWeight="700" color="#f8fafc">
+                <Typography variant="h6" fontWeight="700" color={tok('--text')}>
                   Team Performance Ranking (Leaderboard)
                 </Typography>
-                <Typography variant="body2" color="#94a3b8" sx={{ mt: 0.5 }}>
+                <Typography variant="body2" color={tok('--text-secondary')} sx={{ mt: 0.5 }}>
                   Holistic view of all teams involved in reporting, installation, or resolution
                 </Typography>
               </Box>
@@ -1841,8 +1843,8 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                     setLeaderboardPage(0);
                   }}
                   InputProps={{
-                    startAdornment: <FaSearch style={{ marginRight: 8, color: '#94a3b8' }} />,
-                    sx: { bgcolor: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' } }
+                    startAdornment: <FaSearch style={{ marginRight: 8, color: tok('--text-secondary') }} />,
+                    sx: { bgcolor: tok('--overlay-subtle'), color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') } }
                   }}
                 />
                 <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -1852,7 +1854,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                       setLeaderboardStatusFilter(e.target.value);
                       setLeaderboardPage(0);
                     }}
-                    sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' } }}
+                    sx={{ bgcolor: tok('--overlay-subtle'), color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') } }}
                   >
                     <MenuItem value="all">All Status</MenuItem>
                     <MenuItem value="resolved">Has Resolved</MenuItem>
@@ -1873,14 +1875,14 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
             <Box sx={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                 <thead>
-                  <tr style={{ background: '#0f172a' }}>
-                    <th style={{ padding: '16px 24px', textAlign: 'left', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Team Name</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total Involv.</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Resolved</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Active</th>
-                    <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Success Rate</th>
-                    <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Avg Speed</th>
-                    <th style={{ padding: '16px 24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Top Issue</th>
+                  <tr style={{ background: tok('--bg') }}>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Team Name</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total Involv.</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Resolved</th>
+                    <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Active</th>
+                    <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Success Rate</th>
+                    <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Avg Speed</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Top Issue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1892,7 +1894,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         transition: 'background-color 0.2s ease',
                         cursor: 'pointer'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tok('--overlay-subtle')}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onClick={() => setSelectedTeam(team)}
                     >
@@ -1902,7 +1904,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         </Typography>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography variant="body2" fontWeight="600" color="#94a3b8">{team.total}</Typography>
+                        <Typography variant="body2" fontWeight="600" color={tok('--text-secondary')}>{team.total}</Typography>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
                         <Typography variant="body2" fontWeight="600" color="#22c55e">{team.resolved}</Typography>
@@ -1918,19 +1920,19 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                             height: 22,
                             fontSize: '0.7rem',
                             fontWeight: 600,
-                            bgcolor: 'rgba(255,255,255,0.05)',
+                            bgcolor: tok('--overlay-subtle'),
                             color: parseFloat(team.rate) >= 80 ? '#22c55e' : parseFloat(team.rate) >= 50 ? '#f59e0b' : '#ef4444',
                             border: `1px solid ${parseFloat(team.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(team.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                           }}
                         />
                       </td>
                       <td style={{ padding: '16px', textAlign: 'right' }}>
-                        <Typography variant="body2" fontFamily="monospace" color="#94a3b8">
+                        <Typography variant="body2" fontFamily="monospace" color={tok('--text-secondary')}>
                           {team.avgResolutionSpeed !== 'N/A' ? `${team.avgResolutionSpeed}d` : '-'}
                         </Typography>
                       </td>
                       <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                        <Typography variant="caption" color="#b3b3b3">{team.topCategory}</Typography>
+                        <Typography variant="caption" color={tok('--text-secondary')}>{team.topCategory}</Typography>
                       </td>
                     </tr>
                   ))}
@@ -1948,7 +1950,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                 setLeaderboardPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
-              sx={{ color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+              sx={{ color: tok('--text-secondary'), borderTop: '1px solid rgba(255,255,255,0.05)' }}
             />
           </Paper>
         </Grid>
@@ -1960,16 +1962,16 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         onClose={() => setSelectedTeam(null)}
         // maxWidth="lg"
         fullScreen
-        PaperProps={{ sx: { bgcolor: '#1a1a1a', color: '#fff', border: '1px solid #333' } }}
+        PaperProps={{ sx: { bgcolor: tok('--bg'), color: tok('--text'), border: '1px solid #333' } }}
       >
         {selectedTeam && (
           <>
             <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', p: 3, borderBottom: '1px solid #333' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <FaUserTie color="#7b68ee" size={24} />
+                <FaUserTie color={tok('--accent-text')} size={24} />
                 <Box>
                   <Typography variant="h6">{selectedTeam.name}</Typography>
-                  <Typography variant="caption" color="#b3b3b3">{selectedTeam.type} Dashboard</Typography>
+                  <Typography variant="caption" color={tok('--text-secondary')}>{selectedTeam.type} Dashboard</Typography>
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -2008,50 +2010,50 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
             <DialogContent sx={{ p: 3 }}>
               <Grid container spacing={2} mb={4} mt={1}>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #7b68ee' }}>
-                    <Typography variant="caption" color="#b3b3b3">Total Capacity</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #7b68ee' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Total Capacity</Typography>
                     <Typography variant="h5" fontWeight="bold">{selectedTeam.total}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #4caf50' }}>
-                    <Typography variant="caption" color="#b3b3b3">Resolved</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #4caf50' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Resolved</Typography>
                     <Typography variant="h5" fontWeight="bold" color="#4caf50">{selectedTeam.resolved}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #f44336' }}>
-                    <Typography variant="caption" color="#b3b3b3">Success Rate</Typography>
-                    <Typography variant="h5" fontWeight="bold" color="#7b68ee">{selectedTeam.rate}%</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #f44336' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Success Rate</Typography>
+                    <Typography variant="h5" fontWeight="bold" color={tok('--accent-text')}>{selectedTeam.rate}%</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color="#b3b3b3">Avg. Dispatch</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Avg. Dispatch</Typography>
                     <Typography variant="h5" fontWeight="bold" sx={{ color: '#ff9800' }}>{selectedTeam.avgDispatchSpeed || 'N/A'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color="#b3b3b3">Avg. Resolution</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Avg. Resolution</Typography>
                     <Typography variant="h5" fontWeight="bold" sx={{ color: '#4caf50' }}>{selectedTeam.avgResolutionSpeed || 'N/A'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color="#b3b3b3">Avg. Lifecycle</Typography>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#fff' }}>{selectedTeam.avgLifecycleTime || 'N/A'}</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Avg. Lifecycle</Typography>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: tok('--text') }}>{selectedTeam.avgLifecycleTime || 'N/A'}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color="#b3b3b3">Top Category</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Top Category</Typography>
                     <Typography variant="body1" fontWeight="bold" sx={{ color: '#ff9933', fontSize: '0.85rem' }}>{selectedTeam.topCategory}</Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color="#b3b3b3">Top Sub-Category</Typography>
+                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="caption" color={tok('--text-secondary')}>Top Sub-Category</Typography>
                     <Typography variant="body1" fontWeight="bold" sx={{ color: '#03a9f4', fontSize: '0.85rem' }}>{selectedTeam.topSubCategory || 'N/A'}</Typography>
                   </Box>
                 </Grid>
@@ -2061,7 +2063,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
               <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ textAlign: 'left', color: '#b3b3b3', borderBottom: '1px solid #333' }}>
+                    <tr style={{ textAlign: 'left', color: tok('--text-secondary'), borderBottom: '1px solid #333' }}>
                       <th style={{ padding: '12px' }}>Created At</th>
                       <th style={{ padding: '12px' }}>Report Date</th>
                       <th style={{ padding: '12px' }}>SLID</th>
@@ -2078,10 +2080,10 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
                         key={i}
                         onClick={() => handleViewIssue(issue)}
                         style={{ borderBottom: '1px solid #252525', cursor: 'pointer' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = tok('--surface')}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
-                        <td style={{ padding: '12px', color: '#b3b3b3' }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px', color: tok('--text-secondary') }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
                         <td style={{ padding: '12px' }}>{new Date(issue.date).toLocaleDateString()}</td>
                         <td style={{ padding: '12px', fontWeight: 'bold' }}>{issue.slid}</td>
                         <td style={{ padding: '12px' }}>{issue.issues?.[0]?.category || 'N/A'}</td>

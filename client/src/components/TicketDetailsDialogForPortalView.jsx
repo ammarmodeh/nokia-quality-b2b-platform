@@ -22,7 +22,7 @@ const DetailRow = ({ label, value }) => (
       component="div"
       sx={{
         fontWeight: '500',
-        color: '#b3b3b3'
+        color: 'var(--text-secondary)'
       }}
     >
       {label}
@@ -32,7 +32,7 @@ const DetailRow = ({ label, value }) => (
         variant="body1"
         component="div"
         sx={{
-          color: '#ffffff',
+          color: 'var(--text)',
           wordBreak: 'break-word'
         }}
       >
@@ -50,10 +50,10 @@ const TicketDetailsDialogForPortalView = ({ open, onClose, ticket, onCopy }) => 
   const isMobile = useMediaQuery('(max-width: 503px)');
 
   const colors = {
-    background: '#2d2d2d',
+    background: 'var(--surface)',
     surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: 'var(--border)',
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',
@@ -200,7 +200,7 @@ const TicketDetailsDialogForPortalView = ({ open, onClose, ticket, onCopy }) => 
                   <Chip
                     label={`${ticket.evaluationScore || 'N/A'}`}
                     sx={{
-                      color: '#ffffff',
+                      color: 'var(--text)',
                       backgroundColor: ticket.evaluationScore >= 9 ? colors.success :
                         ticket.evaluationScore >= 7 ? colors.warning : colors.error,
                       fontWeight: 'bold'

@@ -162,7 +162,7 @@ const MonthlyReasonTable = ({ tasks }) => {
       headerName: 'Reason',
       width: 250,
       renderCell: (params) => (
-        <Typography sx={{ color: '#ffffff', fontWeight: 500 }}>
+        <Typography sx={{ color: 'var(--text)', fontWeight: 500 }}>
           {params.value}
         </Typography>
       ),
@@ -195,7 +195,7 @@ const MonthlyReasonTable = ({ tasks }) => {
         <Box sx={{
           fontWeight: 'bold',
           color: params.value > 0 ? '#f44336' : '#6b7280',
-          backgroundColor: '#383838',
+          backgroundColor: 'var(--surface-hover)',
           padding: '4px 8px',
           borderRadius: '4px'
         }}>
@@ -339,7 +339,7 @@ const MonthlyReasonTable = ({ tasks }) => {
               />
             }
             label="Custom Date Range"
-            sx={{ color: '#fff', whiteSpace: 'nowrap' }}
+            sx={{ color: 'var(--text)', whiteSpace: 'nowrap' }}
           />
 
           <Stack
@@ -350,18 +350,18 @@ const MonthlyReasonTable = ({ tasks }) => {
           >
             {!isCustomRange ? (
               <FormControl sx={{ flex: 1, minWidth: isMobile ? 0 : 200 }} size="small">
-                <InputLabel sx={{ color: '#b3b3b3' }}>Select Month</InputLabel>
+                <InputLabel sx={{ color: 'var(--text-secondary)' }}>Select Month</InputLabel>
                 <Select
                   value={selectedMonth || ''}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   label="Select Month"
                   sx={{
-                    backgroundColor: '#2d2d2d',
-                    color: '#ffffff',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#555' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#7b68ee' },
-                    '& .MuiSvgIcon-root': { color: '#b3b3b3' },
+                    backgroundColor: 'var(--surface)',
+                    color: 'var(--text)',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent)' },
+                    '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' },
                   }}
                 >
                   {availableMonths.map((month) => (
@@ -379,14 +379,14 @@ const MonthlyReasonTable = ({ tasks }) => {
                   fullWidth
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
+                  InputLabelProps={{ shrink: true, style: { color: 'var(--text-secondary)' } }}
                   size="small"
                   sx={{
-                    input: { color: '#fff', fontSize: isMobile ? '0.75rem' : 'inherit' },
-                    fieldset: { borderColor: '#555' },
+                    input: { color: 'var(--text)', fontSize: isMobile ? '0.75rem' : 'inherit' },
+                    fieldset: { borderColor: 'var(--border)' },
                     '& .MuiOutlinedInput-root': {
                       '&:hover fieldset': { borderColor: '#777' },
-                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' }
+                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' }
                     }
                   }}
                 />
@@ -396,14 +396,14 @@ const MonthlyReasonTable = ({ tasks }) => {
                   fullWidth
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
-                  InputLabelProps={{ shrink: true, style: { color: '#b3b3b3' } }}
+                  InputLabelProps={{ shrink: true, style: { color: 'var(--text-secondary)' } }}
                   size="small"
                   sx={{
-                    input: { color: '#fff', fontSize: isMobile ? '0.75rem' : 'inherit' },
-                    fieldset: { borderColor: '#555' },
+                    input: { color: 'var(--text)', fontSize: isMobile ? '0.75rem' : 'inherit' },
+                    fieldset: { borderColor: 'var(--border)' },
                     '& .MuiOutlinedInput-root': {
                       '&:hover fieldset': { borderColor: '#777' },
-                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' }
+                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' }
                     }
                   }}
                 />
@@ -420,7 +420,7 @@ const MonthlyReasonTable = ({ tasks }) => {
                     color: '#4caf50',
                     backgroundColor: 'rgba(76, 175, 80, 0.05)',
                     '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.15)' },
-                    '&.Mui-disabled': { color: '#666' }
+                    '&.Mui-disabled': { color: 'var(--text-muted)' }
                   }}
                 >
                   <MdFileDownload fontSize="20px" />
@@ -432,7 +432,7 @@ const MonthlyReasonTable = ({ tasks }) => {
                   onClick={() => setTrendModalOpen(true)}
                   size="small"
                   sx={{
-                    color: '#7b68ee',
+                    color: 'var(--accent-text)',
                     backgroundColor: 'rgba(123, 104, 238, 0.05)',
                     '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.15)' }
                   }}
@@ -445,7 +445,7 @@ const MonthlyReasonTable = ({ tasks }) => {
         </Box>
       </Box>
 
-      <Paper sx={{ height: 400, width: '100%', backgroundColor: '#2d2d2d' }}>
+      <Paper sx={{ height: 400, width: '100%', backgroundColor: 'var(--surface)' }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -456,29 +456,29 @@ const MonthlyReasonTable = ({ tasks }) => {
           slots={{ toolbar: CustomToolbar }}
           sx={{
             border: 0,
-            color: '#ffffff',
-            '& .MuiDataGrid-main': { backgroundColor: '#2d2d2d' },
+            color: 'var(--text)',
+            '& .MuiDataGrid-main': { backgroundColor: 'var(--surface)' },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#2d2d2d',
-              color: '#b3b3b3',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text-secondary)',
               fontSize: '0.875rem',
               fontWeight: 'bold',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--border)',
             },
             '& .MuiDataGrid-container--top [role=row]': {
               backgroundColor: '#3f3f3f'
             },
-            '& .MuiDataGrid-cell': { borderBottom: '1px solid #e5e7eb' },
+            '& .MuiDataGrid-cell': { borderBottom: '1px solid var(--border)' },
             '& .MuiDataGrid-row': {
-              backgroundColor: '#2d2d2d',
-              '&:hover': { backgroundColor: '#3d3d3d' },
+              backgroundColor: 'var(--surface)',
+              '&:hover': { backgroundColor: 'var(--surface-hover)' },
             },
             '& .MuiDataGrid-footerContainer': {
-              backgroundColor: '#2d2d2d',
-              color: '#ffffff',
-              borderTop: '1px solid #e5e7eb',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
+              borderTop: '1px solid var(--border)',
             },
-            '& .MuiTablePagination-root': { color: '#ffffff' },
+            '& .MuiTablePagination-root': { color: 'var(--text)' },
             '& .MuiDataGrid-columnHeaderTitle': {
               fontWeight: 'bold',
             },

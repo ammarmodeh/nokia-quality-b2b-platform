@@ -151,7 +151,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
     // <Box sx={{ width: '100%', height: '100%' }}>
     <div
       ref={tableRef}
-      className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[#e5e7eb] rounded-lg shadow-lg z-50 flex flex-col`}
+      className={`${isMobile ? 'absolute left-1/2 -translate-x-1/2' : 'fixed right-4'} bottom-20 bg-[#171717fa] border border-[var(--border)] rounded-lg shadow-lg z-50 flex flex-col`}
       style={{
         height: '400px', // Set a fixed height
         width: isMobile ? '90%' : '500px',
@@ -162,8 +162,8 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       }}
     >
       {/* Fixed Header */}
-      <div className="flex justify-between items-center p-2 border-b border-[#e5e7eb] flex-shrink-0">
-        <h3 className="text-white font-medium">
+      <div className="flex justify-between items-center p-2 border-b border-[var(--border)] flex-shrink-0">
+        <h3 className="text-[var(--text)] font-medium">
           {tabValue === 0 ? "Theoretical Assessment Scores" : "On-The-Job Assessment Scores"}
         </h3>
         <div>
@@ -182,7 +182,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
             />
           </IconButton>
           <IconButton onClick={onClose} size="small">
-            <CloseIcon style={{ color: "white" }} />
+            <CloseIcon style={{ color: "var(--text)" }} />
           </IconButton>
         </div>
       </div>
@@ -215,7 +215,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
       </Box>
 
       {/* Search Bar */}
-      <div className="border-b border-[#e5e7eb]">
+      <div className="border-b border-[var(--border)]">
         <TextField
           fullWidth
           variant="outlined"
@@ -224,9 +224,9 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
-            startAdornment: <SearchIcon style={{ color: "#777", marginRight: "8px" }} />,
+            startAdornment: <SearchIcon style={{ color: "var(--text-muted)", marginRight: "8px" }} />,
             style: {
-              color: "white",
+              color: "var(--text)",
               borderRadius: "0px",
             },
           }}
@@ -259,23 +259,23 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
           >
             <TableHead>
               <TableRow>
-                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 140 }}>Team Name</TableCell>
-                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 100 }}>Group</TableCell>
-                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 120 }}>Score</TableCell>
-                <TableCell style={{ color: "white", fontWeight: 'bold', minWidth: 150 }}>Date & Time</TableCell>
+                <TableCell style={{ color: "var(--text)", fontWeight: 'bold', minWidth: 140 }}>Team Name</TableCell>
+                <TableCell style={{ color: "var(--text)", fontWeight: 'bold', minWidth: 100 }}>Group</TableCell>
+                <TableCell style={{ color: "var(--text)", fontWeight: 'bold', minWidth: 120 }}>Score</TableCell>
+                <TableCell style={{ color: "var(--text)", fontWeight: 'bold', minWidth: 150 }}>Date & Time</TableCell>
               </TableRow>
             </TableHead>
 
             <TableBody>
               {loading ? (
                 <TableRow style={{ height: '40px' }}>
-                  <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
+                  <TableCell colSpan={4} style={{ color: "var(--text)", textAlign: "center" }}>
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : (tabValue === 0 ? filteredTeams : filteredPracticalTeams).length === 0 ? (
                 <TableRow style={{ height: '40px' }}>
-                  <TableCell colSpan={4} style={{ color: "white", textAlign: "center" }}>
+                  <TableCell colSpan={4} style={{ color: "var(--text)", textAlign: "center" }}>
                     {searchTerm ? "No matching teams found" : `No ${tabValue === 0 ? 'evaluated' : 'assessed'} teams found`}
                   </TableCell>
                 </TableRow>
@@ -284,7 +284,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
                   <TableRow key={team._id} style={{ height: '40px' }}>
                     <TableCell
                       style={{
-                        color: "white",
+                        color: "var(--text)",
                         cursor: 'pointer',
                         minWidth: 140,
                         whiteSpace: 'nowrap',
@@ -300,7 +300,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
                     </TableCell>
                     <TableCell
                       style={{
-                        color: "white",
+                        color: "var(--text)",
                         minWidth: 100,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -324,7 +324,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
                     </TableCell>
                     <TableCell
                       style={{
-                        color: "white",
+                        color: "var(--text)",
                         minWidth: 150,
                         whiteSpace: 'nowrap',
                         lineHeight: '40px'
@@ -349,7 +349,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
         fullScreen
         PaperProps={{
           style: {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
           }
         }}
       >
@@ -370,7 +370,7 @@ const FieldTeamsFloatingTable = ({ open, onClose }) => {
         fullScreen
         PaperProps={{
           style: {
-            backgroundColor: '#2d2d2d',
+            backgroundColor: 'var(--surface)',
           }
         }}
       >

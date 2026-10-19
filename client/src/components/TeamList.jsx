@@ -81,7 +81,7 @@ const TeamList = ({
             startAdornment: <Search sx={{ color: colors.textSecondary, mr: 1, fontSize: 20 }} />,
             sx: {
               borderRadius: '12px',
-              backgroundColor: 'rgba(255,255,255,0.03)',
+              backgroundColor: 'var(--overlay-subtle)',
               border: `1px solid ${colors.border}`,
               color: colors.textPrimary,
               width: { xs: '100%', md: 300 },
@@ -110,10 +110,10 @@ const TeamList = ({
                     p: 2,
                     mb: 2,
                     borderRadius: '16px',
-                    bgcolor: 'rgba(255,255,255,0.02)',
+                    bgcolor: 'var(--overlay-subtle)',
                     border: `1px solid ${colors.border}`,
                     cursor: 'pointer',
-                    '&:active': { bgcolor: 'rgba(255,255,255,0.05)' }
+                    '&:active': { bgcolor: 'var(--overlay-subtle)' }
                   }}
                 >
                   {/* Header: Avatar, Name, ID */}
@@ -164,7 +164,7 @@ const TeamList = ({
                       <Chip
                         label="No Data"
                         size="small"
-                        sx={{ height: 24, fontSize: '0.75rem', bgcolor: 'rgba(255,255,255,0.05)', color: colors.textSecondary }}
+                        sx={{ height: 24, fontSize: '0.75rem', bgcolor: 'var(--overlay-subtle)', color: colors.textSecondary }}
                       />
                     )}
                   </Box>
@@ -179,7 +179,7 @@ const TeamList = ({
                           flex: 1,
                           height: 6,
                           borderRadius: 3,
-                          bgcolor: 'rgba(255,255,255,0.05)',
+                          bgcolor: 'var(--overlay-subtle)',
                           '& .MuiLinearProgress-bar': {
                             bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
                           }
@@ -244,7 +244,7 @@ const TeamList = ({
                       key={team._id}
                       sx={{
                         '&:hover': {
-                          bgcolor: 'rgba(255,255,255,0.02)',
+                          bgcolor: 'var(--overlay-subtle)',
                           cursor: 'pointer'
                         },
                         transition: 'background-color 0.2s',
@@ -294,7 +294,7 @@ const TeamList = ({
                                 sx={{
                                   height: 6,
                                   borderRadius: 3,
-                                  bgcolor: 'rgba(255,255,255,0.05)',
+                                  bgcolor: 'var(--overlay-subtle)',
                                   '& .MuiLinearProgress-bar': {
                                     bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
                                   }
@@ -323,7 +323,7 @@ const TeamList = ({
                           <Chip
                             label="No Data"
                             size="small"
-                            sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: colors.textSecondary, fontWeight: 700 }}
+                            sx={{ bgcolor: 'var(--overlay-subtle)', color: colors.textSecondary, fontWeight: 700 }}
                           />
                         )}
                       </TableCell>

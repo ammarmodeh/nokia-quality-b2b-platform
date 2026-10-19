@@ -1,27 +1,6 @@
+import { alpha } from "../theme/colorFns";
 import React, { useState, useEffect } from "react";
-import {
-    Box,
-    Typography,
-    Button,
-    Paper,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    IconButton,
-    Tooltip,
-    Chip,
-    useTheme,
-    alpha,
-    LinearProgress,
-} from "@mui/material";
+import { Box, Typography, Button, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Tooltip, Chip, useTheme, LinearProgress } from "@mui/material";
 import {
     CloudUpload as UploadIcon,
     Description as FileIcon,
@@ -131,9 +110,9 @@ const ReachSupervisorsAudit = () => {
                 <Paper
                     sx={{
                         p: 4,
-                        bgcolor: '#1a1a1a',
+                        bgcolor: 'var(--bg)',
                         borderRadius: 4,
-                        border: '2px dashed #333',
+                        border: '2px dashed var(--border)',
                         textAlign: 'center',
                         transition: 'all 0.3s ease',
                         '&:hover': { borderColor: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.05) }
@@ -166,7 +145,7 @@ const ReachSupervisorsAudit = () => {
                                 variant="contained"
                                 onClick={handleUpload}
                                 disabled={uploading}
-                                startIcon={uploading ? <MoonLoader size={15} color="white" /> : <UploadIcon />}
+                                startIcon={uploading ? <MoonLoader size={15} color="var(--text)" /> : <UploadIcon />}
                                 sx={{
                                     borderRadius: 2,
                                     px: 4,
@@ -184,7 +163,7 @@ const ReachSupervisorsAudit = () => {
 
                 {/* Preview Section */}
                 {previewData && (
-                    <Paper sx={{ p: 3, bgcolor: '#1a1a1a', borderRadius: 4 }}>
+                    <Paper sx={{ p: 3, bgcolor: 'var(--bg)', borderRadius: 4 }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
                             <Stack direction="row" spacing={2} alignItems="center">
                                 <CheckIcon color="success" />
@@ -205,7 +184,7 @@ const ReachSupervisorsAudit = () => {
                                     color="success"
                                     onClick={handleCommit}
                                     disabled={committing}
-                                    startIcon={committing && <MoonLoader size={15} color="white" />}
+                                    startIcon={committing && <MoonLoader size={15} color="var(--text)" />}
                                     sx={{ textTransform: 'none', fontWeight: 'bold' }}
                                 >
                                     Commit to Reach Repository
@@ -213,12 +192,12 @@ const ReachSupervisorsAudit = () => {
                             </Stack>
                         </Stack>
 
-                        <TableContainer sx={{ maxHeight: 400, borderRadius: 2, border: '1px solid #333' }}>
+                        <TableContainer sx={{ maxHeight: 400, borderRadius: 2, border: '1px solid var(--border)' }}>
                             <Table stickyHeader size="small">
                                 <TableHead>
                                     <TableRow>
                                         {Object.keys(previewData.records[0]).filter(k => !k.startsWith('_')).map(key => (
-                                            <TableCell key={key} sx={{ bgcolor: '#262626', fontWeight: 'bold', color: 'primary.main' }}>
+                                            <TableCell key={key} sx={{ bgcolor: 'var(--surface)', fontWeight: 'bold', color: 'primary.main' }}>
                                                 {key}
                                             </TableCell>
                                         ))}
@@ -254,10 +233,10 @@ const ReachSupervisorsAudit = () => {
                         </Typography>
                     </Stack>
 
-                    <Paper sx={{ bgcolor: '#1a1a1a', borderRadius: 4, overflow: 'hidden' }}>
+                    <Paper sx={{ bgcolor: 'var(--bg)', borderRadius: 4, overflow: 'hidden' }}>
                         <TableContainer>
                             <Table>
-                                <TableHead sx={{ bgcolor: '#262626' }}>
+                                <TableHead sx={{ bgcolor: 'var(--surface)' }}>
                                     <TableRow>
                                         <TableCell sx={{ color: 'grey.400', fontWeight: 'bold' }}>Filename</TableCell>
                                         <TableCell sx={{ color: 'grey.400', fontWeight: 'bold' }}>Date</TableCell>

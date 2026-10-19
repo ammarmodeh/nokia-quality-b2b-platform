@@ -340,8 +340,8 @@ const Quiz = () => {
           <div className="flex items-center gap-4">
             <div className="h-8 w-px bg-white/20"></div>
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">الفريق</span>
-              <h2 className="text-lg font-black text-white leading-none uppercase">{teamName}</h2>
+              <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold">الفريق</span>
+              <h2 className="text-lg font-black text-[var(--text)] leading-none uppercase">{teamName}</h2>
             </div>
             <div className="bg-white px-2 py-0.5 ml-2">
               <span className="text-[10px] text-black font-black uppercase">اختبار فني</span>
@@ -376,7 +376,7 @@ const Quiz = () => {
                 className={`
                   w-8 h-8 text-[11px] font-black border-2 transition-all duration-300
                   ${isCurrent ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.5)] scale-110 z-10' :
-                    isAnswered ? 'bg-[#222] text-white border-white/40 hover:border-white' :
+                    isAnswered ? 'bg-[var(--surface)] text-white border-white/40 hover:border-white' :
                       'bg-transparent text-white/30 border-white/10 hover:border-white/40'}
                 `}
               >
@@ -389,7 +389,7 @@ const Quiz = () => {
 
       <div className="max-w-3xl mx-auto w-full flex-grow">
         <div className="mb-6">
-          <div className="flex justify-between text-[11px] font-bold text-white uppercase mb-1">
+          <div className="flex justify-between text-[11px] font-bold text-[var(--text)] uppercase mb-1">
             <span>سؤال {currentQuestion + 1}/{questions.length}</span>
             <span>{Math.round(((currentQuestion + 1) / questions.length) * 100)}%</span>
           </div>
@@ -399,19 +399,19 @@ const Quiz = () => {
               style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
             />
           </div>
-          <div className="mt-2 text-[10px] text-gray-500 text-center uppercase tracking-widest">
+          <div className="mt-2 text-[10px] text-[var(--text-muted)] text-center uppercase tracking-widest">
             تمت الإجابة على {userAnswers.filter(a => a.selectedAnswer || a.essayAnswer).length} من {questions.length}
           </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto w-full">
-        <div className="bg-[#111111] border-2 border-white p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]">
+        <div className="bg-[var(--bg)] border-2 border-white p-6 md:p-10 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]">
           <div className="mb-8">
             <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-tighter mb-4">
               {currentQ.category || 'عام'}
             </span>
-            <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4 text-right">
+            <h3 className="text-xl md:text-2xl font-black text-[var(--text)] leading-tight mb-4 text-right">
               {currentQ.question}
             </h3>
             {currentQ.questionImage && (
@@ -428,7 +428,7 @@ const Quiz = () => {
           <div className="space-y-3">
             {currentQ.showGuideline && currentQ.guideline && (
               <div className="p-3 bg-white/5 border-l-4 border-white mb-6">
-                <p className="text-xs text-gray-400 italic">
+                <p className="text-xs text-[var(--text-muted)] italic">
                   <strong>ملاحظة:</strong> {currentQ.guideline}
                 </p>
               </div>
@@ -469,7 +469,7 @@ const Quiz = () => {
                       `}>
                         {selectedOption === option && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
                       </div>
-                      <span className={`text-base font-bold transition-colors ${selectedOption === option ? 'text-black' : 'text-white/70 group-hover:text-white'} text-right w-full`}>
+                      <span className={`text-base font-bold transition-colors ${selectedOption === option ? 'text-black' : 'text-white/70 group-hover:text-[var(--text)]'} text-right w-full`}>
                         {option}
                       </span>
                     </div>
@@ -503,7 +503,7 @@ const Quiz = () => {
                 px-6 py-3 font-bold uppercase text-sm tracking-widest transition-colors flex items-center gap-2
                 ${currentQuestion === 0
                   ? 'text-white/20 cursor-not-allowed'
-                  : 'text-white hover:bg-white/10'}
+                  : 'text-[var(--text)] hover:bg-white/10'}
               `}
               onClick={() => {
                 setQuizState(prev => ({
@@ -526,8 +526,8 @@ const Quiz = () => {
         onClose={() => blocker.reset && blocker.reset()}
         PaperProps={{
           sx: {
-            bgcolor: '#111',
-            color: 'white',
+            bgcolor: 'var(--bg)',
+            color: 'var(--text)',
             border: '2px solid white',
             borderRadius: 0,
             boxShadow: '8px 8px 0px 0px rgba(255,255,255,1)',
@@ -535,7 +535,7 @@ const Quiz = () => {
           }
         }}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)', fontWeight: '900', textTransform: 'uppercase' }}>
+        <DialogTitle sx={{ borderBottom: '1px solid var(--border)', fontWeight: '900', textTransform: 'uppercase' }}>
           مغادرة الاختبار؟
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
@@ -547,10 +547,10 @@ const Quiz = () => {
           <Button
             onClick={() => blocker.reset && blocker.reset()}
             sx={{
-              color: 'white',
+              color: 'var(--text)',
               fontWeight: 'bold',
-              border: '1px solid rgba(255,255,255,0.2)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
+              border: '1px solid var(--border)',
+              '&:hover': { bgcolor: 'var(--overlay-subtle)' }
             }}
           >
             البقاء

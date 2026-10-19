@@ -107,7 +107,7 @@ const BenchmarkTables = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="90vh">
-        <MoonLoader color="#7b68ee" size={60} />
+        <MoonLoader color="var(--accent-text)" size={60} />
       </Box>
     );
   }
@@ -115,10 +115,10 @@ const BenchmarkTables = () => {
   if (error) {
     return (
       <Box p={4} display="flex" justifyContent="center">
-        <Card sx={{ bgcolor: '#2d2d2d', border: '1px solid #f44336' }}>
+        <Card sx={{ bgcolor: 'var(--surface)', border: '1px solid #f44336' }}>
           <CardContent>
             <Typography variant="h6" color="error">Error loading data</Typography>
-            <Typography color="#b3b3b3">{error.message}</Typography>
+            <Typography color="var(--text-secondary)">{error.message}</Typography>
           </CardContent>
         </Card>
       </Box>
@@ -127,9 +127,9 @@ const BenchmarkTables = () => {
 
   const colors = {
     primary: "#7b68ee",
-    background: "#1a1a1a",
+    background: "var(--bg)",
     surface: "#252525",
-    border: "#3d3d3d",
+    border: "var(--border)",
     textPrimary: "#ffffff",
     textSecondary: "#b3b3b3",
     success: "#4caf50",
@@ -227,7 +227,7 @@ const BenchmarkTables = () => {
             <Grid container spacing={4}>
               <Grid item xs={12}>
                 <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, overflow: 'hidden' }}>
-                  <Box sx={{ p: 3, borderBottom: `1px solid ${colors.border}`, bgcolor: 'rgba(255,255,255,0.02)' }}>
+                  <Box sx={{ p: 3, borderBottom: `1px solid ${colors.border}`, bgcolor: 'var(--overlay-subtle)' }}>
                     <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>
                       Reason Analysis & Trends
                     </Typography>
@@ -242,7 +242,7 @@ const BenchmarkTables = () => {
 
               <Grid item xs={12}>
                 <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, overflow: 'hidden' }}>
-                  <Box sx={{ p: 3, borderBottom: `1px solid ${colors.border}`, bgcolor: 'rgba(255,255,255,0.02)' }}>
+                  <Box sx={{ p: 3, borderBottom: `1px solid ${colors.border}`, bgcolor: 'var(--overlay-subtle)' }}>
                     <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>
                       Team Violation Repository
                     </Typography>

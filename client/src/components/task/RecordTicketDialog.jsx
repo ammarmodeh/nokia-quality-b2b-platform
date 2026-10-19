@@ -1,11 +1,7 @@
+import { alpha } from "../../theme/colorFns";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import {
-    Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField, MenuItem, Stack, Typography,
-    alpha, Box, IconButton, Grid, Table, TableHead, TableBody, TableRow, TableCell, TableContainer, Paper, Tooltip,
-    Tabs, Tab, Divider, Autocomplete, createFilterOptions
-} from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Stack, Typography, Box, IconButton, Grid, Table, TableHead, TableBody, TableRow, TableCell, TableContainer, Paper, Tooltip, Tabs, Tab, Divider, Autocomplete, createFilterOptions } from "@mui/material";
 import { MdClose, MdHistory, MdInput, MdInfo, MdEdit, MdDelete, MdWarning, MdAccessTime, MdPeople, MdVisibility, MdContentCopy } from "react-icons/md";
 import { format } from "date-fns";
 import api from "../../api/api";
@@ -64,9 +60,9 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
     const [deletingTicket, setDeletingTicket] = useState(null);
     const [viewingTicket, setViewingTicket] = useState(null);
     const [confirmId, setConfirmId] = useState("");
-    const [cellViewer, setCellViewer] = useState({ open: false, title: "", value: "", color: "#7b68ee" });
+    const [cellViewer, setCellViewer] = useState({ open: false, title: "", value: "", color: "var(--accent-text)" });
 
-    const showCellValue = (title, value, color = "#7b68ee") => {
+    const showCellValue = (title, value, color = "var(--accent-text)") => {
         setCellViewer({ open: true, title, value: value || "—", color });
     };
 
@@ -302,7 +298,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                     bgcolor: (theme) => alpha(theme.palette.primary.main, 0.02)
                 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                        <MdHistory size={26} color="#7b68ee" />
+                        <MdHistory size={26} color="var(--accent-text)" />
                         <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: -0.5 }}>
                             {editingTicket ? "Technical Realignment" : "QOPS Transaction Log"}
                         </Typography>
@@ -352,7 +348,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                         <Grid item xs={6} sx={{ textAlign: 'right' }}>
                                             <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 1 }}>PRIMARY SLID / CASE</Typography>
                                             <Typography variant="body1" fontWeight={900}>
-                                                {task?.slid} <span style={{ color: '#999', fontSize: '0.8rem' }}>• #{task?.requestNumber}</span>
+                                                {task?.slid} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>• #{task?.requestNumber}</span>
                                             </Typography>
                                         </Grid>
                                     </Grid>
@@ -557,7 +553,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                     {tickets.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={9} align="center" sx={{ py: 10, bgcolor: alpha('#eee', 0.2) }}>
-                                                <Typography variant="caption" sx={{ fontWeight: 900, color: '#ccc', textTransform: 'uppercase', letterSpacing: 2 }}>
+                                                <Typography variant="caption" sx={{ fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 2 }}>
                                                     NO DATASTREAM RECOERDED FOR THIS CASE
                                                 </Typography>
                                             </TableCell>
@@ -567,9 +563,9 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                             <TableRow key={ticket._id} hover sx={{ bgcolor: index % 2 === 0 ? 'inherit' : alpha('#f0f0f0', 0.5) }}>
                                                 <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-                                                        <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: '#7b68ee', flex: 1 }}>{ticket.ticketId}</Typography>
+                                                        <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: 'var(--accent-text)', flex: 1 }}>{ticket.ticketId}</Typography>
                                                         {ticket.ticketId?.length > 10 && (
-                                                            <Button size="small" onClick={() => showCellValue("TICKET IDENTIFIER", ticket.ticketId, "#7b68ee")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: '#7b68ee' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("TICKET IDENTIFIER", ticket.ticketId, "#7b68ee")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
                                                         )}
                                                         <IconButton size="small" onClick={() => copyToClipboard(ticket.ticketId)} sx={{ opacity: 0.5 }}>
                                                             <MdContentCopy size={10} />
@@ -595,14 +591,14 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                                             noWrap
                                                             sx={{
                                                                 fontWeight: 900,
-                                                                color: '#7b68ee',
+                                                                color: 'var(--accent-text)',
                                                                 flex: 1
                                                             }}
                                                         >
                                                             {`${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`}
                                                         </Typography>
                                                         {(`${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`).length > 15 && (
-                                                            <Button size="small" onClick={() => showCellValue("PARTICIPANT DETAILS", `${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: '#7b68ee' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("PARTICIPANT DETAILS", `${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
                                                         )}
                                                         <IconButton size="small" onClick={() => copyToClipboard(`${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`)} sx={{ opacity: 0.5 }}>
                                                             <MdContentCopy size={10} />
@@ -612,12 +608,12 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                                 <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                            <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: '#7b68ee', display: 'block' }}>
+                                                            <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: 'var(--accent-text)', display: 'block' }}>
                                                                 {`${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`}
                                                             </Typography>
                                                         </Box>
                                                         {(`${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`).length > 15 && (
-                                                            <Button size="small" onClick={() => showCellValue("TRANSACTION TYPE/STATE", `${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: '#7b68ee' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("TRANSACTION TYPE/STATE", `${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
                                                         )}
                                                         <IconButton size="small" onClick={() => copyToClipboard(`${ticket.transactionType || ticket.mainCategory} - ${ticket.transactionState || "VA"}`)} sx={{ opacity: 0.5 }}>
                                                             <MdContentCopy size={10} />
@@ -630,7 +626,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                                             <Tooltip title={getMeaning('UNF_REASON_CODE', ticket.unfReasonCode)}>
                                                                 <Typography variant="caption" noWrap sx={{ color: '#FF5722', fontWeight: 900 }}>{ticket.unfReasonCode}</Typography>
                                                             </Tooltip>
-                                                            <Button size="small" onClick={() => showCellValue("REASON CODE", `${ticket.unfReasonCode} - ${getMeaning('UNF_REASON_CODE', ticket.unfReasonCode)}`, "#FF5722")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: '#7b68ee' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("REASON CODE", `${ticket.unfReasonCode} - ${getMeaning('UNF_REASON_CODE', ticket.unfReasonCode)}`, "#FF5722")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
                                                             <IconButton size="small" onClick={() => copyToClipboard(ticket.unfReasonCode)} sx={{ opacity: 0.5 }}>
                                                                 <MdContentCopy size={10} />
                                                             </IconButton>
@@ -677,7 +673,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                                                 sx={{
                                                                     minWidth: 'auto',
                                                                     p: 0,
-                                                                    color: '#7b68ee',
+                                                                    color: 'var(--accent-text)',
                                                                     fontSize: '0.7rem',
                                                                     fontWeight: 900,
                                                                     textTransform: 'none'
@@ -695,13 +691,13 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-                                                        <Typography variant="caption" noWrap sx={{ fontSize: '0.65rem', color: '#999', flex: 1 }}>
+                                                        <Typography variant="caption" noWrap sx={{ fontSize: '0.65rem', color: 'var(--text-muted)', flex: 1 }}>
                                                             {`C: ${format(new Date(ticket.createdAt), "dd/MM/yy HH:mm")} | U: ${format(new Date(ticket.updatedAt), "dd/MM/yy HH:mm")}`}
                                                         </Typography>
                                                         <Button
                                                             size="small"
                                                             onClick={() => showCellValue("TECHNICAL LOG TIMESTAMPS", `CREATED: ${format(new Date(ticket.createdAt), "dd MMM yyyy HH:mm:ss")}\nUPDATED: ${format(new Date(ticket.updatedAt), "dd MMM yyyy HH:mm:ss")}`, "#999")}
-                                                            sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: '#7b68ee' }}
+                                                            sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}
                                                         >
                                                             View
                                                         </Button>
@@ -750,7 +746,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                             variant="contained"
                             onClick={handleSubmit}
                             disabled={loading}
-                            sx={{ borderRadius: 2, fontWeight: 900, bgcolor: '#7b68ee', px: 4, '&:hover': { bgcolor: '#6854d9' } }}
+                            sx={{ borderRadius: 2, fontWeight: 900, bgcolor: 'var(--accent)', px: 4, '&:hover': { bgcolor: '#6854d9' } }}
                         >
                             {loading ? "TRANSMITTING..." : (editingTicket ? "UPDATE RECORD" : "COMMIT TRANSACTION")}
                         </Button>
@@ -853,7 +849,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                     <IconButton onClick={() => setCellViewer({ ...cellViewer, open: false })} size="small"><MdClose /></IconButton>
                 </DialogTitle>
                 <DialogContent>
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(cellViewer.color || '#7b68ee', 0.05), borderRadius: 2, border: `1px solid ${alpha(cellViewer.color || '#7b68ee', 0.2)}` }}>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(cellViewer.color || '#7b68ee', 0.05), borderRadius: 2, border: `1px solid ${alpha(cellViewer.color || 'var(--accent)', 0.2)}` }}>
                         <Typography
                             variant="body2"
                             sx={{

@@ -30,7 +30,7 @@ const ReasonCategoriesDialog = () => {
         <IconButton
           onClick={handleOpen}
           size="small"
-          sx={{ color: '#ffffff', ml: 0.5 }}
+          sx={{ color: 'var(--text)', ml: 0.5 }}
         >
           <Info fontSize="small" />
         </IconButton>
@@ -44,10 +44,10 @@ const ReasonCategoriesDialog = () => {
         fullScreen={isMobile}
         PaperProps={{
           sx: {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid #3d3d3d',
+            border: '1px solid var(--border)',
           },
         }}
       >
@@ -55,11 +55,11 @@ const ReasonCategoriesDialog = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--border)',
           padding: isMobile ? '12px 16px' : '16px 24px',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FaFileAlt color="#7b68ee" size={isMobile ? 16 : 20} />
+            <FaFileAlt color="var(--accent-text)" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontSize: isMobile ? 13 : 20 }}>
               Reason Categories Guide
             </Typography>
@@ -68,9 +68,9 @@ const ReasonCategoriesDialog = () => {
             onClick={handleClose}
             size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'var(--overlay-subtle)',
               }
             }}
           >
@@ -89,7 +89,7 @@ const ReasonCategoriesDialog = () => {
           },
         }}>
           <Box sx={{ mb: 3 }}>
-            <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               Our categorization of customer feedback reasons helps identify patterns and areas for improvement in service delivery. Here&apos;s how we classify each reason type:
             </Typography>
           </Box>
@@ -97,14 +97,14 @@ const ReasonCategoriesDialog = () => {
           {/* Speed */}
           <Box sx={{ mb: 3 }}>
             <Chip label="Speed" sx={{
-              backgroundColor: '#7b68ee',
-              color: '#ffffff',
+              backgroundColor: 'var(--accent)',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Complaints about internet speed not meeting expectations, regardless of actual measured speed.
             </Typography>
           </Box>
@@ -113,13 +113,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Disconnection" sx={{
               backgroundColor: '#f44336',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Reports of complete service interruptions or frequent disconnections.
             </Typography>
           </Box>
@@ -128,13 +128,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="WiFi Coverage" sx={{
               backgroundColor: '#4caf50',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Issues with WiFi signal strength or dead zones in the customer&apos;s premises.
             </Typography>
           </Box>
@@ -143,13 +143,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Positive Feedback" sx={{
               backgroundColor: '#673ab7',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Positive comments about service quality or installation experience.
             </Typography>
           </Box>
@@ -158,13 +158,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Trial Phase" sx={{
               backgroundColor: '#ff9800',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Customer hesitance to provide definitive feedback due to the service being new.
             </Typography>
           </Box>
@@ -173,13 +173,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Slow Internet Performance" sx={{
               backgroundColor: '#009688',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               General complaints about sluggish performance without specific speed metrics.
             </Typography>
           </Box>
@@ -188,13 +188,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Silent Response" sx={{
               backgroundColor: '#607d8b',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Non-committal feedback like &quot;No Comment&quot; or &quot;No Reason&quot;.
             </Typography>
           </Box>
@@ -203,13 +203,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Can't Determine" sx={{
               backgroundColor: '#795548',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Issues where the root cause cannot be determined from available information.
             </Typography>
           </Box>
@@ -218,13 +218,13 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 3 }}>
             <Chip label="Performance Inconsistency" sx={{
               backgroundColor: '#e91e63',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Mixed feedback citing periods of optimal performance alongside unexplained degradation
             </Typography>
           </Box>
@@ -233,29 +233,29 @@ const ReasonCategoriesDialog = () => {
           <Box sx={{ mb: 2 }}>
             <Chip label="Ping" sx={{
               backgroundColor: '#8bc34a',
-              color: '#ffffff',
+              color: 'var(--text)',
               fontSize: isMobile ? '0.8rem' : '0.9rem',
               height: 'auto',
               py: 1,
               mb: 1
             }} />
-            <Typography variant="body1" sx={{ color: '#ffffff' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text)' }}>
               Specific complaints about latency or ping times affecting real-time applications.
             </Typography>
           </Box>
         </DialogContent>
 
         <DialogActions sx={{
-          borderTop: '1px solid #e5e7eb',
+          borderTop: '1px solid var(--border)',
           padding: isMobile ? '8px 16px' : '12px 24px',
         }}>
           <Button
             onClick={handleClose}
             size={isMobile ? "small" : "medium"}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'var(--overlay-subtle)',
               }
             }}
           >

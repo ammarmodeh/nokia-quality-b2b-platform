@@ -68,13 +68,13 @@ const AIHistoryButton = () => {
         onClick={handleOpenHistory}
         startIcon={<HistoryIcon />}
         sx={{
-          color: '#b3b3b3',
-          borderColor: '#3d3d3d',
+          color: 'var(--text-secondary)',
+          borderColor: 'var(--border)',
           marginLeft: '10px',
           textTransform: 'none',
           '&:hover': {
             borderColor: '#b3b3b3',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)'
+            backgroundColor: 'var(--overlay-subtle)'
           }
         }}
       >
@@ -89,21 +89,21 @@ const AIHistoryButton = () => {
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: "#1e1e1e",
-            color: "#ffffff",
-            border: "1px solid #3d3d3d",
+            backgroundColor: "var(--surface)",
+            color: "var(--text)",
+            border: "1px solid var(--border)",
           }
         }}
       >
-        <DialogTitle sx={{ borderBottom: "1px solid #3d3d3d" }}>
+        <DialogTitle sx={{ borderBottom: "1px solid var(--border)" }}>
           Report History
-          <Typography variant="caption" display="block" sx={{ color: "#808080", mt: 0.5 }}>
+          <Typography variant="caption" display="block" sx={{ color: "var(--text-muted)", mt: 0.5 }}>
             Previous 50 generated reports
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
           {historyData.length === 0 ? (
-            <Typography sx={{ p: 3, textAlign: 'center', color: '#808080' }}>
+            <Typography sx={{ p: 3, textAlign: 'center', color: 'var(--text-muted)' }}>
               No report history found.
             </Typography>
           ) : (
@@ -120,21 +120,21 @@ const AIHistoryButton = () => {
                   >
                     <ListItemText
                       primary={
-                        <Typography variant="body1" sx={{ color: "#fff", fontWeight: 500 }}>
+                        <Typography variant="body1" sx={{ color: "var(--text)", fontWeight: 500 }}>
                           {item.periodTitle}
                         </Typography>
                       }
                       secondary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                          <AccessTimeIcon sx={{ fontSize: 14, color: "#808080" }} />
-                          <Typography variant="caption" sx={{ color: "#808080" }}>
+                          <AccessTimeIcon sx={{ fontSize: 14, color: "var(--text-muted)" }} />
+                          <Typography variant="caption" sx={{ color: "var(--text-muted)" }}>
                             {new Date(item.generatedAt).toLocaleString()}
                           </Typography>
                         </Box>
                       }
                     />
                   </ListItem>
-                  <Divider sx={{ borderColor: "#2d2d2d" }} />
+                  <Divider sx={{ borderColor: "var(--border)" }} />
                 </React.Fragment>
               ))}
             </List>

@@ -61,9 +61,9 @@ const SubtaskManager = ({
     success: "#4caf50",
     warning: "#ff9800",
     error: "#f44336",
-    bg: "#1e1e1e",
+    bg: "var(--surface)",
     card: "#2d2d2d",
-    border: "#3d3d3d",
+    border: "var(--border)",
     textPrimary: "#ffffff",
     textSecondary: "#b3b3b3",
   };
@@ -236,7 +236,7 @@ const SubtaskManager = ({
   const renderCheckpointOptions = (subtaskIndex, checkpointIndex, checkpoint, isClosed) => {
     if (SIMPLE_QUESTIONS.includes(checkpoint.name)) {
       return (
-        <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(255,255,255,0.03)", border: `1px solid ${colors.border}` }}>
+        <Box sx={{ mt: 2, p: 2, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}` }}>
           <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
             {checkpoint.options.question}
           </Typography>
@@ -265,7 +265,7 @@ const SubtaskManager = ({
 
       return (
         <Box sx={{ mt: 1 }}>
-          <Box sx={{ p: 2, bgcolor: "rgba(255,255,255,0.03)", border: `1px solid ${colors.border}`, mb: showActionTaken ? 2 : 0 }}>
+          <Box sx={{ p: 2, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, mb: showActionTaken ? 2 : 0 }}>
             <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block', fontWeight: 'bold' }}>
               {checkpoint.options.question}
             </Typography>
@@ -564,7 +564,7 @@ const SubtaskManager = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                         bgcolor: isClosed ? colors.success : inProgress ? colors.primary : colors.bg,
-                        color: "#fff",
+                        color: "var(--text)",
                       }}
                     >
                       <Typography variant="caption" sx={{ fontWeight: "bold" }}>
@@ -719,7 +719,7 @@ const SubtaskManager = ({
                               textTransform: 'none',
                               '&:hover': {
                                 borderColor: colors.textPrimary,
-                                bgcolor: 'rgba(255,255,255,0.05)'
+                                bgcolor: 'var(--overlay-subtle)'
                               }
                             }}
                           >
@@ -738,7 +738,7 @@ const SubtaskManager = ({
                             '&:hover': {
                               bgcolor: isClosed ? colors.textSecondary : colors.primaryDark,
                             },
-                            color: '#fff',
+                            color: 'var(--text)',
                             fontWeight: "bold",
                             textTransform: 'none',
                             boxShadow: 'none',

@@ -131,7 +131,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
     const isFail = status === "Fail" || status === "Not Valid" || status === "Not Available" || status === "Not Existing" || status === "Missing";
     const isWarn = status === "Need Maintenance";
 
-    let color = "#9e9e9e";
+    let color = "var(--text-muted)";
     let bg = "rgba(158,158,158,0.15)";
     if (isPass) {
       color = "#4caf50";
@@ -160,7 +160,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
   };
 
   const sectionIcons = {
-    "1. FDB – Fiber Splicing & Fiber Management": <SensorsIcon sx={{ color: "#7b68ee" }} />,
+    "1. FDB – Fiber Splicing & Fiber Management": <SensorsIcon sx={{ color: "var(--accent-text)" }} />,
     "2. BEP – Outdoor/Indoor Fiber Splicing": <SettingsIcon sx={{ color: "#00bcd4" }} />,
     "3. OTO – Splicing, Fiber Management & Optical Testing": <SpeedIcon sx={{ color: "#ff9800" }} />,
     "4. ONT – Installation, Configuration & Service Activation": <RouterIcon sx={{ color: "#e91e63" }} />,
@@ -183,10 +183,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
 
   // Helper table renderer
   const renderDetailTable = (checkpointsList, section) => (
-    <TableContainer component={Paper} sx={{ bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors?.border || "#3d3d3d"}`, borderRadius: "14px" }}>
+    <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "14px" }}>
       <Table size="small">
         <TableHead>
-          <TableRow sx={{ bgcolor: "rgba(255,255,255,0.04)" }}>
+          <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
             <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700, width: "55%" }}>Checkpoint</TableCell>
             <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700, width: "15%" }}>Result</TableCell>
             <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700, width: "30%" }}>Assessor Observations / Notes</TableCell>
@@ -210,7 +210,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             const isPass = cp.status === "Pass" || scoreVal >= passThreshold;
 
             return (
-              <TableRow key={cpIdx} sx={{ borderBottom: `1px solid ${colors?.border || "#3d3d3d"}` }}>
+              <TableRow key={cpIdx} sx={{ borderBottom: `1px solid ${colors?.border || "var(--border)"}` }}>
                 <TableCell sx={{ color: colors?.textPrimary || "#fff", py: 1.5 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{cp.name}</Typography>
                   {cp.subSection && (
@@ -240,7 +240,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                         size="small"
                         sx={{
                           bgcolor: isPass ? "#4caf50" : "#f44336",
-                          color: "#ffffff",
+                          color: "var(--text)",
                           fontWeight: 800,
                           fontSize: "0.7rem",
                           height: 22,
@@ -326,7 +326,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
           bgcolor: colors?.surface || "#252525",
           color: colors?.textPrimary || "#fff",
           borderRadius: "20px",
-          border: `1px solid ${colors?.border || "#3d3d3d"}`,
+          border: `1px solid ${colors?.border || "var(--border)"}`,
           boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
         },
       }}
@@ -338,8 +338,8 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: `1px solid ${colors?.border || "#3d3d3d"}`,
-          bgcolor: "rgba(255,255,255,0.02)",
+          borderBottom: `1px solid ${colors?.border || "var(--border)"}`,
+          bgcolor: "var(--overlay-subtle)",
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -352,7 +352,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#7b68ee",
+              color: "var(--accent-text)",
             }}
           >
             <SpeedIcon />
@@ -376,7 +376,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             sx={{
               bgcolor: "#2e7d32",
               "&:hover": { bgcolor: "#1b5e20" },
-              color: "#fff",
+              color: "var(--text)",
               fontWeight: 700,
               borderRadius: "10px",
               boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
@@ -392,7 +392,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             sx={{
               bgcolor: "#2e7d32",
               "&:hover": { bgcolor: "#1b5e20" },
-              color: "#fff",
+              color: "var(--text)",
               fontWeight: 700,
               borderRadius: "10px",
               boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
@@ -409,7 +409,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
               borderColor: colors?.border || "#3d3d3d",
               color: colors?.textPrimary || "#fff",
               borderRadius: "10px",
-              "&:hover": { borderColor: "#7b68ee", bgcolor: "rgba(123, 104, 238, 0.1)" },
+              "&:hover": { borderColor: "var(--accent)", bgcolor: "rgba(123, 104, 238, 0.1)" },
             }}
           >
             Print
@@ -427,9 +427,9 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
           <Paper
             sx={{
               p: 3,
-              bgcolor: "rgba(255,255,255,0.02)",
+              bgcolor: "var(--overlay-subtle)",
               borderRadius: "16px",
-              border: `1px solid ${colors?.border || "#3d3d3d"}`,
+              border: `1px solid ${colors?.border || "var(--border)"}`,
             }}
           >
             <Grid container spacing={3} alignItems="center">
@@ -524,12 +524,12 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
           <Paper
             sx={{
               p: 3,
-              bgcolor: "rgba(255,255,255,0.02)",
+              bgcolor: "var(--overlay-subtle)",
               borderRadius: "16px",
-              border: `1px solid ${colors?.border || "#3d3d3d"}`,
+              border: `1px solid ${colors?.border || "var(--border)"}`,
             }}
           >
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: "#7b68ee", display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: "var(--accent-text)", display: "flex", alignItems: "center", gap: 1 }}>
               <SchoolIcon fontSize="small" /> Field Team Safety & Compliance Certifications
             </Typography>
 
@@ -553,7 +553,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                             size="small"
                             sx={{
                               bgcolor: isCertified ? "#4caf50" : "rgba(255,255,255,0.08)",
-                              color: "#ffffff",
+                              color: "var(--text)",
                               fontWeight: 800,
                               fontSize: "0.75rem",
                               height: 22,
@@ -609,7 +609,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                     size="small"
                     sx={{
                       bgcolor: isEqPass ? "#4caf50" : "#f44336",
-                      color: "#ffffff",
+                      color: "var(--text)",
                       fontWeight: 800,
                       fontSize: "0.75rem",
                       px: 0.5,
@@ -618,10 +618,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                 </Stack>
               </Box>
 
-              <TableContainer component={Paper} sx={{ bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors?.border || "#3d3d3d"}`, borderRadius: "14px" }}>
+              <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "14px" }}>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(255,255,255,0.04)" }}>
+                    <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
                       <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Tool / Equipment Item</TableCell>
                       <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Status</TableCell>
                       <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Remarks / Condition</TableCell>
@@ -629,7 +629,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                   </TableHead>
                   <TableBody>
                     {assessment.equipmentChecklist.map((item, idx) => (
-                      <TableRow key={idx} sx={{ borderBottom: `1px solid ${colors?.border || "#3d3d3d"}` }}>
+                      <TableRow key={idx} sx={{ borderBottom: `1px solid ${colors?.border || "var(--border)"}` }}>
                         <TableCell sx={{ color: colors?.textPrimary || "#fff", fontWeight: 600 }}>{item.toolName}</TableCell>
                         <TableCell align="center">{getStatusBadge(item.status)}</TableCell>
                         <TableCell sx={{ color: item.notes ? (colors?.textPrimary || "#fff") : "rgba(255,255,255,0.3)" }}>
@@ -730,7 +730,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                   <Box key={sIdx}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors?.textPrimary || "#fff", display: "flex", alignItems: "center", gap: 1 }}>
-                        {sectionIcons[sec.sectionTitle] || <CheckCircleIcon fontSize="small" sx={{ color: "#7b68ee" }} />}
+                        {sectionIcons[sec.sectionTitle] || <CheckCircleIcon fontSize="small" sx={{ color: "var(--accent-text)" }} />}
                         {sec.sectionTitle}
                       </Typography>
 
@@ -763,7 +763,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                               size="small"
                               sx={{
                                 bgcolor: isSecPass ? "#4caf50" : "#f44336",
-                                color: "#ffffff",
+                                color: "var(--text)",
                                 fontWeight: 800,
                                 fontSize: "0.75rem",
                                 px: 0.5,
@@ -787,7 +787,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                               size="small"
                               sx={{
                                 bgcolor: isSecPass ? "#4caf50" : "#f44336",
-                                color: "#ffffff",
+                                color: "var(--text)",
                                 fontWeight: 800,
                                 fontSize: "0.75rem",
                                 px: 0.5,
@@ -808,8 +808,8 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                               key={group.key}
                               sx={{
                                 p: 2,
-                                bgcolor: "rgba(255,255,255,0.015)",
-                                border: `1px solid rgba(255,255,255,0.08)`,
+                                bgcolor: "var(--overlay-subtle)",
+                                border: `1px solid var(--border)`,
                                 borderRadius: "12px",
                               }}
                             >
@@ -831,8 +831,8 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                               key={group.key}
                               sx={{
                                 p: 2,
-                                bgcolor: "rgba(255,255,255,0.015)",
-                                border: `1px solid rgba(255,255,255,0.08)`,
+                                bgcolor: "var(--overlay-subtle)",
+                                border: `1px solid var(--border)`,
                                 borderRadius: "12px",
                               }}
                             >
@@ -857,7 +857,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: colors?.textPrimary || "#fff" }}>
                     Assessment Checkpoints
                   </Typography>
-                  <TableContainer component={Paper} sx={{ bgcolor: "rgba(255,255,255,0.02)", border: `1px solid ${colors?.border || "#3d3d3d"}`, borderRadius: "14px" }}>
+                  <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "14px" }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow>
@@ -870,7 +870,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                         {assessment.checkpoints.map((cp, idx) => (
                           <TableRow key={idx}>
                             <TableCell sx={{ color: colors?.textPrimary || "#fff" }}>{cp.name}</TableCell>
-                            <TableCell align="center" sx={{ color: "#7b68ee", fontWeight: 700 }}>{cp.score} / 5</TableCell>
+                            <TableCell align="center" sx={{ color: "var(--accent-text)", fontWeight: 700 }}>{cp.score} / 5</TableCell>
                             <TableCell sx={{ color: cp.notes ? (colors?.textPrimary || "#fff") : "rgba(255,255,255,0.3)" }}>{cp.notes || "None"}</TableCell>
                           </TableRow>
                         ))}
@@ -892,7 +892,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                 borderRadius: "16px",
               }}
             >
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#7b68ee", mb: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "var(--accent-text)", mb: 1 }}>
                 Assessor Comprehensive Feedback & Recommendations
               </Typography>
               <Typography variant="body2" sx={{ color: colors?.textPrimary || "#fff", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
@@ -903,8 +903,8 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, borderTop: `1px solid ${colors?.border || "#3d3d3d"}` }}>
-        <Button onClick={onClose} variant="contained" sx={{ bgcolor: "#7b68ee", "&:hover": { bgcolor: "#6a5acd" }, borderRadius: "10px", px: 4 }}>
+      <DialogActions sx={{ p: 3, borderTop: `1px solid ${colors?.border || "var(--border)"}` }}>
+        <Button onClick={onClose} variant="contained" sx={{ bgcolor: "var(--accent)", "&:hover": { bgcolor: "var(--accent-hover)" }, borderRadius: "10px", px: 4 }}>
           Close Report
         </Button>
       </DialogActions>

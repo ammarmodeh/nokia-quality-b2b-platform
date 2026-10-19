@@ -101,7 +101,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           backgroundColor: '#000000',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           borderRadius: isMobile ? 0 : '16px',
-          border: '1px solid #333',
+          border: '1px solid var(--border)',
           margin: 0,
           width: isMobile ? '100%' : '70%',
           maxWidth: '100%'
@@ -110,9 +110,9 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
     >
       <form onSubmit={handleSubmit(handleFormSubmit)}>
         <DialogTitle sx={{
-          backgroundColor: '#111',
-          color: '#ffffff',
-          borderBottom: '1px solid #333',
+          backgroundColor: 'var(--bg)',
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
           padding: isMobile ? '16px 20px' : '20px 32px',
           fontWeight: 700,
           letterSpacing: '-0.5px',
@@ -123,18 +123,18 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           alignItems: 'center',
           gap: 2
         }}>
-          <AccountCircle sx={{ color: '#7b68ee' }} />
+          <AccountCircle sx={{ color: 'var(--accent-text)' }} />
           Edit Team Information
         </DialogTitle>
         <DialogContent sx={{
-          backgroundColor: '#111',
-          color: '#ffffff',
+          backgroundColor: 'var(--bg)',
+          color: 'var(--text)',
           padding: isMobile ? '20px' : '32px',
           '&::-webkit-scrollbar': {
             width: '4px',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: '#333',
+            backgroundColor: 'var(--surface-hover)',
             borderRadius: '2px',
           },
           height: '100%',
@@ -143,7 +143,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           }
         }}>
           {/* Section: Personal Info */}
-          <Typography variant="overline" sx={{ color: '#666', fontWeight: 'bold', mb: 2, display: 'block' }}>
+          <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 'bold', mb: 2, display: 'block' }}>
             Personal Details
           </Typography>
           <Box sx={{
@@ -158,14 +158,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('firstName', { required: 'First name is required' })}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
             <TextField
               label="Second Name"
@@ -173,14 +173,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('secondName')}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
             <TextField
               label="Third Name"
@@ -188,14 +188,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('thirdName')}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
             <TextField
               label="Surname"
@@ -203,19 +203,19 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('surname')}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
           </Box>
 
           {/* Section: Professional Info */}
-          <Typography variant="overline" sx={{ color: '#666', fontWeight: 'bold', mb: 2, display: 'block' }}>
+          <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 'bold', mb: 2, display: 'block' }}>
             Professional Details
           </Typography>
           <Box sx={{
@@ -232,17 +232,17 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('contactNumber', { required: 'Contact number is required' })}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
               InputProps={{
-                startAdornment: <InputAdornment position="start"><Phone sx={{ color: '#666' }} /></InputAdornment>,
-                style: { color: '#ffffff' }
+                startAdornment: <InputAdornment position="start"><Phone sx={{ color: 'var(--text-muted)' }} /></InputAdornment>,
+                style: { color: 'var(--text)' }
               }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
 
             <TextField
@@ -250,17 +250,17 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               variant="outlined"
               {...register('teamCode', { required: 'Team code is required' })}
               helperText="Changing this will automatically regenerate the Quiz Code"
-              FormHelperTextProps={{ sx: { color: '#666' } }}
+              FormHelperTextProps={{ sx: { color: 'var(--text-muted)' } }}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
 
             <Box sx={{ position: 'relative' }}>
@@ -272,7 +272,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                 disabled
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#1a1a1a',
+                    bgcolor: 'var(--bg)',
                     '& fieldset': { borderColor: forceRegenerate ? '#7b68ee' : '#333' },
                     '&.Mui-disabled fieldset': { borderColor: forceRegenerate ? '#7b68ee' : '#222' },
                   },
@@ -299,32 +299,32 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                     </InputAdornment>
                   )
                 }}
-                InputLabelProps={{ style: { color: '#666' }, shrink: true }}
+                InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
               />
             </Box>
 
             <FormControl fullWidth>
-              <InputLabel shrink sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>
+              <InputLabel shrink sx={{ color: 'var(--text-muted)', '&.Mui-focused': { color: 'var(--accent-text)' } }}>
                 Company
               </InputLabel>
               <NativeSelect
                 {...register('teamCompany')}
                 disabled={user.role !== 'Admin'}
                 sx={{
-                  color: '#ffffff',
-                  bgcolor: '#1a1a1a',
-                  border: '1px solid #333',
+                  color: 'var(--text)',
+                  bgcolor: 'var(--bg)',
+                  border: '1px solid var(--border)',
                   borderRadius: '4px',
                   pl: 2,
                   py: 0.5,
-                  '&:hover': { border: '1px solid #7b68ee' },
+                  '&:hover': { border: '1px solid var(--accent)' },
                   '&:before': { display: 'none' },
                   '&:after': { display: 'none' },
-                  '& .MuiNativeSelect-icon': { color: '#7b68ee' },
+                  '& .MuiNativeSelect-icon': { color: 'var(--accent-text)' },
                 }}
               >
                 {fieldTeamsCompany.map((list, index) => (
-                  <option key={index} value={list} style={{ backgroundColor: '#111', color: '#fff' }}>
+                  <option key={index} value={list} style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>
                     {list}
                   </option>
                 ))}
@@ -333,7 +333,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           </Box>
 
           {/* Section: Device Info */}
-          <Typography variant="overline" sx={{ color: '#666', fontWeight: 'bold', mb: 2, display: 'block' }}>
+          <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: 'bold', mb: 2, display: 'block' }}>
             Device Information
           </Typography>
           <Box sx={{
@@ -347,14 +347,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('fsmSerialNumber')}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
             <TextField
               label="Laptop Serial Number"
@@ -362,48 +362,48 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('laptopSerialNumber')}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
-                  '&:hover fieldset': { borderColor: '#7b68ee' },
-                  '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
+                  '&:hover fieldset': { borderColor: 'var(--accent)' },
+                  '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
           </Box>
 
           {/* Section: Employment & Safety Certifications */}
-          <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
+          <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
             Employment & Safety Certifications
           </Typography>
           <Box sx={{ mb: 3 }}>
             <FormControl fullWidth sx={{ mb: 2.5 }}>
-              <InputLabel shrink sx={{ color: '#888', '&.Mui-focused': { color: '#7b68ee' } }}>
+              <InputLabel shrink sx={{ color: 'var(--text-muted)', '&.Mui-focused': { color: 'var(--accent-text)' } }}>
                 Employment Type
               </InputLabel>
               <NativeSelect
                 {...register('employmentType')}
                 sx={{
-                  color: '#ffffff',
-                  bgcolor: '#1a1a1a',
-                  border: '1px solid #333',
+                  color: 'var(--text)',
+                  bgcolor: 'var(--bg)',
+                  border: '1px solid var(--border)',
                   borderRadius: '4px',
                   pl: 2,
                   py: 0.5,
-                  '&:hover': { border: '1px solid #7b68ee' },
+                  '&:hover': { border: '1px solid var(--accent)' },
                   '&:before': { display: 'none' },
                   '&:after': { display: 'none' },
-                  '& .MuiNativeSelect-icon': { color: '#7b68ee' },
+                  '& .MuiNativeSelect-icon': { color: 'var(--accent-text)' },
                 }}
               >
-                <option value="Subcontractor" style={{ backgroundColor: '#111', color: '#fff' }}>Subcontractor (Partner)</option>
-                <option value="Employee" style={{ backgroundColor: '#111', color: '#fff' }}>Direct Employee</option>
+                <option value="Subcontractor" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Subcontractor (Partner)</option>
+                <option value="Employee" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Direct Employee</option>
               </NativeSelect>
             </FormControl>
 
-            <Box sx={{ bgcolor: '#161616', p: 2, borderRadius: 2, border: '1px solid #282828' }}>
-              <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1.5, display: 'block' }}>
+            <Box sx={{ bgcolor: 'var(--bg)', p: 2, borderRadius: 2, border: '1px solid #282828' }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mb: 1.5, display: 'block' }}>
                 EXPERIENCE DURATION (YEARS / MONTHS / DAYS)
               </Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
@@ -415,14 +415,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                   {...register('experienceYears')}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#1a1a1a',
-                      '& fieldset': { borderColor: '#333' },
-                      '&:hover fieldset': { borderColor: '#7b68ee' },
-                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
+                      '&:hover fieldset': { borderColor: 'var(--accent)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                     },
                   }}
-                  InputProps={{ style: { color: '#ffffff', textAlign: 'center' } }}
-                  InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                  InputProps={{ style: { color: 'var(--text)', textAlign: 'center' } }}
+                  InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
                 />
                 <TextField
                   label="Months"
@@ -432,14 +432,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                   {...register('experienceMonths')}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#1a1a1a',
-                      '& fieldset': { borderColor: '#333' },
-                      '&:hover fieldset': { borderColor: '#7b68ee' },
-                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
+                      '&:hover fieldset': { borderColor: 'var(--accent)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                     },
                   }}
-                  InputProps={{ style: { color: '#ffffff', textAlign: 'center' } }}
-                  InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                  InputProps={{ style: { color: 'var(--text)', textAlign: 'center' } }}
+                  InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
                 />
                 <TextField
                   label="Days"
@@ -449,21 +449,21 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                   {...register('experienceDays')}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: '#1a1a1a',
-                      '& fieldset': { borderColor: '#333' },
-                      '&:hover fieldset': { borderColor: '#7b68ee' },
-                      '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                      bgcolor: 'var(--bg)',
+                      '& fieldset': { borderColor: 'var(--border)' },
+                      '&:hover fieldset': { borderColor: 'var(--accent)' },
+                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                     },
                   }}
-                  InputProps={{ style: { color: '#ffffff', textAlign: 'center' } }}
-                  InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                  InputProps={{ style: { color: 'var(--text)', textAlign: 'center' } }}
+                  InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
                 />
               </Box>
             </Box>
           </Box>
 
-          <Box sx={{ bgcolor: '#161616', p: 2, borderRadius: 2, border: '1px solid #282828', mb: 3 }}>
-            <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 700, mb: 1.5, display: 'block' }}>
+          <Box sx={{ bgcolor: 'var(--bg)', p: 2, borderRadius: 2, border: '1px solid #282828', mb: 3 }}>
+            <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mb: 1.5, display: 'block' }}>
               SAFETY & COMPLIANCE CERTIFICATES
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 1.5 }}>
@@ -475,14 +475,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                 { id: 'certificates.ra', label: 'RA – Risk Assessment' },
                 { id: 'certificates.wah', label: 'WAH – Work at Height' },
               ].map((cert) => (
-                <Box key={cert.id} sx={{ display: 'flex', alignItems: 'center', bgcolor: '#111', p: 1, borderRadius: 1, border: '1px solid #222' }}>
+                <Box key={cert.id} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'var(--bg)', p: 1, borderRadius: 1, border: '1px solid #222' }}>
                   <input
                     type="checkbox"
                     {...register(cert.id)}
                     id={`edit-${cert.id}`}
                     style={{ marginRight: '10px', accentColor: '#7b68ee', transform: 'scale(1.2)' }}
                   />
-                  <label htmlFor={`edit-${cert.id}`} style={{ color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}>
+                  <label htmlFor={`edit-${cert.id}`} style={{ color: 'var(--text)', fontSize: '0.85rem', cursor: 'pointer' }}>
                     {cert.label}
                   </label>
                 </Box>
@@ -491,14 +491,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           </Box>
 
           {/* Section: Role Expertise */}
-          <Typography variant="overline" sx={{ color: '#7b68ee', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
+          <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', mt: 4, mb: 2, display: 'block' }}>
             Role Expertise
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 4 }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 3, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#1a1a1a', p: 1.5, borderRadius: 1, border: '1px solid #333' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'var(--bg)', p: 1.5, borderRadius: 1, border: '1px solid var(--border)' }}>
                 <input type="checkbox" {...register('isNewToInstallation')} id="edit-new-install" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
-                <label htmlFor="edit-new-install" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
+                <label htmlFor="edit-new-install" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
               </Box>
               <TextField
                 label="Installation Start Date"
@@ -508,21 +508,21 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                 {...register('installationStartDate')}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#1a1a1a',
-                    '& fieldset': { borderColor: '#333' },
-                    '&:hover fieldset': { borderColor: '#7b68ee' },
-                    '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                    bgcolor: 'var(--bg)',
+                    '& fieldset': { borderColor: 'var(--border)' },
+                    '&:hover fieldset': { borderColor: 'var(--accent)' },
+                    '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                   },
                 }}
-                InputProps={{ style: { color: '#ffffff' } }}
-                InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                InputProps={{ style: { color: 'var(--text)' } }}
+                InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
               />
             </Box>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 3, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#1a1a1a', p: 1.5, borderRadius: 1, border: '1px solid #333' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'var(--bg)', p: 1.5, borderRadius: 1, border: '1px solid var(--border)' }}>
                 <input type="checkbox" {...register('isNewToActivation')} id="edit-new-activation" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
-                <label htmlFor="edit-new-activation" style={{ color: '#fff', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
+                <label htmlFor="edit-new-activation" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
               </Box>
               <TextField
                 label="Activation Start Date"
@@ -532,17 +532,17 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                 {...register('activationStartDate')}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#1a1a1a',
-                    '& fieldset': { borderColor: '#333' },
-                    '&:hover fieldset': { borderColor: '#7b68ee' },
-                    '&.Mui-focused fieldset': { borderColor: '#7b68ee' },
+                    bgcolor: 'var(--bg)',
+                    '& fieldset': { borderColor: 'var(--border)' },
+                    '&:hover fieldset': { borderColor: 'var(--accent)' },
+                    '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
                   },
                 }}
-                InputProps={{ style: { color: '#ffffff' } }}
-                InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+                InputProps={{ style: { color: 'var(--text)' } }}
+                InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
               />
             </Box>
-            <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic' }}>
+            <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
               * If not checked, team is considered a Rich Expert for that role.
             </Typography>
           </Box>
@@ -564,23 +564,23 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               {...register('escalationAction')}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: '#1a1a1a',
-                  '& fieldset': { borderColor: '#333' },
+                  bgcolor: 'var(--bg)',
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#ec4899' },
                   '&.Mui-focused fieldset': { borderColor: '#ec4899' },
                 },
               }}
-              InputProps={{ style: { color: '#ffffff' } }}
-              InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+              InputProps={{ style: { color: 'var(--text)' } }}
+              InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
             <FormControl fullWidth variant="outlined">
-              <InputLabel shrink style={{ color: '#888' }}>Escalation Status</InputLabel>
+              <InputLabel shrink style={{ color: 'var(--text-muted)' }}>Escalation Status</InputLabel>
               <NativeSelect
                 {...register('escalationStatus')}
                 sx={{
-                  bgcolor: '#1a1a1a',
-                  color: '#fff',
-                  border: '1px solid #333',
+                  bgcolor: 'var(--bg)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
                   borderRadius: '4px',
                   pl: 2,
                   py: 0.5,
@@ -591,7 +591,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
                 }}
               >
                 {['Pending', 'Under Review', 'Action Taken', 'Warning Issued', 'Training Assigned', '1 Week Suspension', '1 Month Suspension', 'Termination', 'Completed', 'Closed', 'Waived', 'Compliant'].map((st, idx) => (
-                  <option key={idx} value={st} style={{ backgroundColor: '#111', color: '#fff' }}>
+                  <option key={idx} value={st} style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>
                     {st}
                   </option>
                 ))}
@@ -607,14 +607,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
             sx={{
               mb: 2,
               '& .MuiOutlinedInput-root': {
-                bgcolor: '#1a1a1a',
-                '& fieldset': { borderColor: '#333' },
+                bgcolor: 'var(--bg)',
+                '& fieldset': { borderColor: 'var(--border)' },
                 '&:hover fieldset': { borderColor: '#ec4899' },
                 '&.Mui-focused fieldset': { borderColor: '#ec4899' },
               },
             }}
-            InputProps={{ style: { color: '#ffffff' } }}
-            InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+            InputProps={{ style: { color: 'var(--text)' } }}
+            InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
           />
           <TextField
             label="Escalation & Policy Notes"
@@ -627,14 +627,14 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
             sx={{
               mb: 3,
               '& .MuiOutlinedInput-root': {
-                bgcolor: '#1a1a1a',
-                '& fieldset': { borderColor: '#333' },
+                bgcolor: 'var(--bg)',
+                '& fieldset': { borderColor: 'var(--border)' },
                 '&:hover fieldset': { borderColor: '#ec4899' },
                 '&.Mui-focused fieldset': { borderColor: '#ec4899' },
               },
             }}
-            InputProps={{ style: { color: '#ffffff' } }}
-            InputLabelProps={{ style: { color: '#888' }, shrink: true }}
+            InputProps={{ style: { color: 'var(--text)' } }}
+            InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
           />
 
           {errorMessage && (
@@ -645,8 +645,8 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
 
         </DialogContent>
         <DialogActions sx={{
-          backgroundColor: '#111',
-          borderTop: '1px solid #333',
+          backgroundColor: 'var(--bg)',
+          borderTop: '1px solid var(--border)',
           padding: isMobile ? '16px' : '20px 32px',
           position: 'sticky',
           bottom: 0,
@@ -655,8 +655,8 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           <Button
             onClick={onClose}
             sx={{
-              color: '#888',
-              '&:hover': { color: '#fff', bgcolor: '#ffffff10' }
+              color: 'var(--text-muted)',
+              '&:hover': { color: '#fff', bgcolor: 'var(--overlay-subtle)' }
             }}
           >
             Cancel
@@ -667,12 +667,12 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
             disableElevation
             disabled={loading}
             sx={{
-              backgroundColor: '#7b68ee',
-              color: '#fff',
+              backgroundColor: 'var(--accent)',
+              color: 'var(--text)',
               px: 4,
               py: 1,
               '&:hover': { backgroundColor: '#6652e0' },
-              '&.Mui-disabled': { backgroundColor: '#333', color: '#666' }
+              '&.Mui-disabled': { backgroundColor: 'var(--surface-hover)', color: 'var(--text-muted)' }
             }}
           >
             {loading ? 'Saving Changes...' : 'Save Changes'}

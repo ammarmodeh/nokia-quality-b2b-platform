@@ -249,29 +249,29 @@ const UserNotesDrawer = ({ open, onClose }) => {
       PaperProps={{
         sx: {
           width: { xs: "100%", sm: "450px" },
-          backgroundColor: "#121212",
-          color: "#ffffff",
-          borderLeft: "1px solid #333",
+          backgroundColor: "var(--bg)",
+          color: "var(--text)",
+          borderLeft: "1px solid var(--border)",
           backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))"
         }
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header */}
-        <Box sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #333" }}>
+        <Box sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)" }}>
           <Stack direction="row" alignItems="center" spacing={1}>
-            <MdEditNote size={24} color="#7b68ee" />
+            <MdEditNote size={24} color="var(--accent-text)" />
             <Typography variant="h6" fontWeight="bold">
               {showArchived ? "Archived Notes" : "Personal Notes"}
             </Typography>
           </Stack>
-          <IconButton onClick={onClose} sx={{ color: "#888" }}>
+          <IconButton onClick={onClose} sx={{ color: "var(--text-muted)" }}>
             <MdClose size={24} />
           </IconButton>
         </Box>
 
         {/* Toolbar */}
-        <Box sx={{ p: 2, borderBottom: "1px solid #333", backgroundColor: "rgba(0,0,0,0.2)" }}>
+        <Box sx={{ p: 2, borderBottom: "1px solid var(--border)", backgroundColor: "rgba(0,0,0,0.2)" }}>
           <Stack spacing={2}>
             <TextField
               fullWidth
@@ -282,10 +282,10 @@ const UserNotesDrawer = ({ open, onClose }) => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <MdOutlineSearch color="#7b68ee" />
+                    <MdOutlineSearch color="var(--accent-text)" />
                   </InputAdornment>
                 ),
-                sx: { borderRadius: 3, backgroundColor: "#1e1e1e", color: "white", "& .MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }
+                sx: { borderRadius: 3, backgroundColor: "var(--surface)", color: "var(--text)", "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" } }
               }}
             />
 
@@ -298,7 +298,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
                     onClick={() => setFilterCategory(cat)}
                     sx={{
                       backgroundColor: filterCategory === cat ? "#7b68ee" : "#2d2d2d",
-                      color: "white",
+                      color: "var(--text)",
                       "&:hover": { backgroundColor: filterCategory === cat ? "#8b78ee" : "#3d3d2d" },
                       borderRadius: 1.5,
                       fontWeight: filterCategory === cat ? "bold" : "normal"
@@ -307,10 +307,10 @@ const UserNotesDrawer = ({ open, onClose }) => {
                   />
                 ))}
               </Stack>
-              <IconButton onClick={(e) => setFilterMenuAnchor(e.currentTarget)} size="small" sx={{ color: "#888" }}>
+              <IconButton onClick={(e) => setFilterMenuAnchor(e.currentTarget)} size="small" sx={{ color: "var(--text-muted)" }}>
                 <MdFilterList />
               </IconButton>
-              <IconButton onClick={(e) => setSortMenuAnchor(e.currentTarget)} size="small" sx={{ color: "#888" }}>
+              <IconButton onClick={(e) => setSortMenuAnchor(e.currentTarget)} size="small" sx={{ color: "var(--text-muted)" }}>
                 <MdSort />
               </IconButton>
             </Stack>
@@ -320,7 +320,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
               fullWidth
               startIcon={<MdAdd />}
               onClick={() => { resetForm(); setEditDialogOpen(true); }}
-              sx={{ backgroundColor: "#7b68ee", "&:hover": { backgroundColor: "#8b78ee" }, borderRadius: 2, textTransform: "none", fontWeight: "bold" }}
+              sx={{ backgroundColor: "var(--accent)", "&:hover": { backgroundColor: "#8b78ee" }, borderRadius: 2, textTransform: "none", fontWeight: "bold" }}
             >
               Add New Note
             </Button>
@@ -328,7 +328,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
         </Box>
 
         {/* Notes List */}
-        <Box sx={{ flex: 1, overflowY: "auto", p: 2, backgroundColor: "#121212" }}>
+        <Box sx={{ flex: 1, overflowY: "auto", p: 2, backgroundColor: "var(--bg)" }}>
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" height="100%"><CircularProgress size={30} /></Box>
           ) : filteredAndSortedNotes.length === 0 ? (
@@ -343,9 +343,9 @@ const UserNotesDrawer = ({ open, onClose }) => {
                 <Grid item xs={12} key={note._id}>
                   <Card sx={{
                     backgroundColor: note.color || "#1e1e1e",
-                    color: "white",
+                    color: "var(--text)",
                     borderRadius: 3,
-                    border: "1px solid rgba(255,255,255,0.05)",
+                    border: "1px solid var(--border)",
                     position: "relative",
                     overflow: "hidden",
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -374,14 +374,14 @@ const UserNotesDrawer = ({ open, onClose }) => {
                         <Chip
                           label={note.category}
                           size="small"
-                          sx={{ height: 20, fontSize: "10px", backgroundColor: "rgba(255,255,255,0.1)", color: "white", fontWeight: "bold" }}
+                          sx={{ height: 20, fontSize: "10px", backgroundColor: "var(--overlay-subtle)", color: "white", fontWeight: "bold" }}
                         />
                         {note.tags.map(tag => (
                           <Chip
                             key={tag}
                             label={`#${tag}`}
                             size="small"
-                            sx={{ height: 20, fontSize: "10px", backgroundColor: "rgba(123, 104, 238, 0.1)", color: "#7b68ee", border: "1px solid rgba(123, 104, 238, 0.2)" }}
+                            sx={{ height: 20, fontSize: "10px", backgroundColor: "rgba(123, 104, 238, 0.1)", color: "var(--accent-text)", border: "1px solid rgba(123, 104, 238, 0.2)" }}
                           />
                         ))}
                       </Stack>
@@ -430,9 +430,9 @@ const UserNotesDrawer = ({ open, onClose }) => {
         anchorEl={filterMenuAnchor}
         open={Boolean(filterMenuAnchor)}
         onClose={() => setFilterMenuAnchor(null)}
-        PaperProps={{ sx: { backgroundColor: "#1e1e1e", color: "white", border: "1px solid #333", width: 200 } }}
+        PaperProps={{ sx: { backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", width: 200 } }}
       >
-        <Typography variant="caption" sx={{ px: 2, py: 1, display: "block", color: "#888", fontWeight: "bold" }}>Priority</Typography>
+        <Typography variant="caption" sx={{ px: 2, py: 1, display: "block", color: "var(--text-muted)", fontWeight: "bold" }}>Priority</Typography>
         {["All", "High", "Medium", "Low"].map(p => (
           <MenuItem
             key={p}
@@ -442,7 +442,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
             {p}
           </MenuItem>
         ))}
-        <hr style={{ border: "0", borderTop: "1px solid #333", margin: "8px 0" }} />
+        <hr style={{ border: "0", borderTop: "1px solid var(--border)", margin: "8px 0" }} />
         <MenuItem
           onClick={() => { setShowArchived(!showArchived); setFilterMenuAnchor(null); }}
           sx={{ fontSize: "14px" }}
@@ -459,9 +459,9 @@ const UserNotesDrawer = ({ open, onClose }) => {
         anchorEl={sortMenuAnchor}
         open={Boolean(sortMenuAnchor)}
         onClose={() => setSortMenuAnchor(null)}
-        PaperProps={{ sx: { backgroundColor: "#1e1e1e", color: "white", border: "1px solid #333", width: 200 } }}
+        PaperProps={{ sx: { backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", width: 200 } }}
       >
-        <Typography variant="caption" sx={{ px: 2, py: 1, display: "block", color: "#888", fontWeight: "bold" }}>Sort By</Typography>
+        <Typography variant="caption" sx={{ px: 2, py: 1, display: "block", color: "var(--text-muted)", fontWeight: "bold" }}>Sort By</Typography>
         {[
           { label: "Newest Updated", value: "newest" },
           { label: "Oldest Created", value: "oldest" },
@@ -483,7 +483,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
         open={editDialogOpen}
         onClose={() => setEditDialogOpen(false)}
         PaperProps={{
-          sx: { backgroundColor: "#1a1a1a", color: "white", borderRadius: 4, width: "100%", maxWidth: "500px", border: "1px solid #333" }
+          sx: { backgroundColor: "var(--bg)", color: "var(--text)", borderRadius: 4, width: "100%", maxWidth: "500px", border: "1px solid var(--border)" }
         }}
       >
         <DialogTitle sx={{ fontWeight: "bold" }}>{currentNote ? "Update Note" : "Create New Note"}</DialogTitle>
@@ -496,7 +496,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
               size="small"
               value={noteForm.title}
               onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
-              sx={{ input: { color: "white" }, "& .MuiInputLabel-root": { color: "#888" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "#333" } } }}
+              sx={{ input: { color: "var(--text)" }, "& .MuiInputLabel-root": { color: "var(--text-muted)" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "var(--border)" } } }}
             />
             <TextField
               label="Content"
@@ -506,7 +506,7 @@ const UserNotesDrawer = ({ open, onClose }) => {
               variant="outlined"
               value={noteForm.content}
               onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
-              sx={{ textarea: { color: "white" }, "& .MuiInputLabel-root": { color: "#888" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "#333" } } }}
+              sx={{ textarea: { color: "var(--text)" }, "& .MuiInputLabel-root": { color: "var(--text-muted)" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "var(--border)" } } }}
             />
             <Grid container spacing={2}>
               <Grid item xs={6}>
@@ -516,17 +516,17 @@ const UserNotesDrawer = ({ open, onClose }) => {
                   size="small"
                   value={noteForm.category}
                   onChange={(e) => setNoteForm({ ...noteForm, category: e.target.value })}
-                  sx={{ input: { color: "white" }, "& .MuiInputLabel-root": { color: "#888" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "#333" } } }}
+                  sx={{ input: { color: "var(--text)" }, "& .MuiInputLabel-root": { color: "var(--text-muted)" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "var(--border)" } } }}
                 />
               </Grid>
               <Grid item xs={6}>
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ color: "#888" }}>Priority</InputLabel>
+                  <InputLabel sx={{ color: "var(--text-muted)" }}>Priority</InputLabel>
                   <Select
                     value={noteForm.priority}
                     label="Priority"
                     onChange={(e) => setNoteForm({ ...noteForm, priority: e.target.value })}
-                    sx={{ color: "white", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                    sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" } }}
                   >
                     <MenuItem value="Low">Low</MenuItem>
                     <MenuItem value="Medium">Medium</MenuItem>
@@ -542,10 +542,10 @@ const UserNotesDrawer = ({ open, onClose }) => {
               placeholder="e.g. todo, urgent, feedback"
               value={noteForm.tags}
               onChange={(e) => setNoteForm({ ...noteForm, tags: e.target.value })}
-              sx={{ input: { color: "white" }, "& .MuiInputLabel-root": { color: "#888" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "#333" } } }}
+              sx={{ input: { color: "var(--text)" }, "& .MuiInputLabel-root": { color: "var(--text-muted)" }, "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: "var(--border)" } } }}
             />
             <Box>
-              <Typography variant="caption" sx={{ color: "#888", display: "block", mb: 1, fontWeight: "bold" }}>Note Color</Typography>
+              <Typography variant="caption" sx={{ color: "var(--text-muted)", display: "block", mb: 1, fontWeight: "bold" }}>Note Color</Typography>
               <Stack direction="row" spacing={1.5} flexWrap="wrap">
                 {NOTE_COLORS.map(color => (
                   <Box
@@ -568,8 +568,8 @@ const UserNotesDrawer = ({ open, onClose }) => {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 0 }}>
-          <Button onClick={() => setEditDialogOpen(false)} sx={{ color: "#888", textTransform: "none" }}>Cancel</Button>
-          <Button onClick={handleCreateOrUpdateNote} variant="contained" sx={{ backgroundColor: "#7b68ee", "&:hover": { backgroundColor: "#8b78ee" }, borderRadius: 2, px: 4, textTransform: "none", fontWeight: "bold" }}>
+          <Button onClick={() => setEditDialogOpen(false)} sx={{ color: "var(--text-muted)", textTransform: "none" }}>Cancel</Button>
+          <Button onClick={handleCreateOrUpdateNote} variant="contained" sx={{ backgroundColor: "var(--accent)", "&:hover": { backgroundColor: "#8b78ee" }, borderRadius: 2, px: 4, textTransform: "none", fontWeight: "bold" }}>
             {currentNote ? "Update Note" : "Create Note"}
           </Button>
         </DialogActions>

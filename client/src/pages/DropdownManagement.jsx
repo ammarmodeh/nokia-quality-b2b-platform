@@ -161,7 +161,7 @@ const DraggableRow = ({ option, index, moveRow, handleOpenDialog, handleDelete, 
       data-handler-id={handlerId}
       sx={{
         bgcolor: isDragging ? 'rgba(255,255,255,0.05)' : 'inherit',
-        '&:hover': { bgcolor: '#2a2a2a' },
+        '&:hover': { bgcolor: 'var(--surface)' },
         opacity: isDragging ? 0.5 : 1,
         cursor: 'move'
       }}
@@ -223,7 +223,7 @@ const DropdownManagement = () => {
   const colors = {
     background: 'transparent',
     surface: '#252525',
-    border: '#3d3d3d',
+    border: 'var(--border)',
     primary: '#7b68ee',
     textPrimary: '#ffffff',
     textSecondary: '#b3b3b3',
@@ -371,8 +371,8 @@ const DropdownManagement = () => {
                 expanded={isExpanded}
                 onChange={handleAccordionChange(panelId)}
                 sx={{
-                  backgroundColor: '#2d2d2d',
-                  color: '#fff',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--text)',
                   border: `1px solid ${hasActiveTab ? colors.primary : colors.border}`,
                   mb: 2,
                   borderRadius: '8px !important',
@@ -398,7 +398,7 @@ const DropdownManagement = () => {
                     scrollButtons="auto"
                     sx={{
                       borderBottom: `1px solid ${colors.border}`,
-                      bgcolor: '#252525',
+                      bgcolor: 'var(--surface)',
                       '& .MuiTabs-indicator': { bgcolor: colors.primary },
                       '& .MuiTab-root': { color: colors.textSecondary, py: 2 },
                       '& .Mui-selected': { color: colors.primary },
@@ -435,7 +435,7 @@ const DropdownManagement = () => {
                             variant="contained"
                             startIcon={<AddIcon />}
                             onClick={() => handleOpenDialog()}
-                            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+                            sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: 'var(--accent-hover)' } }}
                           >
                             Add New Option
                           </Button>
@@ -660,7 +660,7 @@ const DropdownManagement = () => {
               onClick={handleSubmit}
               variant="contained"
               disabled={!formData.value || !formData.label}
-              sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: '#6a5acd' } }}
+              sx={{ bgcolor: colors.primary, '&:hover': { bgcolor: 'var(--accent-hover)' } }}
             >
               {editingOption ? 'Update' : 'Add'}
             </Button>

@@ -114,7 +114,7 @@ const TeamViolationTrend = ({ tasks, selectedWeek, settings = {} }) => {
 
   if (!currentTrend) return (
     <Box p={4} textAlign="center">
-      <Typography color="#b3b3b3">No violation data available for the selected week.</Typography>
+      <Typography color="var(--text-secondary)">No violation data available for the selected week.</Typography>
     </Box>
   );
 
@@ -123,7 +123,7 @@ const TeamViolationTrend = ({ tasks, selectedWeek, settings = {} }) => {
     error: "#f44336",
     success: "#4caf50",
     textSecondary: "#b3b3b3",
-    border: "#3d3d3d",
+    border: "var(--border)",
     surface: "#252525"
   };
 
@@ -146,7 +146,7 @@ const TeamViolationTrend = ({ tasks, selectedWeek, settings = {} }) => {
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: colors.textSecondary }} />
                 <RechartsTooltip
-                  contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, color: '#fff' }}
+                  contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, color: 'var(--text)' }}
                   cursor={{ fill: 'rgba(123, 104, 238, 0.05)' }}
                 />
                 <Bar dataKey="currentWeekViolations" name="Violations" radius={[4, 4, 0, 0]} barSize={30}>
@@ -199,7 +199,7 @@ const TeamViolationTrend = ({ tasks, selectedWeek, settings = {} }) => {
                 '& .MuiDataGrid-footerContainer': {
                   borderTop: `1px solid ${colors.border}`
                 },
-                color: '#fff'
+                color: 'var(--text)'
               }}
             />
           </Box>

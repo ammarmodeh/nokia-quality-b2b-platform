@@ -279,8 +279,8 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
         fullScreen
         PaperProps={{
           sx: {
-            background: 'linear-gradient(135deg, #141414 0%, #ffffff 100%)',
-            color: '#ffffff',
+            background: 'linear-gradient(135deg, var(--bg) 0%, #ffffff 100%)',
+            color: 'var(--text)',
             border: '1px solid #f3f4f6',
             boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           }
@@ -294,7 +294,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                 <MdPsychology size={22} color="#00e5ff" /> {/* Reduced icon size */}
                 {title || "QoS Executive Report"}
               </Typography>
-              <IconButton onClick={onClose} sx={{ color: '#aaa', p: 0.5 }}> {/* Reduced padding */}
+              <IconButton onClick={onClose} sx={{ color: 'var(--text-secondary)', p: 0.5 }}> {/* Reduced padding */}
                 <MdClose size={20} /> {/* Reduced icon size */}
               </IconButton>
             </Box>
@@ -356,7 +356,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
               >
                 <Box
                   sx={{
-                    backgroundColor: '#2d2d2d',
+                    backgroundColor: 'var(--surface)',
                     border: '1px solid #f3f4f6',
                     borderRadius: 1, // Reduced border radius
                     p: { xs: 1.5, sm: 2 }, // Reduced padding
@@ -368,18 +368,18 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     '& h1, & h2, & h3': {
                       color: '#00e5ff',
                       mt: 2, mb: 1, fontWeight: 600, // Reduced margins
-                      borderBottom: '1px dashed #e5e7eb', pb: 0.5 // Reduced padding
+                      borderBottom: '1px dashed var(--border)', pb: 0.5 // Reduced padding
                     },
                     // Specific text size reduction for the Markdown content
                     '& h1': { fontSize: '1.5rem' },
                     '& h2': { fontSize: '1.25rem' },
                     '& h3': { fontSize: '1.1rem' },
-                    '& strong': { color: '#ffffff', fontWeight: 700 },
+                    '& strong': { color: 'var(--text)', fontWeight: 700 },
                     '& ul, & ol': { pl: 2.5, my: 1.5 }, // Reduced padding/margin
                     '& li': { mb: 0.5 }, // Reduced margin
                     '& table': { width: '100%', borderCollapse: 'collapse', my: 1.5, fontSize: '0.85rem' }, // Reduced size
-                    '& th, & td': { border: '1px solid #3d3d3d', p: 1, textAlign: 'left' }, // Reduced padding
-                    '& th': { backgroundColor: '#2d2d2d' }
+                    '& th, & td': { border: '1px solid var(--border)', p: 1, textAlign: 'left' }, // Reduced padding
+                    '& th': { backgroundColor: 'var(--surface)' }
                   }}
                 >
                   <Typography component="div" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -412,13 +412,13 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     overflowY: 'auto',
                     mb: 1, // Reduced margin
                     p: 1,
-                    background: '#2d2d2d',
+                    background: 'var(--surface)',
                     borderRadius: 1,
-                    border: '1px solid #3d3d3d',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   {chatHistory.length === 0 ? (
-                    <Typography color="#777" p={1.5} textAlign="center" variant="caption"> {/* Reduced Typography variant/padding */}
+                    <Typography color="var(--text-muted)" p={1.5} textAlign="center" variant="caption"> {/* Reduced Typography variant/padding */}
                       Ask me about any term, metric, or implication in the report!
                     </Typography>
                   ) : (
@@ -466,8 +466,8 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     sx={{
                       mr: 1,
                       '& .MuiOutlinedInput-root': {
-                        color: '#ffffff',
-                        '& fieldset': { borderColor: '#555' },
+                        color: 'var(--text)',
+                        '& fieldset': { borderColor: 'var(--border)' },
                         '&:hover fieldset': { borderColor: '#00e5ff' },
                         '&.Mui-focused fieldset': { borderColor: '#00e5ff' },
                       },
@@ -512,9 +512,9 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                     rel="noopener noreferrer"
                     underline="none"
                     sx={{
-                      display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#252525', color: '#ccc',
-                      p: 1.5, borderRadius: 1, border: '1px solid #3d3d3d', transition: 'all 0.2s', // Reduced padding/radius
-                      '&:hover': { bgcolor: '#303030', borderColor: '#00e5ff', color: '#ffffff', transform: 'translateY(-1px)', boxShadow: '0 2px 6px rgba(0,229,255,0.15)' }, // Reduced transform/shadow
+                      display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'var(--surface)', color: 'var(--text-secondary)',
+                      p: 1.5, borderRadius: 1, border: '1px solid var(--border)', transition: 'all 0.2s', // Reduced padding/radius
+                      '&:hover': { bgcolor: 'var(--surface)', borderColor: '#00e5ff', color: '#ffffff', transform: 'translateY(-1px)', boxShadow: '0 2px 6px rgba(0,229,255,0.15)' }, // Reduced transform/shadow
                     }}
                   >
                     <MdOpenInNew size={16} color="#00e5ff" /> {/* Reduced icon size */}
@@ -538,7 +538,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
             flexDirection: { xs: 'column', sm: 'row' },
             gap: 1.5 // Reduced gap
           }}>
-            <Typography variant="caption" color="#777" flexGrow={1}> {/* Reduced Typography variant */}
+            <Typography variant="caption" color="var(--text-muted)" flexGrow={1}> {/* Reduced Typography variant */}
               Powered by Gemini 2.5 Flash • OrangeJO-Nokia FTTH Quality Team
             </Typography>
             <Stack direction="row" spacing={1}> {/* Reduced spacing */}
@@ -551,14 +551,14 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
                 sx={{
                   bgcolor: '#dc3545',
                   '&:hover': { bgcolor: '#c82333' },
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 }}
                 disabled={!insights}
               >
                 Download PDF
               </Button>
 
-              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: '#3d3d3d' }}>
+              <Button size="small" startIcon={<MdContentCopy size={16} />} onClick={handleCopy} variant="outlined" sx={{ color: '#90caf9', borderColor: 'var(--border)' }}>
                 Copy Report
               </Button>
               <Button
@@ -570,7 +570,7 @@ const AIInsightDialog = ({ open, onClose, insights, title, onRegenerate, metadat
               >
                 Share via WhatsApp
               </Button>
-              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: '#3d3d3d' }}>
+              <Button size="small" startIcon={<MdRefresh size={16} />} onClick={onRegenerate} variant="outlined" sx={{ color: '#90caf9', borderColor: 'var(--border)' }}>
                 Regenerate
               </Button>
               <Button onClick={onClose} variant="contained" color="primary" size="small">

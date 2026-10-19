@@ -19,7 +19,7 @@ export const GlobalAnalytics = ({
                 gap: 2,
                 mb: 3,
                 pb: 1,
-                borderBottom: '1px solid rgba(255,255,255,0.05)'
+                borderBottom: '1px solid var(--border)'
               }}>
                 <Tabs
                   value={analyticsSubTab}
@@ -33,7 +33,7 @@ export const GlobalAnalytics = ({
                       fontSize: '0.85rem',
                       textTransform: 'none'
                     },
-                    '& .Mui-selected': { color: '#fff !important', fontWeight: 'bold' },
+                    '& .Mui-selected': { color: 'var(--text) !important', fontWeight: 'bold' },
                     '& .MuiTabs-indicator': { backgroundColor: '#3b82f6' }
                   }}
                 >
@@ -49,8 +49,8 @@ export const GlobalAnalytics = ({
                   bgcolor: 'rgba(59, 130, 246, 0.1)',
                   border: '1px solid rgba(59, 130, 246, 0.2)'
                 }}>
-                  <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: '#94a3b8' }}>Tasks</span>
+                  <Typography variant="body2" sx={{ color: 'var(--text)', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Analyzing:</span> <span style={{ fontWeight: '800', color: '#3b82f6' }}>{globalAnalytics.totalProcessed}</span> <span style={{ color: 'var(--text-secondary)' }}>Tasks</span>
                   </Typography>
                 </Box>
 
@@ -86,8 +86,8 @@ export const GlobalAnalytics = ({
                     sx={{
                       bgcolor: 'rgba(0,0,0,0.2)',
                       '& .MuiToggleButton-root': {
-                        color: '#94a3b8',
-                        borderColor: 'rgba(255,255,255,0.05)',
+                        color: 'var(--text-secondary)',
+                        borderColor: 'var(--border)',
                         px: 2,
                         py: 0.5,
                         fontSize: '0.75rem',
@@ -128,8 +128,8 @@ export const GlobalAnalytics = ({
                           onChange={(e) => setRecentDaysValue(Number(e.target.value))}
                           sx={{
                             width: 80,
-                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                            '& .MuiOutlinedInput-root': { color: 'var(--text)', fontSize: '0.8rem' },
+                            '& .MuiInputLabel-root': { color: 'var(--text-secondary)', fontSize: '0.8rem' }
                           }}
                         />
                       </Stack>
@@ -147,10 +147,10 @@ export const GlobalAnalytics = ({
                         )}
                         sx={{
                           '& .MuiOutlinedInput-root': {
-                            color: '#fff', fontSize: '0.8rem',
-                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                            color: 'var(--text)', fontSize: '0.8rem',
+                            '& fieldset': { borderColor: 'var(--border)' }
                           },
-                          '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                          '& .MuiInputLabel-root': { color: 'var(--text-secondary)', fontSize: '0.8rem' }
                         }}
                       />
                     )}
@@ -168,10 +168,10 @@ export const GlobalAnalytics = ({
                         )}
                         sx={{
                           '& .MuiOutlinedInput-root': {
-                            color: '#fff', fontSize: '0.8rem',
-                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                            color: 'var(--text)', fontSize: '0.8rem',
+                            '& fieldset': { borderColor: 'var(--border)' }
                           },
-                          '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                          '& .MuiInputLabel-root': { color: 'var(--text-secondary)', fontSize: '0.8rem' }
                         }}
                       />
                     )}
@@ -186,8 +186,8 @@ export const GlobalAnalytics = ({
                           onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
                           InputLabelProps={{ shrink: true }}
                           sx={{
-                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                            '& .MuiOutlinedInput-root': { color: 'var(--text)', fontSize: '0.8rem' },
+                            '& .MuiInputLabel-root': { color: 'var(--text-secondary)', fontSize: '0.8rem' }
                           }}
                         />
                         <TextField
@@ -198,8 +198,8 @@ export const GlobalAnalytics = ({
                           onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
                           InputLabelProps={{ shrink: true }}
                           sx={{
-                            '& .MuiOutlinedInput-root': { color: '#fff', fontSize: '0.8rem' },
-                            '& .MuiInputLabel-root': { color: '#94a3b8', fontSize: '0.8rem' }
+                            '& .MuiOutlinedInput-root': { color: 'var(--text)', fontSize: '0.8rem' },
+                            '& .MuiInputLabel-root': { color: 'var(--text-secondary)', fontSize: '0.8rem' }
                           }}
                         />
                       </Stack>
@@ -222,7 +222,7 @@ export const GlobalAnalytics = ({
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Box sx={{ width: 3, height: 20, bgcolor: '#8b5cf6', borderRadius: 4 }} />
-                        <Typography variant="h6" fontWeight="800" color="#fff" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
+                        <Typography variant="h6" fontWeight="800" color="var(--text)" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.95rem' }}>
                           Sentiment Segmentation <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Deep Analysis</span>
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 3, mt: 0.5 }}>
@@ -247,7 +247,7 @@ export const GlobalAnalytics = ({
                     <TableContainer sx={{ maxHeight: 200, overflowY: 'auto' }}>
                       <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
                         <TableHead>
-                          <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
+                          <TableRow sx={{ '& .MuiTableCell-root': { bgcolor: 'var(--overlay-subtle)', color: 'var(--text-secondary)', fontWeight: 'bold', borderBottom: '1px solid var(--border)' } }}>
                             <TableCell>Customer Sentiment</TableCell>
                             <TableCell align="right">Hit Count</TableCell>
                             <TableCell align="right">Matrix Share</TableCell>
@@ -255,22 +255,22 @@ export const GlobalAnalytics = ({
                         </TableHead>
                         <TableBody>
                           {globalAnalytics.sentimentData.map((row) => (
-                            <TableRow key={row.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                              <TableCell sx={{ color: row.color, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.name}</TableCell>
-                              <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{row.value}</TableCell>
+                            <TableRow key={row.name} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
+                              <TableCell sx={{ color: row.color, fontWeight: 700, borderBottom: '1px solid var(--border)' }}>{row.name}</TableCell>
+                              <TableCell align="right" sx={{ color: 'var(--text)', fontWeight: 'bold', borderBottom: '1px solid var(--border)' }}>{row.value}</TableCell>
                               <TableCell align="right" sx={{
                                 bgcolor: getHeatmapColor(parseFloat(row.percentage), 0, 100, row.name === 'Promoters' ? 'green' : row.name === 'Neutrals' ? 'orange' : 'red'),
-                                color: '#fff', fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                color: 'var(--text)', fontWeight: 800, borderBottom: '1px solid var(--border)'
                               }}>
                                 {row.percentage}%
                               </TableCell>
                             </TableRow>
                           ))}
 
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
-                            <TableCell sx={{ color: '#94a3b8', fontWeight: 800 }}>Total Audited (Low Sat)</TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 900 }}>{globalAnalytics.totalAuditedLowSatisfaction}</TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 800 }}>100%</TableCell>
+                          <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
+                            <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 800 }}>Total Audited (Low Sat)</TableCell>
+                            <TableCell align="right" sx={{ color: 'var(--text)', fontWeight: 900 }}>{globalAnalytics.totalAuditedLowSatisfaction}</TableCell>
+                            <TableCell align="right" sx={{ color: 'var(--text-secondary)', fontWeight: 800 }}>100%</TableCell>
                           </TableRow>
 
                           <TableRow sx={{ bgcolor: 'rgba(139, 92, 246, 0.05)', borderTop: '1px solid rgba(139, 92, 246, 0.2)' }}>
@@ -299,7 +299,7 @@ export const GlobalAnalytics = ({
                         >
                           {globalAnalytics.sentimentData.map((e, i) => <Cell key={i} fill={e.color} />)}
                         </RechartsPie>
-                        <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: 8 }} />
+                        <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: 8 }} />
                         <RechartsLegend verticalAlign="bottom" height={30} />
                       </RechartsPieChart>
                     </ResponsiveContainer>
@@ -311,9 +311,9 @@ export const GlobalAnalytics = ({
 
 
               <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                <Divider sx={{ flex: 1, borderColor: 'var(--border)' }} />
                 <Typography variant="h6" sx={{ color: '#3b82f6', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase' }}>Advanced Analytics Charts & Tables</Typography>
-                <Divider sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                <Divider sx={{ flex: 1, borderColor: 'var(--border)' }} />
               </Box>
 
               {/* Advanced Analytics Charts & Tables */}
@@ -321,7 +321,7 @@ export const GlobalAnalytics = ({
                 {/* Owner Analysis */}
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59, 130, 246, 0.2)' }} elevation={0}>
-                    <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h6" fontWeight="700" mb={3} color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <SupportAgent sx={{ color: '#3b82f6' }} /> Owner Distribution
                     </Typography>
                     <ResponsiveContainer width="100%" height={280}>
@@ -333,16 +333,16 @@ export const GlobalAnalytics = ({
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: 'var(--text-secondary)' }} />
+                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: 'var(--text-secondary)' }} />
                         <RechartsTooltip
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                <Paper sx={{ p: 1.5, bgcolor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 2, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
+                                  <Typography sx={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                   <Typography sx={{ color: '#3b82f6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                  <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                 </Paper>
                               );
                             }
@@ -353,28 +353,28 @@ export const GlobalAnalytics = ({
                       </RechartsBarChart>
                     </ResponsiveContainer>
                     {/* Detailed Owner Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--overlay-subtle)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid var(--border)', fontSize: '0.7rem' } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Owner</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Points</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                            <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Owner</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Points</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>%</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {globalAnalytics.detailedOwners.map((data) => (
-                            <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                              <TableCell sx={{ color: '#e2e8f0' }}>{data.name}</TableCell>
+                            <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
+                              <TableCell sx={{ color: 'var(--text-secondary)' }}>{data.name}</TableCell>
                               <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>{data.points}</TableCell>
                               <TableCell
                                 align="right"
                                 onClick={() => handleAnalyticsDrillDown({ owner: data.name })}
                                 sx={{
-                                  color: '#e2e8f0',
+                                  color: 'var(--text-secondary)',
                                   fontWeight: 'bold',
                                   cursor: 'pointer',
                                   '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' }
@@ -404,7 +404,7 @@ export const GlobalAnalytics = ({
                               >
                                 {data.subscription}
                               </TableCell>
-                              <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                              <TableCell align="right" sx={{ color: 'var(--text-secondary)' }}>{data.percentage}%</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -417,7 +417,7 @@ export const GlobalAnalytics = ({
                 {/* Reason Breakdown */}
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(16, 185, 129, 0.2)' }} elevation={0}>
-                    <Typography variant="h6" fontWeight="700" mb={3} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h6" fontWeight="700" mb={3} color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <PriorityHigh sx={{ color: '#10b981' }} /> Reason Distribution
                     </Typography>
                     <ResponsiveContainer width="100%" height={280}>
@@ -439,42 +439,42 @@ export const GlobalAnalytics = ({
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
+                                <Paper sx={{ p: 1.5, bgcolor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 2 }}>
+                                  <Typography sx={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{payload[0].name}</Typography>
                                   <Typography sx={{ color: payload[0].payload.fill, fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
+                                  <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Weight: {payload[0].payload.percentage}%</Typography>
                                 </Paper>
                               );
                             }
                             return null;
                           }}
                         />
-                        <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: '#94a3b8' }} />
+                        <RechartsLegend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }} />
                       </RechartsPieChart>
                     </ResponsiveContainer>
                     {/* Detailed Reason Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--overlay-subtle)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid var(--border)', fontSize: '0.7rem' } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Reason</TableCell>
+                            <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Reason</TableCell>
                             {globalAnalytics.matrixOwners.map(owner => (
-                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                              <TableCell key={owner} align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                             ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>%</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {globalAnalytics.detailedReasons.slice(0, 15).map((data) => {
                             const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                             return (
-                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
                                 <TableCell
                                   onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
-                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                  sx={{ color: 'var(--text-secondary)', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                 >
                                   {data.name}
                                 </TableCell>
@@ -494,7 +494,7 @@ export const GlobalAnalytics = ({
                                       }}
                                     >
                                       {count}
-                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginLeft: 4 }}>({pct}%)</span>}
                                     </TableCell>
                                   );
                                 })}
@@ -523,17 +523,17 @@ export const GlobalAnalytics = ({
                                 <TableCell
                                   align="right"
                                   onClick={() => handleAnalyticsDrillDown({ reason: data.name })}
-                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                  sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', cursor: 'pointer' }}
                                 >
                                   {data.total}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                <TableCell align="right" sx={{ color: 'var(--text-secondary)' }}>{data.percentage}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Total Row */}
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                          <TableRow sx={{ bgcolor: 'var(--overlay-subtle)', borderTop: '2px solid var(--border)' }}>
+                            <TableCell sx={{ color: 'var(--text)', fontWeight: 'bold' }}>TOTAL</TableCell>
                             {globalAnalytics.matrixOwners.map(owner => {
                               const totalForOwner = Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                               return (
@@ -546,10 +546,10 @@ export const GlobalAnalytics = ({
                             <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.subscription, 0)}
                             </TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                            <TableCell align="right" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedReasons).reduce((sum, data) => sum + data.total, 0)}
                             </TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                            <TableCell align="right" sx={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>100%</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -562,7 +562,7 @@ export const GlobalAnalytics = ({
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(245, 158, 11, 0.2)' }} elevation={0}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="h6" fontWeight="700" color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Assignment sx={{ color: '#f59e0b' }} /> Sub-Reason Breakdown
                       </Typography>
                       <IconButton
@@ -582,16 +582,16 @@ export const GlobalAnalytics = ({
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: 'var(--text-secondary)' }} />
+                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: 'var(--text-secondary)' }} />
                         <RechartsTooltip
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                <Paper sx={{ p: 1.5, bgcolor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 2 }}>
+                                  <Typography sx={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                   <Typography sx={{ color: '#f59e0b', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                  <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                 </Paper>
                               );
                             }
@@ -602,29 +602,29 @@ export const GlobalAnalytics = ({
                       </RechartsBarChart>
                     </ResponsiveContainer>
                     {/* Detailed Sub-Reason Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--overlay-subtle)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid var(--border)', fontSize: '0.7rem' } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub-Reason</TableCell>
+                            <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Sub-Reason</TableCell>
                             {globalAnalytics.matrixOwners.map(owner => (
-                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                              <TableCell key={owner} align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                             ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.65rem' }}>Other</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>%</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {globalAnalytics.detailedSubReasons.slice(0, 15).map((data) => {
                             const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                             return (
-                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
                                 <TableCell
                                   onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
-                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                  sx={{ color: 'var(--text-secondary)', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                 >
                                   {data.name}
                                 </TableCell>
@@ -644,7 +644,7 @@ export const GlobalAnalytics = ({
                                       }}
                                     >
                                       {count}
-                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginLeft: 4 }}>({pct}%)</span>}
                                     </TableCell>
                                   );
                                 })}
@@ -673,17 +673,17 @@ export const GlobalAnalytics = ({
                                 <TableCell
                                   align="right"
                                   onClick={() => handleAnalyticsDrillDown({ subReason: data.name })}
-                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                  sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', cursor: 'pointer' }}
                                 >
                                   {data.total}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                <TableCell align="right" sx={{ color: 'var(--text-secondary)' }}>{data.percentage}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Total Row */}
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                          <TableRow sx={{ bgcolor: 'var(--overlay-subtle)', borderTop: '2px solid var(--border)' }}>
+                            <TableCell sx={{ color: 'var(--text)', fontWeight: 'bold' }}>TOTAL</TableCell>
                             {globalAnalytics.matrixOwners.map(owner => {
                               const totalForOwner = Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                               return (
@@ -696,10 +696,10 @@ export const GlobalAnalytics = ({
                             <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.subscription, 0)}
                             </TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                            <TableCell align="right" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedSubReasons).reduce((sum, data) => sum + data.total, 0)}
                             </TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                            <TableCell align="right" sx={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>100%</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -712,7 +712,7 @@ export const GlobalAnalytics = ({
                 <Grid item xs={12} md={6}>
                   <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(139, 92, 246, 0.2)' }} elevation={0}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                      <Typography variant="h6" fontWeight="700" color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="h6" fontWeight="700" color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <SearchIcon sx={{ color: '#8b5cf6' }} /> Root Cause Matrix
                       </Typography>
                       <IconButton
@@ -732,16 +732,16 @@ export const GlobalAnalytics = ({
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: '#94a3b8' }} />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} stroke="#94a3b8" fontSize={10} tick={{ fill: 'var(--text-secondary)' }} />
+                        <YAxis stroke="#94a3b8" fontSize={10} tick={{ fill: 'var(--text-secondary)' }} />
                         <RechartsTooltip
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <Paper sx={{ p: 1.5, bgcolor: '#1e293b', border: '1px solid #334155', borderRadius: 2 }}>
-                                  <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+                                <Paper sx={{ p: 1.5, bgcolor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 2 }}>
+                                  <Typography sx={{ color: 'var(--text)', fontWeight: 'bold', fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
                                   <Typography sx={{ color: '#8b5cf6', fontSize: '0.75rem' }}>Count: <strong>{payload[0].value}</strong></Typography>
-                                  <Typography sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
+                                  <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Contribution: {payload[0].payload.percentage}%</Typography>
                                 </Paper>
                               );
                             }
@@ -752,28 +752,28 @@ export const GlobalAnalytics = ({
                       </RechartsBarChart>
                     </ResponsiveContainer>
                     {/* Detailed Root Cause Table - Compact Style */}
-                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px' } }}>
-                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem' } }}>
+                    <TableContainer sx={{ mt: 2, maxHeight: 200, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'var(--overlay-subtle)', borderRadius: '4px' } }}>
+                      <Table size="small" stickyHeader sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, borderBottom: '1px solid var(--border)', fontSize: '0.7rem' } }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Root Cause</TableCell>
+                            <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Root Cause</TableCell>
                             {globalAnalytics.matrixOwners.map(owner => (
-                              <TableCell key={owner} align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
+                              <TableCell key={owner} align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.65rem' }}>{owner}</TableCell>
                             ))}
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>ITN</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Sub</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>Total</TableCell>
-                            <TableCell align="right" sx={{ bgcolor: '#1e293b', color: '#94a3b8', fontWeight: 'bold' }}>%</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ITN</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Sub</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Total</TableCell>
+                            <TableCell align="right" sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>%</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {globalAnalytics.detailedRootCauses.slice(0, 15).map((data) => {
                             const rowTotal = Object.values(data.ownerBreakdown).reduce((sum, count) => sum + count, 0);
                             return (
-                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                              <TableRow key={data.name} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
                                 <TableCell
                                   onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
-                                  sx={{ color: '#e2e8f0', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
+                                  sx={{ color: 'var(--text-secondary)', cursor: 'pointer', '&:hover': { color: '#3b82f6' } }}
                                 >
                                   {data.name}
                                 </TableCell>
@@ -793,7 +793,7 @@ export const GlobalAnalytics = ({
                                       }}
                                     >
                                       {count}
-                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: '#64748b', marginLeft: 4 }}>({pct}%)</span>}
+                                      {count > 0 && <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginLeft: 4 }}>({pct}%)</span>}
                                     </TableCell>
                                   );
                                 })}
@@ -822,17 +822,17 @@ export const GlobalAnalytics = ({
                                 <TableCell
                                   align="right"
                                   onClick={() => handleAnalyticsDrillDown({ rootCause: data.name })}
-                                  sx={{ color: '#e2e8f0', fontWeight: 'bold', cursor: 'pointer' }}
+                                  sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', cursor: 'pointer' }}
                                 >
                                   {data.total}
                                 </TableCell>
-                                <TableCell align="right" sx={{ color: '#94a3b8' }}>{data.percentage}%</TableCell>
+                                <TableCell align="right" sx={{ color: 'var(--text-secondary)' }}>{data.percentage}%</TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Total Row */}
-                          <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-                            <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>TOTAL</TableCell>
+                          <TableRow sx={{ bgcolor: 'var(--overlay-subtle)', borderTop: '2px solid var(--border)' }}>
+                            <TableCell sx={{ color: 'var(--text)', fontWeight: 'bold' }}>TOTAL</TableCell>
                             {globalAnalytics.matrixOwners.map(owner => {
                               const totalForOwner = Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + (data.ownerBreakdown[owner] || 0), 0);
                               return (
@@ -845,10 +845,10 @@ export const GlobalAnalytics = ({
                             <TableCell align="right" sx={{ color: '#10b981', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.subscription, 0)}
                             </TableCell>
-                            <TableCell align="right" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                            <TableCell align="right" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
                               {Object.values(globalAnalytics.detailedRootCauses).reduce((sum, data) => sum + data.total, 0)}
                             </TableCell>
-                            <TableCell align="right" sx={{ color: '#94a3b8', fontWeight: 'bold' }}>100%</TableCell>
+                            <TableCell align="right" sx={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>100%</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -890,10 +890,10 @@ export const GlobalAnalytics = ({
                             {/* Team Header */}
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                               <Box>
-                                <Typography variant="h6" fontWeight="700" color="#fff">
+                                <Typography variant="h6" fontWeight="700" color="var(--text)">
                                   #{(offendersPage - 1) * 10 + idx + 1} {team.teamName}
                                 </Typography>
-                                <Typography variant="body2" color="#b3b3b3">
+                                <Typography variant="body2" color="var(--text-secondary)">
                                   Total Issues: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{team.totalIssues}</span>
                                 </Typography>
                               </Box>
@@ -901,7 +901,7 @@ export const GlobalAnalytics = ({
                                 size="small"
                                 startIcon={<FaFileExcel />}
                                 onClick={() => handleExportTeamViolations(team)}
-                                sx={{ color: '#94a3b8', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } }}
+                                sx={{ color: 'var(--text-secondary)', '&:hover': { color: '#fff', bgcolor: 'var(--overlay-subtle)' } }}
                               >
                                 Export
                               </Button>
@@ -920,7 +920,7 @@ export const GlobalAnalytics = ({
                                       {team.owners.map((owner, i) => (
                                         <Box key={i} sx={{ position: 'relative' }}>
                                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{owner.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{owner.name}</Typography>
                                             <Typography sx={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>{owner.value}</Typography>
                                           </Box>
                                           <LinearProgress
@@ -945,7 +945,7 @@ export const GlobalAnalytics = ({
                                       {team.reasons.map((reason, i) => (
                                         <Box key={i}>
                                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{reason.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{reason.name}</Typography>
                                             <Typography sx={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>{reason.value}</Typography>
                                           </Box>
                                           <LinearProgress
@@ -976,7 +976,7 @@ export const GlobalAnalytics = ({
                                       {team.rootCauses.map((rc, i) => (
                                         <Box key={i}>
                                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{rc.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{rc.name}</Typography>
                                             <Typography sx={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>{rc.value}</Typography>
                                           </Box>
                                           <LinearProgress
@@ -1001,7 +1001,7 @@ export const GlobalAnalytics = ({
                                       {team.subReasons.map((sr, i) => (
                                         <Box key={i}>
                                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, px: 1 }}>
-                                            <Typography sx={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{sr.name}</Typography>
+                                            <Typography sx={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{sr.name}</Typography>
                                             <Typography sx={{ fontSize: '0.75rem', color: '#8b5cf6', fontWeight: 'bold' }}>{sr.value}</Typography>
                                           </Box>
                                           <LinearProgress
@@ -1023,14 +1023,14 @@ export const GlobalAnalytics = ({
 
                               {/* Right Column: NPS Satisfaction */}
                               <Grid item xs={12} md={4}>
-                                <Typography variant="subtitle2" fontWeight="700" mb={2} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="subtitle2" fontWeight="700" mb={2} color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <TrendingUp sx={{ fontSize: 18 }} /> Customer Satisfaction (NPS)
                                 </Typography>
                                 <Paper sx={{
                                   p: 2,
                                   bgcolor: 'rgba(15, 23, 42, 0.6)',
                                   borderRadius: 3,
-                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  border: '1px solid var(--border)',
                                   height: '240px',
                                   display: 'flex',
                                   flexDirection: 'column',
@@ -1048,9 +1048,9 @@ export const GlobalAnalytics = ({
                                         fontWeight={600}
                                       />
                                       <RechartsTooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 12, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
-                                        itemStyle={{ color: '#fff', fontSize: '0.8rem' }}
+                                        cursor={{ fill: 'var(--overlay-subtle)' }}
+                                        contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
+                                        itemStyle={{ color: 'var(--text)', fontSize: '0.8rem' }}
                                       />
                                       <RechartsBar dataKey="value" radius={[0, 6, 6, 0]} barSize={32}>
                                         {team.npsBreakdown.map((entry, index) => (
@@ -1063,7 +1063,7 @@ export const GlobalAnalytics = ({
                                     {team.npsBreakdown.map((entry, i) => (
                                       <Stack key={i} direction="row" spacing={1} alignItems="center">
                                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: entry.color }} />
-                                        <Typography sx={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                                        <Typography sx={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
                                           {entry.name}: <strong>{entry.value}</strong>
                                         </Typography>
                                       </Stack>
@@ -1077,7 +1077,7 @@ export const GlobalAnalytics = ({
                       ))}
                   </Grid>
                 ) : (
-                  <Typography variant="body2" color="#b3b3b3" textAlign="center" py={4}>
+                  <Typography variant="body2" color="var(--text-secondary)" textAlign="center" py={4}>
                     No field team data available
                   </Typography>
                 )}
@@ -1091,7 +1091,7 @@ export const GlobalAnalytics = ({
                       onChange={(e, v) => setOffendersPage(v)}
                       color="primary"
                       sx={{
-                        '& .MuiPaginationItem-root': { color: '#fff' },
+                        '& .MuiPaginationItem-root': { color: 'var(--text)' },
                         '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.3) !important' }
                       }}
                     />

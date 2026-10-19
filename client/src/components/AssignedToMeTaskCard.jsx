@@ -300,8 +300,8 @@ const AssignedToMeTaskCard = ({
         elevation={0}
         className="w-full p-6 rounded-3xl border transition-all duration-300 hover:shadow-2xl hover:shadow-sky-500/10 group relative overflow-hidden"
         sx={{
-          backgroundColor: "#1e293b",
-          borderColor: "#334155",
+          backgroundColor: "var(--surface)",
+          borderColor: "var(--border)",
           "&:hover": { borderColor: "#0ea5e955" }
         }}
       >
@@ -328,11 +328,11 @@ const AssignedToMeTaskCard = ({
                   label={task?.status}
                   size="small"
                   sx={{
-                    backgroundColor: "rgba(255,255,255,0.05)",
-                    color: "#94a3b8",
+                    backgroundColor: "var(--overlay-subtle)",
+                    color: "var(--text-secondary)",
                     fontWeight: "bold",
                     fontSize: "10px",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    border: "1px solid var(--border)",
                   }}
                 />
               </div>
@@ -342,7 +342,7 @@ const AssignedToMeTaskCard = ({
                   <IconButton
                     size="small"
                     onClick={copyToClipboard}
-                    sx={{ color: "#94a3b8", '&:hover': { color: "#0ea5e9", bgcolor: 'rgba(14, 165, 233, 0.1)' } }}
+                    sx={{ color: "var(--text-secondary)", '&:hover': { color: "#0ea5e9", bgcolor: 'rgba(14, 165, 233, 0.1)' } }}
                   >
                     <FaRegCopy size={16} />
                   </IconButton>
@@ -352,7 +352,7 @@ const AssignedToMeTaskCard = ({
                     <IconButton
                       size="small"
                       onClick={redirectToWhatsApp}
-                      sx={{ color: "#94a3b8", '&:hover': { color: "#22c55e", bgcolor: 'rgba(34, 197, 94, 0.1)' } }}
+                      sx={{ color: "var(--text-secondary)", '&:hover': { color: "#22c55e", bgcolor: 'rgba(34, 197, 94, 0.1)' } }}
                     >
                       <FaWhatsapp size={18} />
                     </IconButton>
@@ -364,7 +364,7 @@ const AssignedToMeTaskCard = ({
                 <IconButton
                   size="small"
                   onClick={handleMenuOpen}
-                  sx={{ color: "#94a3b8", '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+                  sx={{ color: "var(--text-secondary)", '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}
                 >
                   <MoreVertIcon size={18} />
                 </IconButton>
@@ -376,9 +376,9 @@ const AssignedToMeTaskCard = ({
                 onClose={handleMenuClose}
                 PaperProps={{
                   sx: {
-                    backgroundColor: "#1e293b",
-                    color: "#f8fafc",
-                    border: "1px solid #334155",
+                    backgroundColor: "var(--surface)",
+                    color: "var(--text)",
+                    border: "1px solid var(--border)",
                     boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3)",
                     borderRadius: 2,
                     mt: 1,
@@ -425,12 +425,12 @@ const AssignedToMeTaskCard = ({
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <Typography variant="h5" sx={{ fontWeight: '900', color: "#f8fafc", letterSpacing: -1, mb: 0.5 }}>
+                  <Typography variant="h5" sx={{ fontWeight: '900', color: "var(--text)", letterSpacing: -1, mb: 0.5 }}>
                     {task?.slid}
                   </Typography>
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full animate-pulse ${activeStep === subtasks.length ? 'bg-emerald-500' : 'bg-sky-500'}`}></span>
-                    <Typography variant="body2" sx={{ color: "#94a3b8", fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <Typography variant="body2" sx={{ color: "var(--text-secondary)", fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', letterSpacing: 1 }}>
                       {activeStep === 0 ? "Pending Commencement" : activeStep === subtasks.length ? "Execution Finalized" : "Field Activity Underway"}
                     </Typography>
                   </div>
@@ -461,20 +461,20 @@ const AssignedToMeTaskCard = ({
 
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1">
-                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 'bold', textTransform: 'uppercase', display: 'block' }}>Field Logistics</Typography>
-                  <Typography variant="body2" sx={{ color: "#f1f5f9", fontWeight: '600' }}>{task?.teamName || "Unassigned"}</Typography>
-                  <Typography variant="caption" sx={{ color: "#94a3b8", display: 'block' }}>{task?.teamCompany || "Internal"}</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--text-muted)", fontWeight: 'bold', textTransform: 'uppercase', display: 'block' }}>Field Logistics</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--text)", fontWeight: '600' }}>{task?.teamName || "Unassigned"}</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--text-secondary)", display: 'block' }}>{task?.teamCompany || "Internal"}</Typography>
                 </div>
                 <div className="space-y-1">
-                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 'bold', textTransform: 'uppercase', display: 'block' }}>Operation Context</Typography>
-                  <Typography variant="body2" sx={{ color: "#f1f5f9", fontWeight: '600' }}>{task?.operation || 'General'}</Typography>
-                  <Typography variant="caption" sx={{ color: "#94a3b8", display: 'block' }}>{task?.category}</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--text-muted)", fontWeight: 'bold', textTransform: 'uppercase', display: 'block' }}>Operation Context</Typography>
+                  <Typography variant="body2" sx={{ color: "var(--text)", fontWeight: '600' }}>{task?.operation || 'General'}</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--text-secondary)", display: 'block' }}>{task?.category}</Typography>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-slate-700/50">
                 <div className="flex justify-between items-center mb-2">
-                  <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 'bold' }}>SLA COMPLIANCE</Typography>
+                  <Typography variant="caption" sx={{ color: "var(--text-secondary)", fontWeight: 'bold' }}>SLA COMPLIANCE</Typography>
                   <Typography variant="caption" sx={{
                     color: remainingMinutes > 0 ? "#10b981" : "#ef4444",
                     fontWeight: 'black',
@@ -484,7 +484,7 @@ const AssignedToMeTaskCard = ({
                     {remainingMinutes > 0 ? `${Math.floor(remainingMinutes / 60)}H LEFT` : `${Math.floor(Math.abs(remainingMinutes) / 60)}H OVERDUE`}
                   </Typography>
                 </div>
-                <Typography variant="caption" sx={{ color: "#64748b", display: 'block', mb: 1 }}>{formattedDate}</Typography>
+                <Typography variant="caption" sx={{ color: "var(--text-muted)", display: 'block', mb: 1 }}>{formattedDate}</Typography>
               </div>
             </div>
           </Stack>
@@ -494,7 +494,7 @@ const AssignedToMeTaskCard = ({
               <Typography variant="body2" sx={{ color: "#0ea5e9", fontWeight: '900', fontSize: '18px' }}>
                 {Math.min(100, Math.round((subtasks.filter(st => st.note || st.status === 'Closed' || (st.optional && st.progress > 0)).length / Math.max(1, subtasks.filter(st => !st.optional).length)) * 100))}%
               </Typography>
-              <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 'bold' }}>
+              <Typography variant="caption" sx={{ color: "var(--text-muted)", fontWeight: 'bold' }}>
                 {activeStep}/{subtasks.length} SUBTASKS
               </Typography>
             </div>
@@ -504,7 +504,7 @@ const AssignedToMeTaskCard = ({
               sx={{
                 height: 8,
                 borderRadius: 4,
-                backgroundColor: "rgba(255,255,255,0.05)",
+                backgroundColor: "var(--overlay-subtle)",
                 "& .MuiLinearProgress-bar": {
                   backgroundColor: "#0ea5e9",
                   borderRadius: 4,
@@ -524,7 +524,7 @@ const AssignedToMeTaskCard = ({
                   py: 1.5,
                   borderRadius: 3,
                   backgroundColor: "#0ea5e9",
-                  color: "#fff",
+                  color: "var(--text)",
                   fontWeight: "bold",
                   textTransform: 'none',
                   boxShadow: "0 4px 15px rgba(14, 165, 233, 0.3)",
@@ -553,11 +553,11 @@ const AssignedToMeTaskCard = ({
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: "#0f172a",
-            color: "#f8fafc",
+            backgroundColor: "var(--bg)",
+            color: "var(--text)",
             borderRadius: "24px",
             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-            border: "1px solid #334155",
+            border: "1px solid var(--border)",
             backgroundImage: 'none',
           },
         }}
@@ -572,7 +572,7 @@ const AssignedToMeTaskCard = ({
           color: "#0ea5e9"
         }}>
           SUBTASK AUDIT TERMINAL
-          <Typography variant="body2" sx={{ color: "#64748b", fontWeight: 'bold', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: "var(--text-muted)", fontWeight: 'bold', mt: 0.5 }}>
             REF: {task?.slid}
           </Typography>
         </DialogTitle>
@@ -580,7 +580,7 @@ const AssignedToMeTaskCard = ({
           <Box sx={{ py: 2 }}>
             <Stepper activeStep={activeStep} orientation="vertical" sx={{
               "& .MuiStepConnector-line": {
-                borderColor: "#334155",
+                borderColor: "var(--border)",
                 borderLeftWidth: 2,
               }
             }}>
@@ -603,7 +603,7 @@ const AssignedToMeTaskCard = ({
                       {subtask.title?.toUpperCase()}
                     </Typography>
                   </StepLabel>
-                  <StepContent sx={{ borderLeft: '2px solid #334155', ml: '11px', pl: 3 }}>
+                  <StepContent sx={{ borderLeft: '2px solid var(--border)', ml: '11px', pl: 3 }}>
                     <TextField
                       autoFocus={activeStep === index}
                       margin="normal"
@@ -619,12 +619,12 @@ const AssignedToMeTaskCard = ({
                         setNote(newNote);
                       }}
                       sx={{
-                        backgroundColor: "rgba(255,255,255,0.03)",
+                        backgroundColor: "var(--overlay-subtle)",
                         borderRadius: "12px",
                         "& .MuiOutlinedInput-root": {
-                          color: "#f8fafc",
+                          color: "var(--text)",
                           fontSize: '14px',
-                          "& fieldset": { borderColor: "#334155" },
+                          "& fieldset": { borderColor: "var(--border)" },
                           "&:hover fieldset": { borderColor: "#0ea5e955" },
                           "&.Mui-focused fieldset": { borderColor: "#0ea5e9" },
                         },
@@ -652,10 +652,10 @@ const AssignedToMeTaskCard = ({
                         onClick={handleBack}
                         size="small"
                         sx={{
-                          color: "#94a3b8",
+                          color: "var(--text-secondary)",
                           fontWeight: "bold",
                           textTransform: 'none',
-                          "&:hover": { backgroundColor: "rgba(255,255,255,0.05)" },
+                          "&:hover": { backgroundColor: "var(--overlay-subtle)" },
                         }}
                       >
                         Back
@@ -677,7 +677,7 @@ const AssignedToMeTaskCard = ({
                 }}
               >
                 <CheckCircle sx={{ color: "#10b981", fontSize: 40, mb: 1 }} />
-                <Typography sx={{ fontWeight: 'bold', color: "#f8fafc", mb: 2 }}>
+                <Typography sx={{ fontWeight: 'bold', color: "var(--text)", mb: 2 }}>
                   Task Audit Sequence Finalized
                 </Typography>
                 <Button
@@ -700,7 +700,7 @@ const AssignedToMeTaskCard = ({
           <Button
             onClick={handleNoteDialogClose}
             sx={{
-              color: "#94a3b8",
+              color: "var(--text-secondary)",
               fontWeight: "bold",
               textTransform: 'none',
               px: 4,
@@ -713,7 +713,7 @@ const AssignedToMeTaskCard = ({
             onClick={handleSaveNote}
             sx={{
               backgroundColor: "#10b981",
-              color: "#fff",
+              color: "var(--text)",
               fontWeight: "black",
               textTransform: 'none',
               borderRadius: "12px",

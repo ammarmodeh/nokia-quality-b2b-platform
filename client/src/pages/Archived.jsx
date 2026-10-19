@@ -159,7 +159,7 @@ const Archived = () => {
         mx: 'auto',
       }}>
         <Typography variant="h5" gutterBottom sx={{
-          color: '#7b68ee',
+          color: 'var(--accent-text)',
           fontWeight: 'bold',
           fontSize: isMobile ? '1.2rem' : '1.5rem',
           mb: 2,
@@ -169,10 +169,10 @@ const Archived = () => {
 
         {/* Search Bar */}
         <Box sx={{
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
           p: 2,
           borderRadius: '8px',
-          border: '1px solid #3d3d3d',
+          border: '1px solid var(--border)',
           mb: 2,
           width: '100%',
         }}>
@@ -186,7 +186,7 @@ const Archived = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <MdSearch style={{ color: '#b3b3b3' }} />
+                  <MdSearch style={{ color: 'var(--text-secondary)' }} />
                 </InputAdornment>
               ),
               endAdornment: searchTerm && (
@@ -195,9 +195,9 @@ const Archived = () => {
                   onClick={() => setSearchTerm('')}
                   sx={{
                     visibility: searchTerm ? 'visible' : 'hidden',
-                    color: '#b3b3b3',
+                    color: 'var(--text-secondary)',
                     '&:hover': {
-                      backgroundColor: '#2a2a2a',
+                      backgroundColor: 'var(--surface)',
                     }
                   }}
                 >
@@ -206,24 +206,24 @@ const Archived = () => {
               ),
               sx: {
                 borderRadius: '20px',
-                backgroundColor: '#2d2d2d',
+                backgroundColor: 'var(--surface)',
                 '& fieldset': {
                   border: 'none',
                 },
                 '& input': {
-                  color: '#ffffff',
+                  color: 'var(--text)',
                   '&::placeholder': {
-                    color: '#666',
+                    color: 'var(--text-muted)',
                     opacity: 1,
                   },
                   '&:-webkit-autofill': {
                     WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
-                    WebkitTextFillColor: '#ffffff !important',
+                    WebkitTextFillColor: 'var(--text) !important',
                   },
                 },
                 '& input:-webkit-autofill': {
                   WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
-                  WebkitTextFillColor: '#ffffff !important',
+                  WebkitTextFillColor: 'var(--text) !important',
                 },
               },
             }}
@@ -233,13 +233,13 @@ const Archived = () => {
                   border: '1px solid #666 !important',
                 },
                 '&.Mui-focused fieldset': {
-                  border: '1px solid #7b68ee !important',
+                  border: '1px solid var(--accent) !important',
                 },
               },
               '& .MuiInputBase-input': {
                 '&:-webkit-autofill': {
                   WebkitBoxShadow: '0 0 0 100px #ffffff inset !important',
-                  WebkitTextFillColor: '#ffffff !important',
+                  WebkitTextFillColor: 'var(--text) !important',
                 },
               },
             }}
@@ -254,29 +254,29 @@ const Archived = () => {
           mt: 2,
           maxWidth: '100%',
           overflowX: 'auto',
-          backgroundColor: '#2d2d2d',
-          border: '1px solid #3d3d3d',
+          backgroundColor: 'var(--surface)',
+          border: '1px solid var(--border)',
           "& .MuiTable-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
           },
           "& .MuiTableHead-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
-              color: "#b3b3b3",
+              color: "var(--text-secondary)",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: "1px solid var(--border)",
             }
           },
           "& .MuiTableBody-root": {
             "& .MuiTableCell-root": {
-              borderBottom: "1px solid #e5e7eb",
-              color: "#ffffff",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text)",
             },
             "& .MuiTableRow-root": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
               "&:hover": {
-                backgroundColor: "#2d2d2d",
+                backgroundColor: "var(--surface)",
               },
             }
           },
@@ -352,7 +352,7 @@ const Archived = () => {
                                 setSelectedTask(archive);
                                 setViewDialogOpen(true);
                               }}
-                              sx={{ color: '#7b68ee' }}
+                              sx={{ color: 'var(--accent-text)' }}
                             >
                               <MdVisibility />
                             </IconButton>
@@ -362,7 +362,7 @@ const Archived = () => {
                               size="small"
                               color="primary"
                               onClick={() => restoreFromArchivesToTasks(archive._id)}
-                              sx={{ color: '#7b68ee' }}
+                              sx={{ color: 'var(--accent-text)' }}
                             >
                               <FaUndoAlt />
                             </IconButton>
@@ -375,7 +375,7 @@ const Archived = () => {
                 <TableRow>
                   <TableCell colSpan={10} align="center" sx={{
                     py: 4,
-                    color: '#ffffff',
+                    color: 'var(--text)',
                     fontStyle: 'italic'
                   }}>
                     No archived tasks found for your account.
@@ -393,10 +393,10 @@ const Archived = () => {
             justifyContent: 'center',
             mt: 2,
             '& .MuiTablePagination-root': {
-              color: '#ffffff',
+              color: 'var(--text)',
             },
             '& .MuiTablePagination-selectIcon': {
-              color: '#ffffff',
+              color: 'var(--text)',
             }
           }}>
             <TablePagination

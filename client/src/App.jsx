@@ -1,16 +1,20 @@
-import { Routes, Route, Navigate, useLocation, createBrowserRouter, createRoutesFromElements, RouterProvider } from "react-router-dom";
+import { Route, Navigate, useLocation, createBrowserRouter, createRoutesFromElements, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useSelector } from "react-redux";
 import React, { Suspense, lazy } from "react";
-import { FadeLoader } from "react-spinners";
-import { Box, ThemeProvider } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
 const TeamsPerformancePage = lazy(() => import("./pages/TeamsPerformancePage"));
 const MainStats = lazy(() => import("./pages/MainStats"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-import clickUpDarkTheme from "./theme/clickUpDarkTheme";
+import appTheme from "./theme/appTheme";
+import PageLoader from "./components/ui/PageLoader";
+
+// Pages outside the redesign scope stay in the codebase but are not shown.
+// Flip to true to make them reachable again.
+const SHOW_OUT_OF_SCOPE_PAGES = false;
 
 // Lazy load pages
-const Layout = lazy(() => import("./components/Layout.jsx"));
+const Layout = lazy(() => import("./components/shell/AppLayout.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AssignedToMe = lazy(() => import("./pages/AssignedToMe"));
 const Users = lazy(() => import("./pages/Users"));
@@ -85,29 +89,14 @@ const QuizResultsRouteHandler = ({ children }) => {
 };
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user, token } = useSelector((state) => state?.auth);
+  const { user } = useSelector((state) => state?.auth);
   const location = useLocation();
 
-  // DIAGNOSTIC LOGGING
-  React.useEffect(() => {
-    const lsUserInfo = localStorage.getItem("userInfo");
-    const lsToken = localStorage.getItem("accessToken");
-    console.log("[Diagnostic] ProtectedRoute Check:", {
-      reduxUser: user?._id || "null",
-      reduxToken: token ? "present" : "null",
-      lsUserInfo: lsUserInfo ? "present" : "null",
-      lsToken: lsToken ? "present" : "null",
-      path: location.pathname
-    });
-  }, [user, token, location]);
-
   if (!user) {
-    console.warn("[ProtectedRoute] No user found — redirecting to /auth");
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (adminOnly && user && user.role !== 'Admin') {
-    console.warn("[ProtectedRoute] User is not Admin — redirecting to /dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -115,11 +104,10 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 };
 
 // Suspense Fallback
-const Loading = () => (
-  <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "#1a1a1a" }}>
-    <FadeLoader color="#7b68ee" speedMultiplier={2} />
-  </Box>
-);
+const Loading = () => <PageLoader fullScreen />;
+
+// Wraps an out-of-scope page: rendered only when SHOW_OUT_OF_SCOPE_PAGES is on.
+const Hidden = ({ children }) => (SHOW_OUT_OF_SCOPE_PAGES ? children : <Navigate to="/dashboard" replace />);
 
 const App = () => {
   const router = React.useMemo(() => createBrowserRouter(
@@ -130,8 +118,8 @@ const App = () => {
         <Route path="/fieldteam-login" element={<FieldTeamLogin />} />
 
         {/* Audit System Routes */}
-        <Route path="/audit/login" element={<AuditLogin />} />
-        <Route path="/audit" element={<AuditLayout />}>
+        <Route path="/audit/login" element={<Hidden><AuditLogin /></Hidden>} />
+        <Route path="/audit" element={<Hidden><AuditLayout /></Hidden>}>
           <Route path="admin/*" element={<AuditAdminDashboard />} />
           <Route path="tasks" element={<AuditorDashboard />} />
           <Route path="tasks/:slid" element={<AuditTaskInspection />} />
@@ -172,46 +160,50 @@ const App = () => {
           <Route
             path="admin/suggestions"
             element={
-              <ProtectedRoute adminOnly>
-                <AdminSuggestionsDashboard />
-              </ProtectedRoute>
+              <Hidden>
+                <ProtectedRoute adminOnly>
+                  <AdminSuggestionsDashboard />
+                </ProtectedRoute>
+              </Hidden>
             }
           />
-          <Route path="/main-stats" element={<MainStats />} />
-          <Route path="/my-suggestions" element={<MemberSuggestionsDashboard />} />
-          <Route path="/policies" element={<PoliciesList />} />
+          <Route path="/main-stats" element={<Hidden><MainStats /></Hidden>} />
+          <Route path="/my-suggestions" element={<Hidden><MemberSuggestionsDashboard /></Hidden>} />
+          <Route path="/policies" element={<Hidden><PoliciesList /></Hidden>} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/customer-issues" element={<CustomerIssuesList />} />
+          <Route path="/ojo-snags" element={<CustomerIssuesList />} />
+          <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
           <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="/assigned-to-me" element={<AssignedToMe />} />
+          <Route path="/assigned-to-me" element={<Hidden><AssignedToMe /></Hidden>} />
           <Route path="/tasks-list" element={<AllTasksList />} />
-          <Route path="/assigned-to-me/detractor" element={<AssignedDetractor />} />
-          <Route path="/assigned-to-me/neutrals" element={<AssignedNeutral />} />
-          <Route path="/benchmark-tables" element={<BenchmarkTables />} />
-          <Route path="/favourites" element={<Favourites />} />
-          <Route path="/calender" element={<Calender />} />
+          <Route path="/assigned-to-me/detractor" element={<Hidden><AssignedDetractor /></Hidden>} />
+          <Route path="/assigned-to-me/neutrals" element={<Hidden><AssignedNeutral /></Hidden>} />
+          <Route path="/benchmark-tables" element={<Hidden><BenchmarkTables /></Hidden>} />
+          <Route path="/favourites" element={<Hidden><Favourites /></Hidden>} />
+          <Route path="/calendar" element={<Calender />} />
+          <Route path="/calender" element={<Navigate to="/calendar" replace />} />
           <Route path="/tasks/view-task/:id" element={<TaskViewPage />} />
           <Route path="/team" element={<Users />} />
           <Route path="/fieldTeams" element={<FieldTeamForm />} />
-          <Route path="/fieldTeams-portal" element={<FieldTeamPortal />} />
-          <Route path="/fieldTeams-portal/:teamId" element={<FieldTeamPortal />} />
+          <Route path="/fieldTeams-portal" element={<Hidden><FieldTeamPortal /></Hidden>} />
+          <Route path="/fieldTeams-portal/:teamId" element={<Hidden><FieldTeamPortal /></Hidden>} />
           <Route path="/assessment-dashboard" element={<PerfAssessmentDashboard />} />
           <Route path="/assessment" element={<Navigate to="/assessment-dashboard" replace />} />
           <Route path="/on-the-job-assessment" element={<OnTheJobAssessment />} />
-          <Route path="/teams-performance-page" element={<TeamsPerformancePage />} />
-          <Route path="/archived" element={<Archived />} />
-          <Route path="/trashed" element={<Trash />} />
-          <Route path="/ai-portal" element={<AIPortal />} />
-          <Route path="/ai-example" element={<AIIntegrationExample />} />
-          <Route path="/excel-portal" element={<DataManagement />} />
-          <Route path="/detractors-analytics" element={<DetractorAnalytics />} />
-          <Route path="/detractor-tasks" element={<DetractorTasks />} />
-          <Route path="/neutral-tasks" element={<NeutralTasks />} />
-          <Route path="/issue-prevention" element={<IssuePreventionAnalytics />} />
-          <Route path="/prevention-deep-dive" element={<PreventionDeepDive />} />
-          <Route path="/documents" element={<DocumentsPortal />} />
-          <Route path="/technical-glossary" element={<TechnicalGlossary />} />
-          <Route path="/reach-supervisors-audit" element={<ReachSupervisorsAudit />} />
+          <Route path="/teams-performance-page" element={<Hidden><TeamsPerformancePage /></Hidden>} />
+          <Route path="/archived" element={<Hidden><Archived /></Hidden>} />
+          <Route path="/trashed" element={<Hidden><Trash /></Hidden>} />
+          <Route path="/ai-portal" element={<Hidden><AIPortal /></Hidden>} />
+          <Route path="/ai-example" element={<Hidden><AIIntegrationExample /></Hidden>} />
+          <Route path="/excel-portal" element={<Hidden><DataManagement /></Hidden>} />
+          <Route path="/detractors-analytics" element={<Hidden><DetractorAnalytics /></Hidden>} />
+          <Route path="/detractor-tasks" element={<Hidden><DetractorTasks /></Hidden>} />
+          <Route path="/neutral-tasks" element={<Hidden><NeutralTasks /></Hidden>} />
+          <Route path="/issue-prevention" element={<Hidden><IssuePreventionAnalytics /></Hidden>} />
+          <Route path="/prevention-deep-dive" element={<Hidden><PreventionDeepDive /></Hidden>} />
+          <Route path="/documents" element={<Hidden><DocumentsPortal /></Hidden>} />
+          <Route path="/technical-glossary" element={<Hidden><TechnicalGlossary /></Hidden>} />
+          <Route path="/reach-supervisors-audit" element={<Hidden><ReachSupervisorsAudit /></Hidden>} />
           <Route
             path="/dropdown-management"
             element={
@@ -240,7 +232,7 @@ const App = () => {
   ), []);
 
   return (
-    <ThemeProvider theme={clickUpDarkTheme}>
+    <ThemeProvider theme={appTheme} defaultMode="light" disableTransitionOnChange>
       <Suspense fallback={<Loading />}>
         <RouterProvider router={router} />
       </Suspense>

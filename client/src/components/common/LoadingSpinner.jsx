@@ -8,7 +8,7 @@ import PropTypes from 'prop-types';
  * @param {number} size - Custom size override (optional)
  * @param {string} color - Custom color override (optional, defaults to theme primary #7b68ee)
  */
-const LoadingSpinner = ({ variant = 'inline', size, color = '#7b68ee', ...props }) => {
+const LoadingSpinner = ({ variant = 'inline', size, color = 'var(--accent-text)', ...props }) => {
   // Determine size based on variant
   const getSize = () => {
     if (size) return size;

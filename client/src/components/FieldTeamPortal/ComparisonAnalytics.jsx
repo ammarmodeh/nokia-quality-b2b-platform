@@ -65,7 +65,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
       p: 1.5,
       minWidth: 180
     }}>
-      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, display: 'block', mb: 0.5 }}>
+      <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, display: 'block', mb: 0.5 }}>
         {label} — {totalRaw} total tasks
       </Typography>
       {tokenValue !== undefined && tokenValue > 0 && (
@@ -84,7 +84,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
               <Typography variant="caption" sx={{ color: p.fill, fontWeight: 600 }}>
                 {p.name}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#e2e8f0', fontWeight: 700 }}>
+              <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>
                 {rawCount} ({p.value?.toFixed(1)}%)
               </Typography>
             </Box>
@@ -290,15 +290,15 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
   const columns = [
     {
       field: 'item', headerName: 'Category Item', flex: 1, minWidth: 180,
-      renderCell: (params) => <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{params.value}</span>
+      renderCell: (params) => <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{params.value}</span>
     },
     {
       field: 'lifetimeCount', headerName: 'Total Count', type: 'number', width: 120,
-      renderCell: (params) => <Typography variant="body2" sx={{ color: '#cbd5e1', fontWeight: 700 }}>{params.value}</Typography>
+      renderCell: (params) => <Typography variant="body2" sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{params.value}</Typography>
     },
     {
       field: 'latestCount', headerName: 'Current Period', type: 'number', width: 140,
-      renderCell: (params) => <span style={{ color: '#fff', fontWeight: 600 }}>{params.value} hits</span>
+      renderCell: (params) => <span style={{ color: 'var(--text)', fontWeight: 600 }}>{params.value} hits</span>
     },
     {
       field: 'popImprovement', headerName: `vs Prev ${timeFilterMode.slice(0, -1)}`, type: 'number', width: 150,
@@ -319,7 +319,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
     {
       field: 'improvement', headerName: 'Overall Improvement', type: 'number', width: 170,
       renderCell: (params) => {
-        if (params.row.trend === 'Insufficient Data') return <span style={{ color: '#64748b' }}>N/A</span>;
+        if (params.row.trend === 'Insufficient Data') return <span style={{ color: 'var(--text-muted)' }}>N/A</span>;
         return (
           <span style={{
             color: params.value > 0 ? '#10b981' : params.value < 0 ? '#ef4444' : '#f59e0b',
@@ -355,16 +355,16 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
       <Paper sx={{ p: 3, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59,130,246,0.15)', mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 4 }}>
           <Box>
-            <Typography variant="h5" fontWeight={700} color="#fff" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h5" fontWeight={700} color="var(--text)" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FaChartArea /> Comparison Analytics
             </Typography>
-            <Typography variant="body2" color="#94a3b8" mt={0.5}>
+            <Typography variant="body2" color="var(--text-secondary)" mt={0.5}>
               Multi-dimensional improvement analysis across custom periods.
             </Typography>
           </Box>
           <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap sx={{ alignItems: 'center' }}>
             <Box>
-              <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Layout</Typography>
+              <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Layout</Typography>
               <ToggleButtonGroup
                 color="primary"
                 value={barMode}
@@ -373,7 +373,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
                 size="small"
                 sx={{
                   border: '1px solid rgba(59,130,246,0.3)',
-                  '& .MuiToggleButton-root': { color: '#94a3b8', border: 'none', px: 2 },
+                  '& .MuiToggleButton-root': { color: 'var(--text-secondary)', border: 'none', px: 2 },
                   '& .Mui-selected': { bgcolor: 'rgba(59,130,246,0.1) !important', color: colors.primary + ' !important' }
                 }}
               >
@@ -383,7 +383,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
             </Box>
 
             <Box>
-              <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Grouping</Typography>
+              <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Grouping</Typography>
               <ToggleButtonGroup
                 color="primary"
                 value={timeFilterMode}
@@ -392,7 +392,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
                 size="small"
                 sx={{
                   border: '1px solid rgba(59,130,246,0.3)',
-                  '& .MuiToggleButton-root': { color: '#94a3b8', border: 'none', px: 2 },
+                  '& .MuiToggleButton-root': { color: 'var(--text-secondary)', border: 'none', px: 2 },
                   '& .Mui-selected': { bgcolor: 'rgba(59,130,246,0.1) !important', color: colors.primary + ' !important' }
                 }}
               >
@@ -405,39 +405,39 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
         </Box>
 
         {/* Summary Stat Cards */}
-        <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, mb: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <Box sx={{ p: 2, bgcolor: 'var(--overlay-subtle)', borderRadius: 2, mb: 4, border: '1px solid var(--border)' }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={3}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" color="#64748b" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Total Tasks (Low Sat. Score)</Typography>
+                <Typography variant="caption" color="var(--text-muted)" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Total Tasks (Low Sat. Score)</Typography>
                 <Typography variant="h6" color={colors.primary} fontWeight={800}>{totalStats.totalUniqueSamples}</Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={3} sx={{ borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+            <Grid item xs={12} sm={3} sx={{ borderLeft: '1px solid var(--border)' }}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="caption" color="#8b5cf6" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Total Samples Token</Typography>
                 <Typography variant="h6" color="#8b5cf6" fontWeight={800}>{totalSamplesTarget}</Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={2} sx={{ borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+            <Grid item xs={12} sm={2} sx={{ borderLeft: '1px solid var(--border)' }}>
               <MuiTooltip title="Sum of all category item occurrences across all periods. Can exceed Total Samples if a task has multiple categories (e.g. multiple reasons)." arrow>
                 <Box sx={{ textAlign: 'center', cursor: 'help' }}>
-                  <Typography variant="caption" color="#64748b" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="caption" color="var(--text-muted)" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
                     Total Category Hits <FaInfoCircle size={10} />
                   </Typography>
-                  <Typography variant="h6" color="#fff" fontWeight={800}>{totalStats.totalItemOccurrences}</Typography>
+                  <Typography variant="h6" color="var(--text)" fontWeight={800}>{totalStats.totalItemOccurrences}</Typography>
                 </Box>
               </MuiTooltip>
             </Grid>
-            <Grid item xs={12} sm={2} sx={{ borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+            <Grid item xs={12} sm={2} sx={{ borderLeft: '1px solid var(--border)' }}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" color="#64748b" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Improved Items</Typography>
+                <Typography variant="caption" color="var(--text-muted)" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Improved Items</Typography>
                 <Typography variant="h6" color="#10b981" fontWeight={800}>{totalStats.improvedCount}</Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={2} sx={{ borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+            <Grid item xs={12} sm={2} sx={{ borderLeft: '1px solid var(--border)' }}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" color="#64748b" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Declined Items</Typography>
+                <Typography variant="caption" color="var(--text-muted)" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 700 }}>Declined Items</Typography>
                 <Typography variant="h6" color="#ef4444" fontWeight={800}>{totalStats.declinedCount}</Typography>
               </Box>
             </Grid>
@@ -447,7 +447,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
         {/* Filters */}
         <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <Box sx={{ flex: 1, minWidth: '250px' }}>
-            <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Categorization</Typography>
+            <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Categorization</Typography>
             <FormControl size="small" fullWidth>
               <Select
                 value={comparisonCategory}
@@ -456,11 +456,11 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
                   setSelectedItemsFilters([]);
                 }}
                 sx={{
-                  color: '#fff',
-                  bgcolor: 'rgba(255,255,255,0.02)',
+                  color: 'var(--text)',
+                  bgcolor: 'var(--overlay-subtle)',
                   '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.2)' },
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(59,130,246,0.4)' },
-                  '& .MuiSvgIcon-root': { color: '#94a3b8' }
+                  '& .MuiSvgIcon-root': { color: 'var(--text-secondary)' }
                 }}
               >
                 <MenuItem value="reason">By Reason</MenuItem>
@@ -472,7 +472,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
           </Box>
 
           <Box sx={{ flex: 2, minWidth: '300px' }}>
-            <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Focus Search</Typography>
+            <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', mb: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>Focus Search</Typography>
             <Autocomplete
               multiple
               limitTags={3}
@@ -487,8 +487,8 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
                   size="small"
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      color: '#fff',
-                      bgcolor: 'rgba(255,255,255,0.02)',
+                      color: 'var(--text)',
+                      bgcolor: 'var(--overlay-subtle)',
                       '& fieldset': { borderColor: 'rgba(59,130,246,0.2)' },
                     }
                   }}
@@ -504,14 +504,14 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
         {/* Date Range */}
         <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Custom Span:</Typography>
+            <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Custom Span:</Typography>
             <TextField
               type="date"
               size="small"
               value={dateRange.start}
               onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
               sx={{
-                '& .MuiInputBase-root': { color: '#fff', fontSize: '0.8rem', bgcolor: 'rgba(255,255,255,0.02)' },
+                '& .MuiInputBase-root': { color: '#fff', fontSize: '0.8rem', bgcolor: 'var(--overlay-subtle)' },
                 width: 150
               }}
             />
@@ -522,7 +522,7 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
               value={dateRange.end}
               onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
               sx={{
-                '& .MuiInputBase-root': { color: '#fff', fontSize: '0.8rem', bgcolor: 'rgba(255,255,255,0.02)' },
+                '& .MuiInputBase-root': { color: '#fff', fontSize: '0.8rem', bgcolor: 'var(--overlay-subtle)' },
                 width: 150
               }}
             />
@@ -541,16 +541,16 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
           <ResponsiveContainer>
             <ComposedChart data={percentageChartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="period" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="period" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
                 domain={barMode === 'stacked' ? [0, 100] : [0, 'auto']}
                 tickFormatter={(v) => `${v}%`}
               />
-              <RechartsTooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-              <Legend wrapperStyle={{ paddingTop: '20px', color: '#94a3b8' }} />
+              <RechartsTooltip content={<CustomBarTooltip />} cursor={{ fill: 'var(--overlay-subtle)' }} />
+              <Legend wrapperStyle={{ paddingTop: '20px', color: 'var(--text-secondary)' }} />
 
               {activeItems.map((item) => (
                 <Bar
@@ -616,8 +616,8 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
       <Paper sx={{ p: 4, ...colors.glass, borderRadius: 3, border: '1px solid rgba(59,130,246,0.15)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
-            <Typography variant="h6" fontWeight={700} color="#fff">Improvement Matrix</Typography>
-            <Typography variant="caption" color="#64748b">Comparison between earliest and latest available data points in current range.</Typography>
+            <Typography variant="h6" fontWeight={700} color="var(--text)">Improvement Matrix</Typography>
+            <Typography variant="caption" color="var(--text-muted)">Comparison between earliest and latest available data points in current range.</Typography>
           </Box>
           <Chip icon={<FaCalendarAlt />} label={`Span: ${periodRange}`} sx={{ bgcolor: colors.primary + '10', color: colors.primary, fontWeight: 700, border: `1px solid ${colors.primary}30` }} />
         </Box>
@@ -631,12 +631,12 @@ const ComparisonAnalytics = ({ technicalTasks = [], settings = {}, colors = {}, 
             slotProps={{ toolbar: { showQuickFilter: true, quickFilterProps: { debounceMs: 500 } } }}
             disableRowSelectionOnClick
             sx={{
-              border: 0, color: '#94a3b8',
-              '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-              '& .MuiDataGrid-cell': { borderBottom: '1px solid rgba(255,255,255,0.05)' },
-              '& .MuiDataGrid-columnHeaders': { bgcolor: 'rgba(15, 23, 42, 0.5)', color: colors.primary, borderBottom: '1px solid rgba(255,255,255,0.1)', fontWeight: 800 },
-              '& .MuiDataGrid-footerContainer': { borderTop: '1px solid rgba(255,255,255,0.05)' },
-              '& .MuiTablePagination-root': { color: '#64748b' },
+              border: 0, color: 'var(--text-secondary)',
+              '& .MuiDataGrid-row:hover': { bgcolor: 'var(--overlay-subtle)' },
+              '& .MuiDataGrid-cell': { borderBottom: '1px solid var(--border)' },
+              '& .MuiDataGrid-columnHeaders': { bgcolor: 'rgba(15, 23, 42, 0.5)', color: colors.primary, borderBottom: '1px solid var(--border)', fontWeight: 800 },
+              '& .MuiDataGrid-footerContainer': { borderTop: '1px solid var(--border)' },
+              '& .MuiTablePagination-root': { color: 'var(--text-muted)' },
               '& .MuiDataGrid-toolbarContainer .MuiButton-text': { color: colors.primary }
             }}
           />

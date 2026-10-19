@@ -463,14 +463,14 @@ const Tasks = () => {
             px: 2,
             gap: 1,
             borderRadius: "999px",
-            backgroundColor: "#2d2d2d",
-            border: "1px solid #3d3d3d",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
             "&:focus-within": {
-              borderColor: "#7b68ee",
+              borderColor: "var(--accent)",
             },
           }}
         >
-          <MdOutlineSearch className="text-gray-400 text-xl" />
+          <MdOutlineSearch className="text-[var(--text-muted)] text-xl" />
           <TextField
             fullWidth
             variant="standard"
@@ -479,14 +479,14 @@ const Tasks = () => {
             onChange={(e) => !e.target.value && handleClearSearch()}
             onKeyPress={(e) => e.key === 'Enter' && handleSearchClick()}
             sx={{
-              "& .MuiInputBase-root": { backgroundColor: "transparent", color: "#ffffff" },
-              "& .MuiInputBase-input": { fontSize: "14px", color: "#ffffff", padding: 0 },
+              "& .MuiInputBase-root": { backgroundColor: "transparent", color: "var(--text)" },
+              "& .MuiInputBase-input": { fontSize: "14px", color: "var(--text)", padding: 0 },
               "& .MuiInput-root:before, & .MuiInput-root:after": { borderBottom: "none" },
             }}
             InputProps={{
               disableUnderline: true,
               endAdornment: searchTerm && (
-                <IconButton size="small" onClick={handleClearSearch} sx={{ color: "#b3b3b3" }}><MdClose /></IconButton>
+                <IconButton size="small" onClick={handleClearSearch} sx={{ color: "var(--text-secondary)" }}><MdClose /></IconButton>
               ),
             }}
           />
@@ -499,7 +499,7 @@ const Tasks = () => {
             size="small"
             sx={{
               backgroundColor: "#323232",
-              color: "#ffffff",
+              color: "var(--text)",
               borderRadius: "999px",
               "&:hover": { backgroundColor: "#1d4ed8" },
               fontSize: "14px",
@@ -514,16 +514,16 @@ const Tasks = () => {
 
       {/* Advanced Filter Collapse */}
       <Collapse in={showFilters}>
-        <Paper sx={{ p: 3, bgcolor: "#1e1e1e", borderRadius: 4, mb: 3, border: "1px solid #333" }}>
+        <Paper sx={{ p: 3, bgcolor: "var(--surface)", borderRadius: 4, mb: 3, border: "1px solid var(--border)" }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: "#888" }}>Priority</InputLabel>
+                <InputLabel sx={{ color: "var(--text-muted)" }}>Priority</InputLabel>
                 <Select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                   label="Priority"
-                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                  sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" } }}
                 >
                   <MenuItem value="all">All Priorities</MenuItem>
                   <MenuItem value="High">🔴 High</MenuItem>
@@ -534,12 +534,12 @@ const Tasks = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: "#888" }}>Status</InputLabel>
+                <InputLabel sx={{ color: "var(--text-muted)" }}>Status</InputLabel>
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   label="Status"
-                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                  sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" } }}
                 >
                   <MenuItem value="all">All Statuses</MenuItem>
                   <MenuItem value="Todo">⏳ Todo</MenuItem>
@@ -550,12 +550,12 @@ const Tasks = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: "#888" }}>Validation</InputLabel>
+                <InputLabel sx={{ color: "var(--text-muted)" }}>Validation</InputLabel>
                 <Select
                   value={validationFilter}
                   onChange={(e) => setValidationFilter(e.target.value)}
                   label="Validation"
-                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                  sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" } }}
                 >
                   <MenuItem value="all">All Validation</MenuItem>
                   <MenuItem value="Pending">🕒 Pending</MenuItem>
@@ -566,12 +566,12 @@ const Tasks = () => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
-                <InputLabel sx={{ color: "#888" }}>Field Team</InputLabel>
+                <InputLabel sx={{ color: "var(--text-muted)" }}>Field Team</InputLabel>
                 <Select
                   value={teamFilter}
                   onChange={(e) => setTeamFilter(e.target.value)}
                   label="Field Team"
-                  sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#333" } }}
+                  sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" } }}
                 >
                   <MenuItem value="all">All Teams</MenuItem>
                   {fieldTeams.map(team => (
@@ -582,7 +582,7 @@ const Tasks = () => {
             </Grid>
           </Grid>
           <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button size="small" onClick={() => { setStatusFilter("all"); setPriorityFilter("all"); setValidationFilter("all"); setTeamFilter("all"); }} sx={{ color: "#7b68ee" }}>Reset Filters</Button>
+            <Button size="small" onClick={() => { setStatusFilter("all"); setPriorityFilter("all"); setValidationFilter("all"); setTeamFilter("all"); }} sx={{ color: "var(--accent-text)" }}>Reset Filters</Button>
           </Box>
         </Paper>
       </Collapse>

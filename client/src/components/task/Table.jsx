@@ -45,7 +45,7 @@ const Table = ({ tasks }) => {
   );
 
   const TableRow = ({ task }) => (
-    <tr className='border-b border-gray-200 text-gray-400 hover:bg-gray-300/10'>
+    <tr className='border-b border-gray-200 text-[var(--text-muted)] hover:bg-gray-300/10'>
       <td className='py-2'>
         <div className='flex items-center gap-2'>
           <div
@@ -69,22 +69,22 @@ const Table = ({ tasks }) => {
       </td>
 
       <td className='py-2'>
-        <span className='text-sm text-gray-400'>
+        <span className='text-sm text-[var(--text-muted)]'>
           {formatDate(new Date(task?.date))}
         </span>
       </td>
 
       <td className='py-2'>
         <div className='flex items-center gap-3'>
-          <div className='flex gap-1 items-center text-sm text-gray-400'>
+          <div className='flex gap-1 items-center text-sm text-[var(--text-muted)]'>
             <BiMessageAltDetail />
             <span>{task?.activities?.length}</span>
           </div>
-          <div className='flex gap-1 items-center text-sm text-gray-400 dark:text-gray-400'>
+          <div className='flex gap-1 items-center text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]'>
             <MdAttachFile />
             <span>{task?.assets?.length}</span>
           </div>
-          <div className='flex gap-1 items-center text-sm text-gray-400 dark:text-gray-400'>
+          <div className='flex gap-1 items-center text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]'>
             <FaList />
             <span>0/{task?.subTasks?.length}</span>
           </div>
@@ -97,7 +97,7 @@ const Table = ({ tasks }) => {
             <div
               key={m._id}
               className={clsx(
-                "w-7 h-7 rounded-full text-white flex items-center justify-center text-sm -mr-1",
+                "w-7 h-7 rounded-full text-[var(--text)] flex items-center justify-center text-sm -mr-1",
                 BGS[index % BGS?.length]
               )}
             >
@@ -125,7 +125,7 @@ const Table = ({ tasks }) => {
   );
   return (
     <>
-      <div className='bg-[#2d2d2d]  px-2 md:px-4 pt-4 pb-9 shadow-md rounded'>
+      <div className='bg-[var(--surface)]  px-2 md:px-4 pt-4 pb-9 shadow-md rounded'>
         <div className='overflow-x-auto'>
           <table className='w-full '>
             <TableHeader />

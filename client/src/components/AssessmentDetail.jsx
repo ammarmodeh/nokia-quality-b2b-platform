@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import React, { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
@@ -269,7 +270,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
             <Box sx={{
               p: 3,
               borderRadius: '20px',
-              bgcolor: 'rgba(255,255,255,0.03)',
+              bgcolor: tok('--overlay-subtle'),
               border: `1px solid ${colors.border}`,
               textAlign: 'center'
             }}>
@@ -367,13 +368,13 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
                 <Chip
                   label={getLabelForCheckpoint(point.name, point.score)}
                   size="small"
-                  sx={{ bgcolor: colors[getPerformanceColor(point.score)], color: 'white', fontWeight: 600 }}
+                  sx={{ bgcolor: colors[getPerformanceColor(point.score)], color: tok('--text'), fontWeight: 600 }}
                 />
               </Box>
             </Box>
 
             {point.notes && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '12px', borderLeft: `4px solid ${colors.primary}` }}>
+              <Box sx={{ mt: 2, p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', borderLeft: `4px solid ${colors.primary}` }}>
                 <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 0.5, display: 'block' }}>Specialist Observations:</Typography>
                 <Typography variant="body2" sx={{ direction: 'rtl', textAlign: 'right', color: colors.textPrimary }}>{point.notes}</Typography>
               </Box>
@@ -392,7 +393,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
         </Box>
         <Typography variant="body1" sx={{
           p: 3,
-          bgcolor: 'rgba(255,255,255,0.02)',
+          bgcolor: tok('--overlay-subtle'),
           borderRadius: '16px',
           border: `1px solid ${colors.border}`,
           color: colors.textPrimary,

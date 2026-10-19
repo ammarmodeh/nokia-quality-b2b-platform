@@ -50,7 +50,7 @@ const AIPortal = () => {
   };
 
   return (
-    <Box sx={{ p: 3, minHeight: '100vh', color: '#ffffff' }}>
+    <Box sx={{ p: 3, minHeight: '100vh', color: 'var(--text)' }}>
       <Typography variant="h4" sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2, color: '#90caf9' }}>
         <MdPsychology size={40} /> AI Portal <Typography variant="caption" sx={{ color: 'gray' }}>(Powered by Gemini)</Typography>
       </Typography>
@@ -58,11 +58,11 @@ const AIPortal = () => {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
 
         {/* Insights Section */}
-        <Paper sx={{ p: 3, backgroundColor: '#2d2d2d', color: '#ffffff', borderRadius: 2 }}>
+        <Paper sx={{ p: 3, backgroundColor: 'var(--surface)', color: 'var(--text)', borderRadius: 2 }}>
           <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <MdAutoAwesome color="#ffeb3b" /> Strategic Insights
           </Typography>
-          <Typography variant="body2" sx={{ mb: 3, color: '#aaa' }}>
+          <Typography variant="body2" sx={{ mb: 3, color: 'var(--text-secondary)' }}>
             Generate an AI-powered executive summary of your current operations, highlighting risks and opportunities.
           </Typography>
 
@@ -76,19 +76,19 @@ const AIPortal = () => {
           </Button>
 
           {insights && (
-            <Box sx={{ p: 2, backgroundColor: '#252525', borderRadius: 1, border: '1px solid #3d3d3d' }}>
+            <Box sx={{ p: 2, backgroundColor: 'var(--surface)', borderRadius: 1, border: '1px solid var(--border)' }}>
               <Typography variant="body1" style={{ whiteSpace: 'pre-line' }}>{insights}</Typography>
             </Box>
           )}
         </Paper>
 
         {/* Chat Section */}
-        <Paper sx={{ p: 3, backgroundColor: '#2d2d2d', color: '#ffffff', borderRadius: 2, display: 'flex', flexDirection: 'column', height: '600px' }}>
+        <Paper sx={{ p: 3, backgroundColor: 'var(--surface)', color: 'var(--text)', borderRadius: 2, display: 'flex', flexDirection: 'column', height: '600px' }}>
           <Typography variant="h6" sx={{ mb: 2 }}>AI Assistant Chat</Typography>
 
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 2, p: 2, backgroundColor: '#252525', borderRadius: 1 }}>
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 2, p: 2, backgroundColor: 'var(--surface)', borderRadius: 1 }}>
             {chatHistory.length === 0 && (
-              <Typography variant="body2" sx={{ color: '#666', textAlign: 'center', mt: 4 }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-muted)', textAlign: 'center', mt: 4 }}>
                 Ask me anything about your tasks, teams, or performance stats.
               </Typography>
             )}
@@ -99,7 +99,7 @@ const AIPortal = () => {
                   p: 2,
                   borderRadius: 2,
                   backgroundColor: msg.role === 'user' ? '#3f51b5' : '#666',
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 }}>
                   <Typography variant="body2">{msg.text}</Typography>
                 </Box>
@@ -107,7 +107,7 @@ const AIPortal = () => {
             ))}
             {loadingChat && (
               <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
-                <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#2d2d2d' }}>
+                <Box sx={{ p: 2, borderRadius: 2, backgroundColor: 'var(--surface)' }}>
                   <CircularProgress size={20} />
                 </Box>
               </Box>
@@ -123,10 +123,10 @@ const AIPortal = () => {
               onChange={(e) => setChatMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               sx={{
-                backgroundColor: '#252525',
-                input: { color: '#ffffff' },
+                backgroundColor: 'var(--surface)',
+                input: { color: 'var(--text)' },
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#666' },
                 }
               }}

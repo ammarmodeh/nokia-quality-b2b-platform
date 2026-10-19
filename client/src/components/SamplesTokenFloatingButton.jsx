@@ -25,9 +25,9 @@ const SamplesTokenFloatingButton = () => {
             position: 'fixed',
             bottom: 30,
             right: 30,
-            backgroundColor: '#7b68ee',
+            backgroundColor: 'var(--accent)',
             '&:hover': {
-              backgroundColor: '#5e4ecf',
+              backgroundColor: 'var(--accent-hover)',
             },
             zIndex: 1000
           }}

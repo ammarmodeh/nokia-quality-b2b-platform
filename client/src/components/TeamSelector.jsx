@@ -154,7 +154,7 @@ const TeamSelector = ({
                 startIcon={<Add sx={{ fontSize: '1.2rem !important' }} />}
                 sx={{
                   backgroundColor: colors.primary,
-                  color: '#ffffff',
+                  color: 'var(--text)',
                   fontWeight: 600,
                   fontSize: '0.85rem',
                   whiteSpace: 'nowrap',
@@ -171,7 +171,7 @@ const TeamSelector = ({
                     transform: 'translateY(-1px)',
                   },
                   '&.Mui-disabled': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: 'var(--overlay-subtle)',
                     color: 'rgba(255, 255, 255, 0.3)',
                   }
                 }}

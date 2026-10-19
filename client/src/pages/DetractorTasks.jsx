@@ -468,7 +468,7 @@ const DetractorTasks = () => {
             startIcon={<FaFileExcel />}
             size={isMobile ? 'small' : 'medium'}
             sx={{
-              borderColor: '#3d3d3d',
+              borderColor: 'var(--border)',
               color: '#4caf50',
               '&:hover': { borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.05)' },
               textTransform: 'none',
@@ -484,7 +484,7 @@ const DetractorTasks = () => {
             startIcon={<FaExchangeAlt />}
             size={isMobile ? 'small' : 'medium'}
             sx={{
-              borderColor: '#3d3d3d',
+              borderColor: 'var(--border)',
               color: '#00f2ff',
               '&:hover': { borderColor: '#00f2ff', backgroundColor: 'rgba(0, 242, 255, 0.05)' },
               textTransform: 'none',
@@ -499,10 +499,10 @@ const DetractorTasks = () => {
 
       {/* Main Content Box */}
       <Box sx={{
-        backgroundColor: '#2d2d2d',
+        backgroundColor: 'var(--surface)',
         p: 2,
         borderRadius: '12px',
-        border: '1px solid #3d3d3d',
+        border: '1px solid var(--border)',
         mb: 3,
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}>
@@ -520,7 +520,7 @@ const DetractorTasks = () => {
                 p: 2,
                 borderRadius: 2,
                 bgcolor: 'rgba(30, 30, 30, 0.6)',
-                border: '1px solid #3d3d3d',
+                border: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 2,
@@ -538,10 +538,10 @@ const DetractorTasks = () => {
                   {stat.icon}
                 </Box>
                 <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#fff', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'var(--text)', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>
                     {stat.value}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: '#b3b3b3', fontSize: '0.75rem' }}>
+                  <Typography variant="body2" sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                     {stat.label}
                   </Typography>
                 </Box>
@@ -553,12 +553,12 @@ const DetractorTasks = () => {
 
 
         {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: '#3d3d3d', mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'var(--border)', mb: 3 }}>
           <Tabs
             value={activeTab}
             onChange={(e, v) => setActiveTab(v)}
             sx={{
-              '& .MuiTab-root': { color: '#b3b3b3', textTransform: 'none', fontWeight: 600 },
+              '& .MuiTab-root': { color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600 },
               '& .Mui-selected': { color: '#ef4444' },
               '& .MuiTabs-indicator': { backgroundColor: '#ef4444' }
             }}
@@ -581,7 +581,7 @@ const DetractorTasks = () => {
               {/* Owner Analysis */}
               <Grid item xs={12} md={6}>
                 <Paper sx={{ p: 2, bgcolor: 'rgba(30, 30, 30, 0.6)', borderRadius: 2 }}>
-                  <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  <Typography variant="h6" fontWeight="700" mb={2} color="var(--text)">
                     Owner Distribution
                   </Typography>
                   <ResponsiveContainer width="100%" height={250}>
@@ -589,7 +589,7 @@ const DetractorTasks = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" />
                       <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#b3b3b3" />
                       <YAxis stroke="#b3b3b3" />
-                      <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3d3d3d' }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }} />
                       <Bar dataKey="value" fill="#ef4444" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -599,7 +599,7 @@ const DetractorTasks = () => {
               {/* Reason Breakdown */}
               <Grid item xs={12} md={6}>
                 <Paper sx={{ p: 2, bgcolor: 'rgba(30, 30, 30, 0.6)', borderRadius: 2 }}>
-                  <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  <Typography variant="h6" fontWeight="700" mb={2} color="var(--text)">
                     Reason Breakdown
                   </Typography>
                   <ResponsiveContainer width="100%" height={250}>
@@ -618,7 +618,7 @@ const DetractorTasks = () => {
                           <Cell key={`cell-${index}`} fill={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF6B9D', '#8884D8', '#82CA9D'][index % 8]} />
                         ))}
                       </Pie>
-                      <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3d3d3d' }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </Paper>
@@ -627,7 +627,7 @@ const DetractorTasks = () => {
               {/* Sub-reason Distribution */}
               <Grid item xs={12} md={6}>
                 <Paper sx={{ p: 2, bgcolor: 'rgba(30, 30, 30, 0.6)', borderRadius: 2 }}>
-                  <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  <Typography variant="h6" fontWeight="700" mb={2} color="var(--text)">
                     Sub-reason Distribution
                   </Typography>
                   <ResponsiveContainer width="100%" height={250}>
@@ -635,7 +635,7 @@ const DetractorTasks = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" />
                       <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#b3b3b3" />
                       <YAxis stroke="#b3b3b3" />
-                      <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3d3d3d' }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }} />
                       <Bar dataKey="value" fill="#f59e0b" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -645,7 +645,7 @@ const DetractorTasks = () => {
               {/* Root Cause Analysis */}
               <Grid item xs={12} md={6}>
                 <Paper sx={{ p: 2, bgcolor: 'rgba(30, 30, 30, 0.6)', borderRadius: 2 }}>
-                  <Typography variant="h6" fontWeight="700" mb={2} color="#fff">
+                  <Typography variant="h6" fontWeight="700" mb={2} color="var(--text)">
                     Root Cause Analysis
                   </Typography>
                   <ResponsiveContainer width="100%" height={250}>
@@ -653,7 +653,7 @@ const DetractorTasks = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" />
                       <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} stroke="#b3b3b3" />
                       <YAxis stroke="#b3b3b3" />
-                      <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: '1px solid #3d3d3d' }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }} />
                       <Bar dataKey="value" fill="#10b981" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -684,10 +684,10 @@ const DetractorTasks = () => {
                           {/* Team Header */}
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Box>
-                              <Typography variant="h6" fontWeight="700" color="#fff">
+                              <Typography variant="h6" fontWeight="700" color="var(--text)">
                                 #{(offendersPage - 1) * 10 + idx + 1} {team.teamName}
                               </Typography>
-                              <Typography variant="body2" color="#94a3b8">
+                              <Typography variant="body2" color="var(--text-secondary)">
                                 Total Issues: <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{team.totalIssues}</span>
                               </Typography>
                             </Box>
@@ -721,7 +721,7 @@ const DetractorTasks = () => {
                                       <Cell key={`cell-${index}`} fill={['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][index % 5]} />
                                     ))}
                                   </Pie>
-                                  <RechartsTooltip contentStyle={{ backgroundColor: '#1e1e1e', border: 'none' }} />
+                                  <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none' }} />
                                 </PieChart>
                               </ResponsiveContainer>
                             </Grid>
@@ -734,7 +734,7 @@ const DetractorTasks = () => {
                               <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
                                 {team.owners.map((owner, i) => (
                                   <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(239, 68, 68, 0.1)', borderRadius: 1 }}>
-                                    <Typography variant="caption" color="#e2e8f0">{owner.name}</Typography>
+                                    <Typography variant="caption" color="var(--text-secondary)">{owner.name}</Typography>
                                     <Typography variant="caption" fontWeight="bold" color="#ef4444">{owner.value}</Typography>
                                   </Box>
                                 ))}
@@ -749,7 +749,7 @@ const DetractorTasks = () => {
                               <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
                                 {team.reasons.map((reason, i) => (
                                   <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(245, 158, 11, 0.1)', borderRadius: 1 }}>
-                                    <Typography variant="caption" color="#e2e8f0">{reason.name}</Typography>
+                                    <Typography variant="caption" color="var(--text-secondary)">{reason.name}</Typography>
                                     <Typography variant="caption" fontWeight="bold" color="#f59e0b">{reason.value}</Typography>
                                   </Box>
                                 ))}
@@ -764,7 +764,7 @@ const DetractorTasks = () => {
                               <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
                                 {team.subReasons.map((subReason, i) => (
                                   <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(167, 139, 250, 0.1)', borderRadius: 1 }}>
-                                    <Typography variant="caption" color="#e2e8f0">{subReason.name}</Typography>
+                                    <Typography variant="caption" color="var(--text-secondary)">{subReason.name}</Typography>
                                     <Typography variant="caption" fontWeight="bold" color="#a78bfa">{subReason.value}</Typography>
                                   </Box>
                                 ))}
@@ -779,7 +779,7 @@ const DetractorTasks = () => {
                               <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
                                 {team.rootCauses.map((rootCause, i) => (
                                   <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, p: 0.5, bgcolor: 'rgba(16, 185, 129, 0.1)', borderRadius: 1 }}>
-                                    <Typography variant="caption" color="#e2e8f0">{rootCause.name}</Typography>
+                                    <Typography variant="caption" color="var(--text-secondary)">{rootCause.name}</Typography>
                                     <Typography variant="caption" fontWeight="bold" color="#10b981">{rootCause.value}</Typography>
                                   </Box>
                                 ))}
@@ -791,7 +791,7 @@ const DetractorTasks = () => {
                     ))}
                 </Grid>
               ) : (
-                <Typography variant="body2" color="#64748b" textAlign="center" py={4}>
+                <Typography variant="body2" color="var(--text-muted)" textAlign="center" py={4}>
                   No field team data available
                 </Typography>
               )}
@@ -805,7 +805,7 @@ const DetractorTasks = () => {
                     onChange={(e, v) => setOffendersPage(v)}
                     color="error" // Matching detractor theme
                     sx={{
-                      '& .MuiPaginationItem-root': { color: '#fff' },
+                      '& .MuiPaginationItem-root': { color: 'var(--text)' },
                       '& .Mui-selected': { bgcolor: 'rgba(239, 68, 68, 0.3) !important' }
                     }}
                   />
@@ -838,10 +838,10 @@ const DetractorTasks = () => {
                 sx={{
                   flexGrow: 1,
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#1e1e1e',
+                    backgroundColor: 'var(--surface)',
                     borderRadius: '8px',
-                    color: '#ffffff',
-                    '& fieldset': { borderColor: '#3d3d3d' },
+                    color: 'var(--text)',
+                    '& fieldset': { borderColor: 'var(--border)' },
                     '&:hover fieldset': { borderColor: '#666' },
                     '&.Mui-focused fieldset': { borderColor: '#ef4444' },
                   }
@@ -849,11 +849,11 @@ const DetractorTasks = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <MdSearch style={{ color: '#b3b3b3' }} />
+                      <MdSearch style={{ color: 'var(--text-secondary)' }} />
                     </InputAdornment>
                   ),
                   endAdornment: searchTerm && (
-                    <IconButton size="small" onClick={() => setSearchTerm('')} sx={{ color: '#b3b3b3' }}>
+                    <IconButton size="small" onClick={() => setSearchTerm('')} sx={{ color: 'var(--text-secondary)' }}>
                       <MdClose />
                     </IconButton>
                   )
@@ -862,10 +862,10 @@ const DetractorTasks = () => {
 
               <Box sx={{
                 display: 'flex',
-                backgroundColor: '#1e1e1e',
+                backgroundColor: 'var(--surface)',
                 borderRadius: '8px',
                 p: 0.5,
-                border: '1px solid #3d3d3d'
+                border: '1px solid var(--border)'
               }}>
                 {[
                   { id: 'grid', icon: <MdViewModule />, label: 'Grid' },
@@ -895,7 +895,7 @@ const DetractorTasks = () => {
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
+            <Divider sx={{ mb: 2, borderColor: 'var(--border)' }} />
 
             {/* Date Filters & Advanced Toggle */}
             <Box sx={{
@@ -905,7 +905,7 @@ const DetractorTasks = () => {
               mb: 2,
               alignItems: isMobile ? 'stretch' : 'center'
             }}>
-              <Typography variant="body2" sx={{ color: '#b3b3b3', minWidth: 'fit-content' }}>Filter by Date:</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', minWidth: 'fit-content' }}>Filter by Date:</Typography>
               <TextField
                 type="date"
                 label="From"
@@ -915,9 +915,9 @@ const DetractorTasks = () => {
                 size="small"
                 sx={{
                   maxWidth: isMobile ? 'none' : '200px',
-                  '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
-                  '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                  '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+                  '& .MuiInputBase-root': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
+                  '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                  '& .MuiOutlinedInput-root fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#666' },
                 }}
               />
@@ -930,9 +930,9 @@ const DetractorTasks = () => {
                 size="small"
                 sx={{
                   maxWidth: isMobile ? 'none' : '200px',
-                  '& .MuiInputBase-root': { color: '#ffffff', backgroundColor: '#1e1e1e' },
-                  '& .MuiInputLabel-root': { color: '#b3b3b3' },
-                  '& .MuiOutlinedInput-root fieldset': { borderColor: '#3d3d3d' },
+                  '& .MuiInputBase-root': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
+                  '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
+                  '& .MuiOutlinedInput-root fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#666' },
                 }}
               />
@@ -955,7 +955,7 @@ const DetractorTasks = () => {
                 size="small"
                 variant={showFilters ? "contained" : "outlined"}
                 sx={{
-                  borderColor: '#3d3d3d',
+                  borderColor: 'var(--border)',
                   color: showFilters ? '#fff' : '#ef4444',
                   bgcolor: showFilters ? '#ef4444' : 'transparent',
                   '&:hover': {
@@ -980,12 +980,12 @@ const DetractorTasks = () => {
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
-                      <InputLabel sx={{ color: "#64748b", "&.Mui-focused": { color: "#ef4444" } }}>Priority Layer</InputLabel>
+                      <InputLabel sx={{ color: "var(--text-muted)", "&.Mui-focused": { color: "#ef4444" } }}>Priority Layer</InputLabel>
                       <Select
                         value={priorityFilter}
                         onChange={(e) => setPriorityFilter(e.target.value)}
                         label="Priority Layer"
-                        sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.1)" }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(239, 68, 68, 0.3)" }, "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" } }}
+                        sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(239, 68, 68, 0.3)" }, "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" } }}
                       >
                         <MenuItem value="all">Full Spectrum</MenuItem>
                         <MenuItem value="High">🔴 High Priority</MenuItem>
@@ -996,12 +996,12 @@ const DetractorTasks = () => {
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
-                      <InputLabel sx={{ color: "#64748b", "&.Mui-focused": { color: "#ef4444" } }}>Validation Status</InputLabel>
+                      <InputLabel sx={{ color: "var(--text-muted)", "&.Mui-focused": { color: "#ef4444" } }}>Validation Status</InputLabel>
                       <Select
                         value={validationFilter}
                         onChange={(e) => setValidationFilter(e.target.value)}
                         label="Validation Status"
-                        sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.1)" }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(239, 68, 68, 0.3)" }, "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" } }}
+                        sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(239, 68, 68, 0.3)" }, "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" } }}
                       >
                         <MenuItem value="all">All Statuses</MenuItem>
                         <MenuItem value="Validated">🛡️ Validated</MenuItem>
@@ -1011,12 +1011,12 @@ const DetractorTasks = () => {
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <FormControl fullWidth size="small">
-                      <InputLabel sx={{ color: "#64748b", "&.Mui-focused": { color: "#ef4444" } }}>Unit Assignment</InputLabel>
+                      <InputLabel sx={{ color: "var(--text-muted)", "&.Mui-focused": { color: "#ef4444" } }}>Unit Assignment</InputLabel>
                       <Select
                         value={teamFilter}
                         onChange={(e) => setTeamFilter(e.target.value)}
                         label="Unit Assignment"
-                        sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.1)" }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(239, 68, 68, 0.3)" }, "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" } }}
+                        sx={{ color: "var(--text)", ".MuiOutlinedInput-notchedOutline": { borderColor: "var(--border)" }, "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(239, 68, 68, 0.3)" }, "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#ef4444" } }}
                       >
                         <MenuItem value="all">All Units</MenuItem>
                         {fieldTeams.map(team => (
@@ -1029,7 +1029,7 @@ const DetractorTasks = () => {
                     <Button
                       fullWidth
                       onClick={() => { setStatusFilter("all"); setPriorityFilter("all"); setValidationFilter("all"); setTeamFilter("all"); }}
-                      sx={{ color: "#64748b", fontWeight: 800, height: '100%' }}
+                      sx={{ color: "var(--text-muted)", fontWeight: 800, height: '100%' }}
                     >
                       RESET FILTERS
                     </Button>
@@ -1038,7 +1038,7 @@ const DetractorTasks = () => {
               </Box>
             </Collapse>
 
-            <Divider sx={{ mb: 2, borderColor: '#3d3d3d' }} />
+            <Divider sx={{ mb: 2, borderColor: 'var(--border)' }} />
 
             {/* Status Tabs */}
             <Tabs
@@ -1050,7 +1050,7 @@ const DetractorTasks = () => {
               sx={{
                 '& .MuiTabs-indicator': { backgroundColor: '#ef4444' },
                 '& .MuiTab-root': {
-                  color: '#b3b3b3',
+                  color: 'var(--text-secondary)',
                   textTransform: 'none',
                   fontWeight: 600,
                   fontSize: '0.95rem',
@@ -1067,7 +1067,7 @@ const DetractorTasks = () => {
 
             {/* Search Results Summary */}
             <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ color: '#64748b' }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-muted)' }}>
                 Showing {filteredTasks.length} results
               </Typography>
             </Box>
@@ -1116,7 +1116,7 @@ const DetractorTasks = () => {
                   ) : (
                     /* Table Layout */
                     <Box sx={{ width: '100%', overflowX: 'auto' }}>
-                      <TableContainer component={Paper} sx={{ bgcolor: "rgba(10, 10, 15, 0.7)", backdropFilter: 'blur(30px)', borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)", overflow: 'visible', boxShadow: '0 30px 60px rgba(0,0,0,0.5)' }}>
+                      <TableContainer component={Paper} sx={{ bgcolor: "rgba(10, 10, 15, 0.7)", backdropFilter: 'blur(30px)', borderRadius: 8, border: "1px solid var(--border)", overflow: 'visible', boxShadow: '0 30px 60px rgba(0,0,0,0.5)' }}>
                         <Table>
                           <TableHead sx={{ bgcolor: "rgba(239, 68, 68, 0.08)" }}>
                             <TableRow>
@@ -1125,33 +1125,33 @@ const DetractorTasks = () => {
                                   indeterminate={selectedTasks.length > 0 && selectedTasks.length < filteredTasks.length}
                                   checked={filteredTasks.length > 0 && selectedTasks.length === filteredTasks.length}
                                   onChange={toggleSelectAll}
-                                  sx={{ color: "rgba(255,255,255,0.15)", '&.Mui-checked': { color: "#ef4444" } }}
+                                  sx={{ color: "var(--overlay-subtle)", '&.Mui-checked': { color: "#ef4444" } }}
                                 />
                               </TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                                <TableSortLabel active={orderBy === 'slid'} direction={order} onClick={() => handleSort('slid')} sx={{ color: '#64748b !important', '& .MuiTableSortLabel-icon': { color: '#ef4444 !important' } }}>SLID</TableSortLabel>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                                <TableSortLabel active={orderBy === 'slid'} direction={order} onClick={() => handleSort('slid')} sx={{ color: 'var(--text-muted) !important', '& .MuiTableSortLabel-icon': { color: '#ef4444 !important' } }}>SLID</TableSortLabel>
                               </TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Category</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Operation</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Intensity</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Network Status</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Field Deployment</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Location</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Priority</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Validation</TableCell>
-                              <TableCell sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Created</TableCell>
-                              <TableCell align="right" sx={{ color: "#64748b", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Tactical</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Category</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Operation</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Intensity</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Network Status</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Field Deployment</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Location</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Priority</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Validation</TableCell>
+                              <TableCell sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Created</TableCell>
+                              <TableCell align="right" sx={{ color: "var(--text-muted)", fontWeight: 900, fontSize: '0.8rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Tactical</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {filteredTasks.map((task) => {
                               const isSelected = selectedTasks.some(t => t._id === task._id);
                               return (
-                                <TableRow key={task._id} hover selected={isSelected} sx={{ transition: 'all 0.2s', '&:hover': { bgcolor: "rgba(255,255,255,0.04) !important" }, '&.Mui-selected': { bgcolor: "rgba(239, 68, 68, 0.08) !important" } }}>
+                                <TableRow key={task._id} hover selected={isSelected} sx={{ transition: 'all 0.2s', '&:hover': { bgcolor: "var(--overlay-subtle) !important" }, '&.Mui-selected': { bgcolor: "rgba(239, 68, 68, 0.08) !important" } }}>
                                   <TableCell padding="checkbox">
-                                    <Checkbox checked={isSelected} onChange={() => toggleSelectTask(task)} sx={{ color: "rgba(255,255,255,0.1)", '&.Mui-checked': { color: "#ef4444" } }} />
+                                    <Checkbox checked={isSelected} onChange={() => toggleSelectTask(task)} sx={{ color: "var(--overlay-subtle)", '&.Mui-checked': { color: "#ef4444" } }} />
                                   </TableCell>
-                                  <TableCell sx={{ color: "#fff", fontWeight: 900, fontFamily: 'monospace', fontSize: '1.05rem', letterSpacing: '0.5px' }}>{task.slid}</TableCell>
+                                  <TableCell sx={{ color: "var(--text)", fontWeight: 900, fontFamily: 'monospace', fontSize: '1.05rem', letterSpacing: '0.5px' }}>{task.slid}</TableCell>
                                   <TableCell>
                                     <Chip
                                       label={task.category || "N/A"}
@@ -1165,10 +1165,10 @@ const DetractorTasks = () => {
                                       }}
                                     />
                                   </TableCell>
-                                  <TableCell sx={{ color: "#94a3b8", fontWeight: 600, fontSize: "0.85rem" }}>{task.operation || "N/A"}</TableCell>
+                                  <TableCell sx={{ color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.85rem" }}>{task.operation || "N/A"}</TableCell>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                                      <Box sx={{ width: 70, height: 8, bgcolor: "rgba(255,255,255,0.05)", borderRadius: 10, overflow: 'hidden' }}>
+                                      <Box sx={{ width: 70, height: 8, bgcolor: "var(--overlay-subtle)", borderRadius: 10, overflow: 'hidden' }}>
                                         <Box sx={{ width: `${(task.evaluationScore / 10) * 100}%`, height: '100%', bgcolor: "#ef4444", boxShadow: `0 0 15px #ef4444` }} />
                                       </Box>
                                       <Typography variant="body2" sx={{ fontWeight: 1000, color: "#ef4444" }}>{task.evaluationScore}</Typography>
@@ -1190,12 +1190,12 @@ const DetractorTasks = () => {
                                       }}
                                     />
                                   </TableCell>
-                                  <TableCell sx={{ color: "#cbd5e1", fontWeight: 700 }}>{task.teamName || 'N/A'}</TableCell>
-                                  <TableCell sx={{ color: "#94a3b8", fontWeight: 600 }}>{task.governorate}</TableCell>
+                                  <TableCell sx={{ color: "var(--text-secondary)", fontWeight: 700 }}>{task.teamName || 'N/A'}</TableCell>
+                                  <TableCell sx={{ color: "var(--text-secondary)", fontWeight: 600 }}>{task.governorate}</TableCell>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                       <Box sx={{ width: 12, height: 12, borderRadius: '3px', transform: 'rotate(45deg)', bgcolor: priorityConfig[task.priority]?.color, boxShadow: `0 0 20px ${priorityConfig[task.priority]?.color}` }} />
-                                      <Typography variant="body2" sx={{ color: "#f8fafc", fontWeight: 800 }}>{task.priority}</Typography>
+                                      <Typography variant="body2" sx={{ color: "var(--text)", fontWeight: 800 }}>{task.priority}</Typography>
                                     </Box>
                                   </TableCell>
                                   <TableCell>
@@ -1211,7 +1211,7 @@ const DetractorTasks = () => {
                                       }}
                                     />
                                   </TableCell>
-                                  <TableCell sx={{ color: "#64748b", fontWeight: 600, fontSize: "0.8rem" }}>
+                                  <TableCell sx={{ color: "var(--text-muted)", fontWeight: 600, fontSize: "0.8rem" }}>
                                     {task.createdAt ? moment(task.createdAt).format("MMM DD, YYYY") : "N/A"}
                                   </TableCell>
                                   <TableCell align="right">
@@ -1219,7 +1219,7 @@ const DetractorTasks = () => {
                                       <IconButton onClick={() => handleWhatsAppDispatch(task)} size="small" sx={{ color: "#22c55e", bgcolor: "rgba(34, 197, 94, 0.15)", borderRadius: '10px', "&:hover": { bgcolor: "#22c55e", color: "#fff" } }}>
                                         <FaWhatsapp size={18} />
                                       </IconButton>
-                                      <IconButton onClick={() => setSelectedTasks([task]) && exportToExcel()} size="small" sx={{ color: "#fff", bgcolor: "rgba(255, 255, 255, 0.08)", borderRadius: '10px', "&:hover": { bgcolor: "#fff", color: "#000" } }}>
+                                      <IconButton onClick={() => setSelectedTasks([task]) && exportToExcel()} size="small" sx={{ color: "#fff", bgcolor: "var(--overlay-subtle)", borderRadius: '10px', "&:hover": { bgcolor: "#fff", color: "#000" } }}>
                                         <FaFileExcel size={18} />
                                       </IconButton>
                                     </Stack>

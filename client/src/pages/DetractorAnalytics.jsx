@@ -241,7 +241,7 @@ const DetractorAnalytics = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', color: 'white' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', color: 'var(--text)' }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
         📊 Advanced NPS Analytics & Root Cause Analysis
       </Typography>
@@ -263,10 +263,10 @@ const DetractorAnalytics = () => {
               onChange={(e) => handleFilterChange('startDate', e.target.value)}
               InputLabelProps={{ shrink: true }}
               sx={{
-                input: { color: 'white' },
-                label: { color: '#aaa' },
+                input: { color: 'var(--text)' },
+                label: { color: 'var(--text-secondary)' },
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#666' }
                 }
               }}
@@ -281,10 +281,10 @@ const DetractorAnalytics = () => {
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
               InputLabelProps={{ shrink: true }}
               sx={{
-                input: { color: 'white' },
-                label: { color: '#aaa' },
+                input: { color: 'var(--text)' },
+                label: { color: 'var(--text-secondary)' },
                 '& .MuiOutlinedInput-root': {
-                  '& fieldset': { borderColor: '#3d3d3d' },
+                  '& fieldset': { borderColor: 'var(--border)' },
                   '&:hover fieldset': { borderColor: '#666' }
                 }
               }}
@@ -295,18 +295,18 @@ const DetractorAnalytics = () => {
               options={teamNames}
               value={filters.teamName}
               onChange={(e, newValue) => handleFilterChange('teamName', newValue || '')}
-              renderInput={(params) => <TextField {...params} label="Team" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
-              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#3d3d3d' } } }}
+              renderInput={(params) => <TextField {...params} label="Team" sx={{ input: { color: 'var(--text)' }, label: { color: 'var(--text-secondary)' } }} />}
+              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'var(--border)' } } }}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#aaa' }}>Responsibility</InputLabel>
+              <InputLabel sx={{ color: 'var(--text-secondary)' }}>Responsibility</InputLabel>
               <Select
                 value={filters.responsible}
                 onChange={(e) => handleFilterChange('responsible', e.target.value)}
                 label="Responsibility"
-                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' } }}
+                sx={{ color: 'var(--text)', '.MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' } }}
               >
                 <MenuItem value="">All</MenuItem>
                 <MenuItem value="Field Team">Field Team</MenuItem>
@@ -321,12 +321,12 @@ const DetractorAnalytics = () => {
 
           <Grid item xs={12} sm={6} md={2}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#aaa' }}>Period</InputLabel>
+              <InputLabel sx={{ color: 'var(--text-secondary)' }}>Period</InputLabel>
               <Select
                 value={filters.period}
                 onChange={(e) => handleFilterChange('period', e.target.value)}
                 label="Period"
-                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: '#3d3d3d' } }}
+                sx={{ color: 'var(--text)', '.MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border)' } }}
               >
                 <MenuItem value="daily">Daily</MenuItem>
                 <MenuItem value="weekly">Weekly</MenuItem>
@@ -340,7 +340,7 @@ const DetractorAnalytics = () => {
       {/* KPI Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={3}>
-          <Card sx={{ color: 'white', height: '100%' }}>
+          <Card sx={{ color: 'var(--text)', height: '100%' }}>
             <CardContent>
               <Typography color="gray" gutterBottom>Total Violations</Typography>
               <Typography variant="h3">{overview.totalRecords}</Typography>
@@ -349,7 +349,7 @@ const DetractorAnalytics = () => {
           </Card>
         </Grid>
         <Grid item xs={12} md={3}>
-          <Card sx={{ color: 'white', height: '100%' }}>
+          <Card sx={{ color: 'var(--text)', height: '100%' }}>
             <CardContent>
               <Typography color="gray" gutterBottom>Unique Teams</Typography>
               <Typography variant="h3">{teamNames.length}</Typography>
@@ -358,7 +358,7 @@ const DetractorAnalytics = () => {
           </Card>
         </Grid>
         <Grid item xs={12} md={3}>
-          <Card sx={{ color: 'white', height: '100%' }}>
+          <Card sx={{ color: 'var(--text)', height: '100%' }}>
             <CardContent>
               <Typography color="gray" gutterBottom>Top Violator</Typography>
               <Typography variant="h6">{teamViolations[0]?.teamName || 'N/A'}</Typography>
@@ -367,7 +367,7 @@ const DetractorAnalytics = () => {
           </Card>
         </Grid>
         <Grid item xs={12} md={3}>
-          <Card sx={{ color: 'white', height: '100%' }}>
+          <Card sx={{ color: 'var(--text)', height: '100%' }}>
             <CardContent>
               <Typography color="gray" gutterBottom>Trend</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -391,7 +391,7 @@ const DetractorAnalytics = () => {
       {/* Charts Row 1 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
-          <Card sx={{ color: 'white' }}>
+          <Card sx={{ color: 'var(--text)' }}>
             <CardContent sx={{ height: 350 }}>
               <Typography variant="h6" gutterBottom>Responsibility Breakdown (Main)</Typography>
               <ResponsiveContainer width="100%" height="100%">
@@ -409,7 +409,7 @@ const DetractorAnalytics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: '#2d2d2d', border: 'none' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none' }} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -417,7 +417,7 @@ const DetractorAnalytics = () => {
           </Card>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Card sx={{ color: 'white' }}>
+          <Card sx={{ color: 'var(--text)' }}>
             <CardContent sx={{ height: 350 }}>
               <Typography variant="h6" gutterBottom>Top 10 Teams by Violations</Typography>
               <ResponsiveContainer width="100%" height="100%">
@@ -425,8 +425,8 @@ const DetractorAnalytics = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="name" stroke="#fff" angle={-45} textAnchor="end" height={100} />
                   <YAxis stroke="#fff" />
-                  <Tooltip contentStyle={{ backgroundColor: '#2d2d2d', border: 'none' }} />
-                  <Bar dataKey="value" fill="#7b68ee">
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none' }} />
+                  <Bar dataKey="value" fill="var(--accent-text)">
                     {overview.teamBreakdown?.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
@@ -441,7 +441,7 @@ const DetractorAnalytics = () => {
       {/* Charts Row 2 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12}>
-          <Card sx={{ color: 'white' }}>
+          <Card sx={{ color: 'var(--text)' }}>
             <CardContent sx={{ height: 350 }}>
               <Typography variant="h6" gutterBottom>Violation Trends Over Time ({filters.period})</Typography>
               <ResponsiveContainer width="100%" height="100%">
@@ -449,7 +449,7 @@ const DetractorAnalytics = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="date" stroke="#fff" />
                   <YAxis stroke="#fff" />
-                  <Tooltip contentStyle={{ backgroundColor: '#2d2d2d', border: 'none' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--surface)', border: 'none' }} />
                   <Legend />
                   <Line type="monotone" dataKey="count" stroke="#7b68ee" strokeWidth={2} dot={{ r: 4 }} />
                   <Line type="monotone" dataKey="uniqueTeams" stroke="#00C49F" strokeWidth={2} dot={{ r: 4 }} />
@@ -483,24 +483,24 @@ const DetractorAnalytics = () => {
               }
             ]}
             sx={{
-              color: 'white',
-              borderColor: '#3d3d3d',
-              '& .MuiDataGrid-cell': { borderColor: '#3d3d3d', color: '#ddd' },
-              '& .MuiDataGrid-columnHeaders': { bgcolor: '#f3f4f6', color: '#ffffff', borderBottom: '1px solid #555', fontWeight: 'bold' },
-              '& .MuiDataGrid-footerContainer': { borderColor: '#3d3d3d', color: '#ffffff' },
+              color: 'var(--text)',
+              borderColor: 'var(--border)',
+              '& .MuiDataGrid-cell': { borderColor: 'var(--border)', color: '#ddd' },
+              '& .MuiDataGrid-columnHeaders': { bgcolor: '#f3f4f6', color: '#ffffff', borderBottom: '1px solid var(--border)', fontWeight: 'bold' },
+              '& .MuiDataGrid-footerContainer': { borderColor: 'var(--border)', color: 'var(--text)' },
             }}
           />
         </Box>
       </Paper>
 
       {/* Advanced RCA Section */}
-      <Paper sx={{ p: 2, mb: 4, borderRadius: 3, background: 'linear-gradient(135deg, #121212, #1a1a1a)', border: '1px solid #3d3d3d', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
+      <Paper sx={{ p: 2, mb: 4, borderRadius: 3, background: 'linear-gradient(135deg, var(--bg), var(--bg))', border: '1px solid var(--border)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 2 }}>
           <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'rgba(123, 104, 238, 0.1)' }}>
             <Warning color="primary" />
           </Box>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'white' }}>Advanced Root Cause Discovery</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'var(--text)' }}>Advanced Root Cause Discovery</Typography>
             <Typography variant="body2" sx={{ color: 'gray' }}>Managerial Intelligence & Deep Operational Analysis</Typography>
           </Box>
         </Box>
@@ -513,11 +513,11 @@ const DetractorAnalytics = () => {
               options={columns.map(c => c.field).filter(f => !['id', 'auditStatus', 'Team Name'].includes(f))}
               value={filters.studyColumns}
               onChange={(e, newValue) => handleFilterChange('studyColumns', newValue)}
-              renderInput={(params) => <TextField {...params} label="Dynamic Study Columns" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
-              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#444' } } }}
+              renderInput={(params) => <TextField {...params} label="Dynamic Study Columns" sx={{ input: { color: 'var(--text)' }, label: { color: 'var(--text-secondary)' } }} />}
+              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'var(--border)' } } }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip key={index} variant="outlined" label={option} {...getTagProps({ index })} sx={{ color: '#7b68ee', borderColor: '#7b68ee', bgcolor: 'rgba(123, 104, 238, 0.05)' }} />
+                  <Chip key={index} variant="outlined" label={option} {...getTagProps({ index })} sx={{ color: 'var(--accent-text)', borderColor: 'var(--accent)', bgcolor: 'rgba(123, 104, 238, 0.05)' }} />
                 ))
               }
             />
@@ -527,8 +527,8 @@ const DetractorAnalytics = () => {
               options={columns.map(c => c.field).filter(f => !['id', 'auditStatus'].includes(f))}
               value={filters.compareBy}
               onChange={(e, newValue) => handleFilterChange('compareBy', newValue || '')}
-              renderInput={(params) => <TextField {...params} label="Dynamic Comparison Target" sx={{ input: { color: 'white' }, label: { color: '#aaa' } }} />}
-              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: '#444' } } }}
+              renderInput={(params) => <TextField {...params} label="Dynamic Comparison Target" sx={{ input: { color: 'var(--text)' }, label: { color: 'var(--text-secondary)' } }} />}
+              sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'var(--border)' } } }}
             />
           </Grid>
         </Grid>
@@ -541,7 +541,7 @@ const DetractorAnalytics = () => {
             {/* 2. Week vs Q1 (Detractor/Neutral) & NPS Density */}
             <Grid container spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} md={6}>
-                <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Card sx={{ height: '100%', bgcolor: 'var(--overlay-subtle)', border: '1px solid var(--border)' }}>
                   <CardContent>
                     <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'bold', color: '#ff7c7c' }}>📌 Week # vs Q1 Classification</Typography>
                     <Box sx={{ height: 300 }}>
@@ -550,7 +550,7 @@ const DetractorAnalytics = () => {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                           <XAxis dataKey="label" stroke="#aaa" />
                           <YAxis stroke="#aaa" />
-                          <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none', borderRadius: 8 }} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--bg)', border: 'none', borderRadius: 8 }} />
                           <Legend />
                           <Bar dataKey="q1.detractors" name="Detractors (1-6)" fill="#ff4d4d" stackId="q1" />
                           <Bar dataKey="q1.neutrals" name="Neutrals (7-8)" fill="#ffcc00" stackId="q1" />
@@ -561,7 +561,7 @@ const DetractorAnalytics = () => {
                 </Card>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Card sx={{ height: '100%', bgcolor: 'var(--overlay-subtle)', border: '1px solid var(--border)' }}>
                   <CardContent>
                     <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'bold', color: '#00C49F' }}>📈 NPS Density (Violations / Total Samples %)</Typography>
                     <Box sx={{ height: 300 }}>
@@ -570,7 +570,7 @@ const DetractorAnalytics = () => {
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                           <XAxis dataKey="label" stroke="#aaa" />
                           <YAxis stroke="#aaa" />
-                          <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none', borderRadius: 8 }} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--bg)', border: 'none', borderRadius: 8 }} />
                           <Line type="monotone" dataKey="npsDensity" name="Density %" stroke="#00C49F" strokeWidth={3} dot={{ r: 6, strokeWidth: 2 }} />
                         </LineChart>
                       </ResponsiveContainer>
@@ -581,7 +581,7 @@ const DetractorAnalytics = () => {
             </Grid>
 
             {/* 3. Feedback/Comment Trend & Dynamic RCA */}
-            <Card sx={{ bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', mb: 3 }}>
+            <Card sx={{ bgcolor: 'var(--overlay-subtle)', border: '1px solid var(--border)', mb: 3 }}>
               <CardContent>
                 <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'bold', color: '#ffbb28' }}>💬 Comment Volume vs Week #</Typography>
                 <Box sx={{ height: 250 }}>
@@ -590,7 +590,7 @@ const DetractorAnalytics = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                       <XAxis dataKey="label" stroke="#aaa" />
                       <YAxis stroke="#aaa" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none', borderRadius: 8 }} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg)', border: 'none', borderRadius: 8 }} />
                       <Bar dataKey="comments" name="Total Feedback Comments" fill="#ffbb28" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -600,7 +600,7 @@ const DetractorAnalytics = () => {
 
             {/* Dynamic Analysis Cards */}
             {rootCauses.map((cause, idx) => (
-              <Card key={idx} sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Card key={idx} sx={{ mb: 3, bgcolor: 'var(--overlay-subtle)', border: '1px solid var(--border)' }}>
                 <CardContent>
                   <Typography variant="h6" color="primary" gutterBottom>🔍 Dynamic Discovery: {cause.field}</Typography>
                   {isComparison ? (
@@ -609,7 +609,7 @@ const DetractorAnalytics = () => {
                         <BarChart data={cause.data} layout="vertical">
                           <XAxis type="number" stroke="#aaa" />
                           <YAxis type="category" dataKey="groupName" stroke="#aaa" width={120} />
-                          <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: 'none' }} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--bg)', border: 'none' }} />
                           <Legend />
                           {cause.allValues?.map((val, i) => (
                             <Bar key={val} dataKey={val} stackId="a" fill={COLORS[i % COLORS.length]} />
@@ -638,7 +638,7 @@ const DetractorAnalytics = () => {
                               <Typography variant="caption" color="gray">{val.value}</Typography>
                               <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{val.count}</Typography>
                             </Box>
-                            <Box sx={{ height: 4, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
+                            <Box sx={{ height: 4, bgcolor: 'var(--overlay-subtle)', borderRadius: 2 }}>
                               <Box sx={{ width: `${(val.count / Math.max(...(cause.topValues?.map(v => v.count) || [1]))) * 100}%`, height: '100%', bgcolor: COLORS[i % COLORS.length] }} />
                             </Box>
                           </Box>
@@ -654,14 +654,14 @@ const DetractorAnalytics = () => {
           {/* Right Snapshot Sidebar */}
           <Grid item xs={12} lg={3}>
             <Box sx={{ position: 'sticky', top: 20 }}>
-              <Card sx={{ mb: 3, bgcolor: 'rgba(20, 20, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <Card sx={{ mb: 3, bgcolor: 'rgba(20, 20, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid var(--border)' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TrendingUp fontSize="small" color="primary" /> Top Offending Teams
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {trendSnapshots.topTeams?.map((team, idx) => (
-                      <Box key={idx} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box key={idx} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'var(--overlay-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>{team.name}</Typography>
                         <Chip label={team.value} size="small" sx={{ height: 20, fontSize: '0.7rem', bgcolor: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d' }} />
                       </Box>
@@ -670,14 +670,14 @@ const DetractorAnalytics = () => {
                 </CardContent>
               </Card>
 
-              <Card sx={{ bgcolor: 'rgba(20, 20, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <Card sx={{ bgcolor: 'rgba(20, 20, 20, 0.8)', backdropFilter: 'blur(10px)', border: '1px solid var(--border)' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <FilterList fontSize="small" color="secondary" /> Top Root Causes
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {trendSnapshots.topReasons?.map((reason, idx) => (
-                      <Box key={idx} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box key={idx} sx={{ p: 1.5, borderRadius: 1.5, bgcolor: 'var(--overlay-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{reason.name}</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ffcc00' }}>{reason.value}</Typography>
                       </Box>
@@ -692,7 +692,7 @@ const DetractorAnalytics = () => {
 
       {/* Data Table */}
       <Typography variant="h6" sx={{ mb: 2 }}>Detailed Data Explorer</Typography>
-      <Paper sx={{ width: '100%', border: '1px solid #3d3d3d', height: 600 }}>
+      <Paper sx={{ width: '100%', border: '1px solid var(--border)', height: 600 }}>
         {rows.length > 0 ? (
           <DataGrid
             rows={rows}
@@ -700,24 +700,24 @@ const DetractorAnalytics = () => {
             slots={{ toolbar: GridToolbar }}
             loading={loading}
             sx={{
-              color: 'white',
-              borderColor: '#3d3d3d',
-              '& .MuiDataGrid-cell': { borderColor: '#3d3d3d', color: '#ddd' },
+              color: 'var(--text)',
+              borderColor: 'var(--border)',
+              '& .MuiDataGrid-cell': { borderColor: 'var(--border)', color: '#ddd' },
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: '#f3f4f6',
-                color: '#ffffff',
-                borderBottom: '1px solid #555',
+                color: 'var(--text)',
+                borderBottom: '1px solid var(--border)',
                 fontWeight: 'bold'
               },
               '& .MuiDataGrid-columnHeader': { bgcolor: '#f3f4f6', color: '#ffffff' },
-              '& .MuiDataGrid-columnHeaderTitle': { color: '#ffffff' },
-              '& .MuiDataGrid-footerContainer': { borderColor: '#3d3d3d', color: '#ffffff' },
-              '& .MuiTablePagination-root': { color: '#ffffff' },
-              '& .MuiButtonBase-root': { color: '#ffffff' },
+              '& .MuiDataGrid-columnHeaderTitle': { color: 'var(--text)' },
+              '& .MuiDataGrid-footerContainer': { borderColor: 'var(--border)', color: 'var(--text)' },
+              '& .MuiTablePagination-root': { color: 'var(--text)' },
+              '& .MuiButtonBase-root': { color: 'var(--text)' },
             }}
           />
         ) : (
-          <Box sx={{ p: 4, textAlign: 'center', color: '#aaa' }}>
+          <Box sx={{ p: 4, textAlign: 'center', color: 'var(--text-secondary)' }}>
             <Typography>No data available to display.</Typography>
           </Box>
         )}

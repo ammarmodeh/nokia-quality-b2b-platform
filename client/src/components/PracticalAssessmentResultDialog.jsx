@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
@@ -34,10 +35,10 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
 
   // Dark mode colors
   const colors = {
-    background: '#2d2d2d',
+    background: tok('--surface'),
     surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: tok('--border'),
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',
@@ -145,7 +146,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
           color: colors.textPrimary
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -155,7 +156,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
           precision: 0,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },
@@ -196,7 +197,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
           precision: 0,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -208,7 +209,7 @@ const PracticalAssessmentResultDialog = ({ assessmentId, teamName, onClose }) =>
           }
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },
@@ -478,11 +479,11 @@ ${assessment.feedback || "No additional feedback provided."}
               }}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
-                  <Typography sx={{ color: "white" }}>{assessment.fieldTeamName}</Typography>
+                  <Typography sx={{ color: tok('--text') }}>{assessment.fieldTeamName}</Typography>
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
-                  <Typography sx={{ color: "white" }}>
+                  <Typography sx={{ color: tok('--text') }}>
                     {new Date(assessment.assessmentDate).toLocaleString()}
                   </Typography>
                 </Box>
@@ -496,11 +497,11 @@ ${assessment.feedback || "No additional feedback provided."}
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Conducted By</Typography>
-                  <Typography sx={{ color: "white" }}>{assessment.conductedBy}</Typography>
+                  <Typography sx={{ color: tok('--text') }}>{assessment.conductedBy}</Typography>
                 </Box>
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Feedback</Typography>
-                  <Typography sx={{ color: "white", direction: 'rtl', textAlign: 'right' }}>{assessment.feedback}</Typography>
+                  <Typography sx={{ color: tok('--text'), direction: 'rtl', textAlign: 'right' }}>{assessment.feedback}</Typography>
                 </Box>
               </Box>
             </CardContent>

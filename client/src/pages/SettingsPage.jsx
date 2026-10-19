@@ -160,18 +160,18 @@ const SettingsPage = () => {
   const SectionHeader = ({ title, icon: Icon }) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, mt: 3 }}>
       <Icon sx={{ color: '#1976d2' }} />
-      <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+      <Typography variant="h6" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
         {title}
       </Typography>
     </Box>
   );
 
   const textFieldStyles = {
-    '& .MuiInputBase-root': { color: '#ffffff' },
+    '& .MuiInputBase-root': { color: 'var(--text)' },
     '& .MuiInputLabel-root': {
-      color: '#b3b3b3',
+      color: 'var(--text-secondary)',
       '&.Mui-disabled': {
-        color: '#b3b3b3'
+        color: 'var(--text-secondary)'
       }
     },
     '& .MuiOutlinedInput-root': {
@@ -182,9 +182,9 @@ const SettingsPage = () => {
       borderRadius: '4px',
     },
     '& .Mui-disabled': {
-      WebkitTextFillColor: '#ffffff !important',
+      WebkitTextFillColor: 'var(--text) !important',
       '& .MuiInputBase-input': {
-        WebkitTextFillColor: '#ffffff !important'
+        WebkitTextFillColor: 'var(--text) !important'
       }
     }
   };
@@ -197,13 +197,13 @@ const SettingsPage = () => {
         </Box>
       )}
 
-      <Paper sx={{ p: isMobile ? 2 : 4, backgroundColor: '#2d2d2d', borderRadius: '12px', border: '1px solid #444' }}>
+      <Paper sx={{ p: isMobile ? 2 : 4, backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => navigate(-1)} sx={{ color: '#ffffff' }}>
+            <IconButton onClick={() => navigate(-1)} sx={{ color: 'var(--text)' }}>
               <ArrowBackIcon />
             </IconButton>
-            <Typography variant="h4" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+            <Typography variant="h4" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
               Project Settings
             </Typography>
           </Box>
@@ -285,7 +285,7 @@ const SettingsPage = () => {
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
 
           <SectionHeader title="Timer Configuration" icon={TimerIcon} />
           <Grid container spacing={3}>
@@ -300,7 +300,7 @@ const SettingsPage = () => {
                 helperText={errors.globalTimer ? "Value must be between 1 and 180" : ""}
                 sx={textFieldStyles}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: '#666' }} /></InputAdornment>
+                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: 'var(--text-muted)' }} /></InputAdornment>
                 }}
               />
             </Grid>
@@ -315,13 +315,13 @@ const SettingsPage = () => {
                 helperText={errors.sessionTimeout ? "Value must be between 1 and 1440" : ""}
                 sx={textFieldStyles}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: '#666' }} /></InputAdornment>
+                  startAdornment: <InputAdornment position="start"><TimerIcon sx={{ color: 'var(--text-muted)' }} /></InputAdornment>
                 }}
               />
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
 
           <SectionHeader title="Status Thresholds (%)" icon={ScoreIcon} />
           <Grid container spacing={3}>
@@ -411,7 +411,7 @@ const SettingsPage = () => {
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
           <SectionHeader title="Calendar Configuration" icon={SettingsIcon} />
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
@@ -472,14 +472,14 @@ const SettingsPage = () => {
             </Grid>
             <Grid item xs={12}>
               <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(25, 118, 210, 0.05)', borderRadius: 1, border: '1px dashed #1976d2' }}>
-                <Typography variant="caption" sx={{ color: '#b3b3b3' }}>
+                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                   ℹ️ <strong>How to Calibrate:</strong> Define a date range (e.g., Jan 1 - Jan 5) and assign it a week number (e.g., Week 1). All dates after this range will automatically increment every 7 days based on your chosen <strong>Week Start Day</strong>.
                 </Typography>
               </Box>
             </Grid>
           </Grid>
 
-          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
 
           <SectionHeader title="Month Configuration" icon={SettingsIcon} />
           <Grid container spacing={3}>
@@ -516,22 +516,22 @@ const SettingsPage = () => {
             </Grid>
           </Grid>
 
-          {/* <Divider sx={{ my: 4, borderColor: '#444' }} />
+          {/* <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <FormControlLabel
               control={<Switch checked={watch("notifications.emailAlerts")} disabled={!editMode} onChange={(e) => setValue("notifications.emailAlerts", e.target.checked, { shouldDirty: true })} />}
-              label={<Typography sx={{ color: '#ffffff' }}>Enable Email Alerts</Typography>}
+              label={<Typography sx={{ color: 'var(--text)' }}>Enable Email Alerts</Typography>}
             />
             <FormControlLabel
               control={<Switch checked={watch("notifications.pushNotifications")} disabled={!editMode} onChange={(e) => setValue("notifications.pushNotifications", e.target.checked, { shouldDirty: true })} />}
-              label={<Typography sx={{ color: '#ffffff' }}>Enable Push Notifications</Typography>}
+              label={<Typography sx={{ color: 'var(--text)' }}>Enable Push Notifications</Typography>}
             />
           </Box> */}
 
-          <Divider sx={{ my: 4, borderColor: '#444' }} />
+          <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
           <SectionHeader title="Dynamic Scoring Keys" icon={ScoreIcon} />
           <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ color: '#b3b3b3', mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2 }}>
               Define scoring keys that can be applied to Tasks and Customer Issues. These keys will appear as selectable options in the respective forms.
             </Typography>
             <ScoringKeysEditor control={control} register={register} errors={errors} editMode={editMode} />
@@ -601,8 +601,8 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
   const isReorderDisabled = searchTerm !== "" || sortConfig.key !== null || !editMode;
 
   const textFieldStyles = {
-    '& .MuiInputBase-root': { color: '#ffffff', fontSize: '0.85rem' },
-    '& .MuiInputLabel-root': { color: '#b3b3b3' },
+    '& .MuiInputBase-root': { color: 'var(--text)', fontSize: '0.85rem' },
+    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
     '& .MuiOutlinedInput-root': {
       '& fieldset': { borderColor: editMode ? '#444' : 'transparent' },
       '&:hover fieldset': { borderColor: editMode ? '#666' : 'transparent' },
@@ -610,7 +610,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
       backgroundColor: editMode ? '#1e1e1e' : 'transparent',
     },
     '& .Mui-disabled': {
-      WebkitTextFillColor: '#ffffff !important',
+      WebkitTextFillColor: 'var(--text) !important',
     }
   };
 
@@ -625,12 +625,12 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
           sx={{
             ...textFieldStyles,
             width: 300,
-            '& .MuiOutlinedInput-root': { bgcolor: '#1e1e1e' }
+            '& .MuiOutlinedInput-root': { bgcolor: 'var(--surface)' }
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#666' }} />
+                <SearchIcon sx={{ color: 'var(--text-muted)' }} />
               </InputAdornment>
             ),
           }}
@@ -646,56 +646,56 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
         )}
       </Box>
 
-      <TableContainer component={Paper} sx={{ bgcolor: 'transparent', border: '1px solid #444', maxHeight: 400, overflow: 'auto' }}>
+      <TableContainer component={Paper} sx={{ bgcolor: 'transparent', border: '1px solid var(--border)', maxHeight: 400, overflow: 'auto' }}>
         <Table size="small" stickyHeader>
-          <TableHead sx={{ bgcolor: '#1e1e1e' }}>
+          <TableHead sx={{ bgcolor: 'var(--surface)' }}>
             <TableRow>
-              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444' }}>
+              <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>
                 <TableSortLabel
                   active={sortConfig.key === 'label'}
                   direction={sortConfig.key === 'label' ? sortConfig.direction : 'asc'}
                   onClick={() => handleSort('label')}
                   sx={{
-                    color: '#b3b3b3 !important',
-                    '& .MuiTableSortLabel-icon': { color: '#b3b3b3 !important' }
+                    color: 'var(--text-secondary) !important',
+                    '& .MuiTableSortLabel-icon': { color: 'var(--text-secondary) !important' }
                   }}
                 >
                   Key Name (Label)
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444' }}>
+              <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>
                 <TableSortLabel
                   active={sortConfig.key === 'points'}
                   direction={sortConfig.key === 'points' ? sortConfig.direction : 'asc'}
                   onClick={() => handleSort('points')}
                   sx={{
-                    color: '#b3b3b3 !important',
-                    '& .MuiTableSortLabel-icon': { color: '#b3b3b3 !important' }
+                    color: 'var(--text-secondary) !important',
+                    '& .MuiTableSortLabel-icon': { color: 'var(--text-secondary) !important' }
                   }}
                 >
                   Points
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444' }}>
+              <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>
                 <TableSortLabel
                   active={sortConfig.key === 'targetForm'}
                   direction={sortConfig.key === 'targetForm' ? sortConfig.direction : 'asc'}
                   onClick={() => handleSort('targetForm')}
                   sx={{
-                    color: '#b3b3b3 !important',
-                    '& .MuiTableSortLabel-icon': { color: '#b3b3b3 !important' }
+                    color: 'var(--text-secondary) !important',
+                    '& .MuiTableSortLabel-icon': { color: 'var(--text-secondary) !important' }
                   }}
                 >
                   Target
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ bgcolor: '#1e1e1e', color: '#b3b3b3', borderBottom: '1px solid #444', textAlign: 'center', width: 140 }}>Action</TableCell>
+              <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', textAlign: 'center', width: 140 }}>Action</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {processedFields.map((field, index) => (
               <TableRow key={field.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                <TableCell sx={{ borderBottom: '1px solid #333', p: 1 }}>
+                <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 1 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -706,7 +706,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
                     placeholder="e.g. Critical Issue"
                   />
                 </TableCell>
-                <TableCell sx={{ borderBottom: '1px solid #333', p: 1, width: 120 }}>
+                <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 1, width: 120 }}>
                   <TextField
                     type="number"
                     fullWidth
@@ -717,7 +717,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
                     sx={textFieldStyles}
                   />
                 </TableCell>
-                <TableCell sx={{ borderBottom: '1px solid #333', p: 1, width: 140 }}>
+                <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 1, width: 140 }}>
                   <Controller
                     control={control}
                     name={`scoringKeys.${field.originalIndex}.targetForm`}
@@ -742,7 +742,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
                     )}
                   />
                 </TableCell>
-                <TableCell sx={{ borderBottom: '1px solid #333', p: 1, textAlign: 'center' }}>
+                <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 1, textAlign: 'center' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
                     <IconButton
                       onClick={() => handleMove(index, 'up')}
@@ -769,7 +769,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
             ))}
             {processedFields.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} sx={{ textAlign: 'center', py: 3, color: '#666' }}>
+                <TableCell colSpan={3} sx={{ textAlign: 'center', py: 3, color: 'var(--text-muted)' }}>
                   No keys found.
                 </TableCell>
               </TableRow>

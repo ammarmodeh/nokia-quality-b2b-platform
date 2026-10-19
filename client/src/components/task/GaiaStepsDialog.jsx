@@ -1,25 +1,6 @@
+import { alpha } from "../../theme/colorFns";
 import { useState, useEffect } from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    IconButton,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    Typography,
-    Box,
-    Chip,
-    Stack,
-    Button,
-    alpha,
-    Tooltip
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box, Chip, Stack, Button, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { MdHistory, MdContentCopy } from 'react-icons/md';
 import api from '../../api/api';
@@ -115,7 +96,7 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
             PaperProps={{
                 sx: {
                     borderRadius: 2,
-                    bgcolor: '#1e1e1e', // Dark theme background
+                    bgcolor: 'var(--surface)', // Dark theme background
                     backgroundImage: 'none'
                 }
             }}
@@ -124,66 +105,66 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                borderBottom: '1px solid #333',
-                bgcolor: '#252525',
-                color: '#fff'
+                borderBottom: '1px solid var(--border)',
+                bgcolor: 'var(--surface)',
+                color: 'var(--text)'
             }}>
                 <Stack direction="row" spacing={1} alignItems="center">
-                    <MdHistory size={24} color="#7b68ee" />
+                    <MdHistory size={24} color="var(--accent-text)" />
                     <Typography variant="h6" fontWeight={700}>
                         Q-Ops Transaction Log
                     </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
                     <Tooltip title="Copy Full Log">
-                        <IconButton onClick={handleCopyAll} sx={{ color: '#7b68ee', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}>
+                        <IconButton onClick={handleCopyAll} sx={{ color: 'var(--accent-text)', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}>
                             <MdContentCopy />
                         </IconButton>
                     </Tooltip>
-                    <IconButton onClick={onClose} sx={{ color: '#aaa' }}>
+                    <IconButton onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>
                         <CloseIcon />
                     </IconButton>
                 </Stack>
             </DialogTitle>
 
-            <DialogContent sx={{ p: 0, bgcolor: '#1e1e1e', display: 'flex', flexDirection: 'column', height: '70vh' }}>
+            <DialogContent sx={{ p: 0, bgcolor: 'var(--surface)', display: 'flex', flexDirection: 'column', height: '70vh' }}>
                 {task && (
-                    <Box sx={{ p: 2, bgcolor: '#2c2c2c', borderBottom: '1px solid #333', flexShrink: 0 }}>
-                        <Typography variant="subtitle2" sx={{ color: '#aaa', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, letterSpacing: 1 }}>
+                    <Box sx={{ p: 2, bgcolor: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, letterSpacing: 1 }}>
                             Target Case
                         </Typography>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Typography variant="body1" sx={{ color: '#fff', fontWeight: 600 }}>
-                                {task.slid} <span style={{ color: '#7b68ee' }}>#{task.requestNumber}</span>
+                            <Typography variant="body1" sx={{ color: 'var(--text)', fontWeight: 600 }}>
+                                {task.slid} <span style={{ color: 'var(--accent-text)' }}>#{task.requestNumber}</span>
                             </Typography>
-                            <Typography variant="body2" sx={{ color: '#ccc' }}>
+                            <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
                                 {task.customerName || "No Customer Name"}
                             </Typography>
                         </Stack>
                         {(task.gaiaCheck || task.gaiaContent || task.latestGaia) && (
-                            <Box sx={{ mt: 2, p: 2, bgcolor: '#1b1b1b', borderRadius: 2, border: '1px solid #333' }}>
-                                <Typography variant="subtitle2" sx={{ color: '#aaa', letterSpacing: 0.5, mb: 1, fontSize: '0.75rem' }}>
+                            <Box sx={{ mt: 2, p: 2, bgcolor: '#1b1b1b', borderRadius: 2, border: '1px solid var(--border)' }}>
+                                <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', letterSpacing: 0.5, mb: 1, fontSize: '0.75rem' }}>
                                     GAIA Summary
                                 </Typography>
                                 <Stack spacing={1}>
-                                    <Typography variant="body2" sx={{ color: '#eee' }}>
+                                    <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                                         <strong>GAIA Check:</strong> {task.gaiaCheck || 'No'}
                                     </Typography>
-                                    <Typography variant="body2" sx={{ color: '#eee', whiteSpace: 'pre-wrap' }}>
+                                    <Typography variant="body2" sx={{ color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
                                         <strong>GAIA Content:</strong> {task.gaiaContent || 'N/A'}
                                     </Typography>
                                     {task.latestGaia?.transactionType && (
-                                        <Typography variant="body2" sx={{ color: '#eee' }}>
+                                        <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                                             <strong>Latest GAIA Type:</strong> {task.latestGaia.transactionType}
                                         </Typography>
                                     )}
                                     {task.latestGaia?.transactionState && (
-                                        <Typography variant="body2" sx={{ color: '#eee' }}>
+                                        <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                                             <strong>Latest GAIA State:</strong> {task.latestGaia.transactionState}
                                         </Typography>
                                     )}
                                     {task.latestGaia?.unfReasonCode && (
-                                        <Typography variant="body2" sx={{ color: '#eee' }}>
+                                        <Typography variant="body2" sx={{ color: 'var(--text)' }}>
                                             <strong>Latest GAIA Reason:</strong> {task.latestGaia.unfReasonCode}
                                         </Typography>
                                     )}
@@ -197,29 +178,29 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                     <Table size="small" stickyHeader>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333', width: 50 }}>Action</TableCell>
-                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Execution Date</TableCell>
-                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Type / State</TableCell>
-                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Agent / Participant</TableCell>
-                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333', width: '40%' }}>Detailed Technical Log</TableCell>
-                                <TableCell sx={{ bgcolor: '#252525', color: '#aaa', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid #333' }}>Unf. Reason</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', width: 50 }}>Action</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Execution Date</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Type / State</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Agent / Participant</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', width: '40%' }}>Detailed Technical Log</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Unf. Reason</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#aaa' }}>Loading...</TableCell>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'var(--text-secondary)' }}>Loading...</TableCell>
                                 </TableRow>
                             ) : tickets.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#aaa' }}>No logs found for this case.</TableCell>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'var(--text-secondary)' }}>No logs found for this case.</TableCell>
                                 </TableRow>
                             ) : tickets.map((ticket, index) => (
                                 <TableRow
                                     key={ticket._id || index}
                                     sx={{
-                                        '&:hover': { bgcolor: '#3d3d3d' },
-                                        borderBottom: '1px solid #3d3d3d'
+                                        '&:hover': { bgcolor: 'var(--surface-hover)' },
+                                        borderBottom: '1px solid var(--border)'
                                     }}
                                 >
                                     <TableCell>
@@ -227,13 +208,13 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleCopyStep(ticket)}
-                                                sx={{ color: '#aaa', '&:hover': { color: '#fff' } }}
+                                                sx={{ color: 'var(--text-secondary)', '&:hover': { color: 'var(--text)' } }}
                                             >
                                                 <MdContentCopy size={16} />
                                             </IconButton>
                                         </Tooltip>
                                     </TableCell>
-                                    <TableCell sx={{ color: '#fff', fontSize: '0.875rem' }}>
+                                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.875rem' }}>
                                         {ticket.eventDate
                                             ? format(new Date(ticket.eventDate), 'dd/MM/yyyy')
                                             : '-'
@@ -252,16 +233,16 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                                                     height: 20
                                                 }}
                                             />
-                                            <Typography variant="caption" sx={{ color: '#ccc' }}>
+                                            <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                                                 {ticket.transactionState}
                                             </Typography>
                                         </Stack>
                                     </TableCell>
-                                    <TableCell sx={{ color: '#fff', fontSize: '0.875rem' }}>
+                                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.875rem' }}>
                                         <Typography variant="body2">
                                             {ticket.recordedBy?.name || 'System'}
                                         </Typography>
-                                        <Typography variant="caption" sx={{ color: '#777' }}>
+                                        <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
                                             {ticket.agentName}
                                         </Typography>
                                     </TableCell>
@@ -270,11 +251,11 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                                             p: 1,
                                             bgcolor: alpha('#000', 0.2),
                                             borderRadius: 1,
-                                            border: '1px solid #333',
+                                            border: '1px solid var(--border)',
                                             direction: 'rtl',
                                             textAlign: 'right'
                                         }}>
-                                            <Typography variant="body2" sx={{ color: '#eee', whiteSpace: 'pre-wrap', fontFamily: 'sans-serif', fontSize: '0.85rem' }}>
+                                            <Typography variant="body2" sx={{ color: 'var(--text)', whiteSpace: 'pre-wrap', fontFamily: 'sans-serif', fontSize: '0.85rem' }}>
                                                 {ticket.note}
                                             </Typography>
                                         </Box>
@@ -290,8 +271,8 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
 
             </DialogContent>
 
-            <DialogActions sx={{ p: 2, bgcolor: '#252525', borderTop: '1px solid #333' }}>
-                <Button onClick={onClose} sx={{ color: '#aaa' }}>Close</Button>
+            <DialogActions sx={{ p: 2, bgcolor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+                <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Close</Button>
             </DialogActions>
         </Dialog>
     );

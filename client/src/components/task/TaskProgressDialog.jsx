@@ -1,18 +1,6 @@
+import { alpha } from "../../theme/colorFns";
 import React, { useMemo } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  Typography,
-  IconButton,
-  LinearProgress,
-  Stack,
-  alpha,
-  useTheme
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, IconButton, LinearProgress, Stack, useTheme } from '@mui/material';
 import { MdClose } from "react-icons/md";
 
 const TaskProgressDialog = ({ open, onClose, subtasks = [] }) => {

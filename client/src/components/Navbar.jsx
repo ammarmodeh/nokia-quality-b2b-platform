@@ -44,10 +44,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
   const menuStyles = {
     '& .MuiPaper-root': {
-      backgroundColor: '#2d2d2d',
-      color: '#ffffff',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       borderRadius: '8px',
-      border: `1px solid #3d3d3d`,
+      border: `1px solid var(--border)`,
       padding: '8px 0',
       maxHeight: '90vh',
       overflowY: 'auto',
@@ -57,10 +57,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
       borderRadius: '6px',
       m: '4px',
       fontSize: '14px',
-      color: '#ffffff',
+      color: 'var(--text)',
       '&:hover': {
-        backgroundColor: '#3d3d3d',
-        color: '#7b68ee',
+        backgroundColor: 'var(--surface-hover)',
+        color: 'var(--accent-text)',
       },
     },
   };
@@ -156,7 +156,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         <IconButton
           onClick={toggleSidebar}
           sx={{
-            color: 'white',
+            color: 'var(--text)',
             '&:hover': {
               color: 'grey.200',
               backgroundColor: 'transparent'
@@ -177,7 +177,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           <div
             ref={searchBarRef}
             className={`relative ${isMediumSize ? (showSearch ? 'w-[165px]' : 'w-0') : 'w-[300px]'
-              } flex items-center py-2 px-3 gap-2 rounded-lg bg-[#2d2d2d] border border-[#e5e7eb] focus-within:border-[#7b68ee] transition-[width] duration-300 ease-in-out overflow-hidden`}
+              } flex items-center py-2 px-3 gap-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] focus-within:border-[var(--accent)] transition-[width] duration-300 ease-in-out overflow-hidden`}
             style={{
               transitionProperty: 'width, opacity',
               transitionDuration: '300ms',
@@ -185,11 +185,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               opacity: isMediumSize ? (showSearch ? 1 : 0) : 1
             }}
           >
-            <MdOutlineSearch className="text-gray-400 text-lg" />
+            <MdOutlineSearch className="text-[var(--text-muted)] text-lg" />
             <input
               type="text"
               placeholder="Search by SLID..."
-              className="flex-1 w-full outline-none bg-transparent placeholder:text-gray-400 text-white text-sm"
+              className="flex-1 w-full outline-none bg-transparent placeholder:text-[var(--text-muted)] text-[var(--text)] text-sm"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -199,7 +199,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-gray-400 absolute right-8 hover:text-gray-300"
+                className="text-[var(--text-muted)] absolute right-8 hover:text-[var(--text-secondary)]"
               >
                 <IoMdCloseCircle className="text-xl" />
               </button>
@@ -207,7 +207,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
             {isMediumSize && showSearch && (
               <button
                 onClick={toggleSearch}
-                className="text-gray-400 hover:text-gray-300 absolute right-2"
+                className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] absolute right-2"
               >
                 <IoIosArrowDropleftCircle className="text-xl" />
               </button>
@@ -219,7 +219,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
         {isMediumSize && !showSearch && (
           <button
             onClick={toggleSearch}
-            className="text-2xl text-gray-400 hover:text-gray-300 transition-colors duration-300"
+            className="text-2xl text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-300"
           >
             <MdOutlineSearch />
           </button>
@@ -240,10 +240,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 },
               }}
             >
@@ -268,19 +268,19 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 sx={{
                   px: 3,
                   py: 2,
-                  backgroundColor: "#2d2d2d",
-                  borderBottom: "1px solid #e5e7eb",
+                  backgroundColor: "var(--surface)",
+                  borderBottom: "1px solid var(--border)",
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: "bold", color: "#ffffff" }}>
+                <Typography variant="h6" sx={{ fontWeight: "bold", color: "var(--text)" }}>
                   Menu
                 </Typography>
                 <Button
                   onClick={handleMobileMenuClose}
                   sx={{
-                    color: "#b3b3b3",
+                    color: "var(--text-secondary)",
                     minWidth: 0,
-                    "&:hover": { color: "#ffffff" }
+                    "&:hover": { color: "var(--text)" }
                   }}
                 >
                   <IoMdClose size={20} />
@@ -295,8 +295,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 >
                   <Typography variant="body1">Dashboard</Typography>
                 </MenuItem>
-                <Divider sx={{ borderColor: '#3d3d3d', mx: 2, my: 1 }} />
-                <Typography variant="caption" sx={{ px: 3, py: 1, color: '#6b7280', display: 'block', fontWeight: 'bold' }}>TASK CATEGORIES</Typography>
+                <Divider sx={{ borderColor: 'var(--border)', mx: 2, my: 1 }} />
+                <Typography variant="caption" sx={{ px: 3, py: 1, color: 'var(--text-muted)', display: 'block', fontWeight: 'bold' }}>TASK CATEGORIES</Typography>
                 <MenuItem
                   component={Link}
                   to="/assigned-to-me"
@@ -318,7 +318,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 >
                   <Typography variant="body1">All Tasks</Typography>
                 </MenuItem>
-                <Divider sx={{ borderColor: '#3d3d3d', mx: 2, my: 1 }} />
+                <Divider sx={{ borderColor: 'var(--border)', mx: 2, my: 1 }} />
                 <MenuItem
                   onClick={() => {
                     setOpenAddTask(true);
@@ -326,7 +326,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <MdAdd size={20} color="#7b68ee" />
+                    <MdAdd size={20} color="var(--accent-text)" />
                     <Typography variant="body1">Create Task</Typography>
                   </Stack>
                 </MenuItem>
@@ -353,8 +353,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                         height: 18,
                         fontSize: '9px',
                         fontWeight: 'bold',
-                        backgroundColor: '#7b68ee',
-                        color: 'white',
+                        backgroundColor: 'var(--accent)',
+                        color: 'var(--text)',
                         borderRadius: '4px'
                       }}
                     />
@@ -370,7 +370,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <MdAdd size={20} color="#7b68ee" />
+                    <MdAdd size={20} color="var(--accent-text)" />
                     <Typography variant="body1">Report Issue</Typography>
                   </Stack>
                 </MenuItem>
@@ -400,17 +400,17 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 },
               }}
             >
               Dashboard
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
             <Button
               onClick={() => setOpenAddTask(true)}
@@ -422,11 +422,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#7b68ee',
+                color: 'var(--accent-text)',
                 fontWeight: 'bold',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#9c8dff'
+                  color: 'var(--accent-text)'
                 },
               }}
               startIcon={<MdAdd style={{ fontSize: '20px' }} />}
@@ -434,7 +434,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
               Create Task
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
             <Button
               component={Link}
@@ -447,17 +447,17 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 },
               }}
             >
               Field Teams Portal
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
             <Button
               component={Link}
@@ -470,17 +470,17 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 },
               }}
             >
               All Tasks
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
             <Button
               onClick={() => {
@@ -504,11 +504,11 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 },
               }}
             >
-              <MdAdd size={20} color="#7b68ee" />
+              <MdAdd size={20} color="var(--accent-text)" />
               Report Issue
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
             <Button
               component={Link}
@@ -521,17 +521,17 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 },
               }}
             >
               Issues List
             </Button>
 
-            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+            <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
             <Button
               onClick={() => setCalendarDialogOpen(true)}
@@ -543,10 +543,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: '#b3b3b3',
+                color: 'var(--text-secondary)',
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: '#ffffff'
+                  color: 'var(--text)'
                 },
               }}
             >
@@ -555,7 +555,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           </>
         )}
 
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
 
 
@@ -563,10 +563,10 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           <IconButton
             onClick={() => setNotesDrawerOpen(true)}
             sx={{
-              color: '#b3b3b3',
+              color: 'var(--text-secondary)',
               "&:hover": {
-                color: '#ffffff',
-                backgroundColor: 'rgba(255,255,255,0.05)'
+                color: 'var(--text)',
+                backgroundColor: 'var(--overlay-subtle)'
               }
             }}
           >
@@ -579,8 +579,8 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                   fontSize: '8px',
                   height: '14px',
                   minWidth: '22px',
-                  backgroundColor: '#7b68ee',
-                  color: 'white',
+                  backgroundColor: 'var(--accent)',
+                  color: 'var(--text)',
                   top: 2,
                   right: 0,
                   animation: 'pulse-animation 2s infinite',
@@ -598,40 +598,40 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
           </IconButton>
         </Tooltip>
 
-        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "#3d3d3d" }} orientation="vertical" />
+        <Divider sx={{ height: 24, borderRightWidth: 1, borderColor: "var(--border)" }} orientation="vertical" />
 
         <UserAvatar />
       </div>
 
       {/* Search Results Dropdown */}
       {searchQuery && showResults && (
-        <div className="absolute top-[55px] left-4 w-full max-w-[300px] bg-[#2d2d2d] border border-[#e5e7eb] rounded-lg z-50 overflow-hidden">
-          <div className="flex justify-between items-center p-3 bg-[#3d3d3d] border-b border-[#e5e7eb]">
-            <span className="text-sm font-medium text-gray-300">Search Results</span>
+        <div className="absolute top-[55px] left-4 w-full max-w-[300px] bg-[var(--surface)] border border-[var(--border)] rounded-lg z-50 overflow-hidden">
+          <div className="flex justify-between items-center p-3 bg-[var(--surface-hover)] border-b border-[var(--border)]">
+            <span className="text-sm font-medium text-[var(--text-secondary)]">Search Results</span>
             <button
               onClick={() => setShowResults(false)}
-              className="text-gray-400 hover:text-gray-300"
+              className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             >
               <MdClose />
             </button>
           </div>
-          <ul className="max-h-60 overflow-y-auto divide-y divide-[#e5e7eb]">
+          <ul className="max-h-60 overflow-y-auto divide-y divide-[var(--border)]">
             {loading ? (
               <li className="p-4 flex justify-center">
-                <BeatLoader color="#7b68ee" />
+                <BeatLoader color="var(--accent-text)" />
               </li>
             ) : searchResults.length > 0 ? (
               searchResults.map((task) => (
                 <li
                   key={task._id}
-                  className="p-3 hover:bg-[#3d3d3d] cursor-pointer text-white"
+                  className="p-3 hover:bg-[var(--surface-hover)] cursor-pointer text-[var(--text)]"
                   onClick={() => handleTaskClick(task._id)}
                 >
                   {task.slid}
                 </li>
               ))
             ) : (
-              <li className="p-4 text-center text-gray-400">No results found</li>
+              <li className="p-4 text-center text-[var(--text-muted)]">No results found</li>
             )}
           </ul>
         </div>

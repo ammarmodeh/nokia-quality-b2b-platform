@@ -22,18 +22,18 @@ const TableAccordion = ({ title, children, defaultExpanded = false, color = 'pri
         backgroundColor: 'transparent',
         boxShadow: 'none',
         border: '1px solid',
-        borderColor: '#3d3d3d', // Darker border color
+        borderColor: 'var(--border)', // Darker border color
         '&:before': {
           display: 'none'
         }
       }}
     >
       <AccordionSummary
-        expandIcon={<ExpandMore sx={{ color: '#ffffff' }} />} // Light color for the expand icon
+        expandIcon={<ExpandMore sx={{ color: 'var(--text)' }} />} // Light color for the expand icon
         sx={{
-          backgroundColor: '#2d2d2d', // Dark background color
+          backgroundColor: 'var(--surface)', // Dark background color
           borderBottom: expanded ? '1px solid' : 'none',
-          borderColor: '#3d3d3d', // Darker border color
+          borderColor: 'var(--border)', // Darker border color
           minHeight: '48px',
           '& .MuiAccordionSummary-content': {
             alignItems: 'center',
@@ -44,7 +44,7 @@ const TableAccordion = ({ title, children, defaultExpanded = false, color = 'pri
         <Typography
           variant="subtitle1"
           sx={{
-            color: '#7b68ee', // Light color for the text
+            color: 'var(--accent-text)', // Light color for the text
             fontWeight: 'bold',
             display: 'flex',
             alignItems: 'center',
@@ -54,7 +54,7 @@ const TableAccordion = ({ title, children, defaultExpanded = false, color = 'pri
           {title}
         </Typography>
       </AccordionSummary>
-      <AccordionDetails sx={{ p: 0, backgroundColor: '#252525' }}>
+      <AccordionDetails sx={{ p: 0, backgroundColor: 'var(--surface)' }}>
         {children}
       </AccordionDetails>
     </Accordion>

@@ -12,7 +12,7 @@ const AssignedToMeBoardView = ({ tasks, users, handleTaskUpdate, handleTaskDelet
       {/* Task display */}
       {
         !isLoading && tasks.length === 0 ? (
-          <p className="text-center text-gray-500 mt-7">No tasks found.</p>
+          <p className="text-center text-[var(--text-muted)] mt-7">No tasks found.</p>
         ) : (
           <div className={"min-h-full w-full py-4 grid grid-cols-[repeat(auto-fit,_minmax(250px,_1fr))] gap-4 2xl:gap-10"}>
             {

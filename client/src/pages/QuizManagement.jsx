@@ -100,7 +100,7 @@ const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog,
       data-handler-id={handlerId}
       sx={{
         bgcolor: isDragging ? 'rgba(255,255,255,0.05)' : 'inherit',
-        '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+        '&:hover': { bgcolor: 'var(--overlay-subtle)' },
         '& td': { borderBottom: `1px solid ${colors.border}` },
         cursor: 'move',
         opacity: isDragging ? 0.5 : 1
@@ -187,7 +187,7 @@ const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog,
           <Tooltip title="View">
             <IconButton
               onClick={() => handleOpenDialog(question, true)}
-              sx={{ color: colors.textSecondary, '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}
+              sx={{ color: colors.textSecondary, '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}
             >
               <ViewIcon fontSize="small" />
             </IconButton>
@@ -280,7 +280,7 @@ const QuizManagement = () => {
   const colors = {
     background: 'transparent',
     surface: '#1e1e1e',
-    border: '#333333',
+    border: 'var(--border)',
     primary: '#7b68ee',
     secondary: '#3ea6ff',
     textPrimary: '#ffffff',
@@ -549,7 +549,7 @@ const QuizManagement = () => {
               Configure, analyze, and reorder questions for field team assessments.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} sx={{ bgcolor: 'rgba(255,255,255,0.05)', p: 0.5, borderRadius: '12px' }}>
+          <Stack direction="row" spacing={1} sx={{ bgcolor: 'var(--overlay-subtle)', p: 0.5, borderRadius: '12px' }}>
             <Button
               size="small"
               onClick={() => setSelectedQuizType('Performance')}
@@ -606,7 +606,7 @@ const QuizManagement = () => {
                 borderRadius: '8px',
                 textTransform: 'none',
                 boxShadow: `0 4px 14px 0 ${colors.primary}40`,
-                '&:hover': { bgcolor: '#6a5acd', boxShadow: `0 6px 20px 0 ${colors.primary}60` }
+                '&:hover': { bgcolor: 'var(--accent-hover)', boxShadow: `0 6px 20px 0 ${colors.primary}60` }
               }}
             >
               Add Question
@@ -653,9 +653,9 @@ const QuizManagement = () => {
                       <XAxis type="number" hide />
                       <YAxis dataKey="name" type="category" stroke={colors.textSecondary} width={100} tick={{ fontSize: 12 }} />
                       <RechartsTooltip
-                        contentStyle={{ backgroundColor: '#1e1e1e', borderColor: '#333', color: '#fff' }}
-                        itemStyle={{ color: '#fff' }}
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                        itemStyle={{ color: 'var(--text)' }}
+                        cursor={{ fill: 'var(--overlay-subtle)' }}
                       />
                       <Bar dataKey="value" fill={colors.primary} radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
@@ -685,8 +685,8 @@ const QuizManagement = () => {
                         ))}
                       </Pie>
                       <RechartsTooltip
-                        contentStyle={{ backgroundColor: '#1e1e1e', borderColor: '#333', color: '#fff' }}
-                        itemStyle={{ color: '#fff' }}
+                        contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                        itemStyle={{ color: 'var(--text)' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -723,7 +723,7 @@ const QuizManagement = () => {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                bgcolor: 'rgba(255,255,255,0.03)',
+                bgcolor: 'var(--overlay-subtle)',
                 '& fieldset': { borderColor: colors.border },
                 '&:hover fieldset': { borderColor: colors.primary },
               },
@@ -740,7 +740,7 @@ const QuizManagement = () => {
               onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: 'rgba(255,255,255,0.03)',
+                  bgcolor: 'var(--overlay-subtle)',
                   '& fieldset': { borderColor: colors.border },
                 },
                 '& .MuiInputLabel-root': { color: colors.textSecondary },
@@ -762,7 +762,7 @@ const QuizManagement = () => {
               onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  bgcolor: 'rgba(255,255,255,0.03)',
+                  bgcolor: 'var(--overlay-subtle)',
                   '& fieldset': { borderColor: colors.border },
                 },
                 '& .MuiInputLabel-root': { color: colors.textSecondary },
@@ -786,7 +786,7 @@ const QuizManagement = () => {
         }}>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.03)' }}>
+              <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
                 <TableCell width="40" sx={{ borderBottom: `2px solid ${colors.border}` }}></TableCell>
                 <TableCell width="60" sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}`, fontSize: '12px', letterSpacing: '0.08em' }}>ORDER</TableCell>
                 <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Question</TableCell>
@@ -841,7 +841,7 @@ const QuizManagement = () => {
                       fontWeight: 'bold'
                     },
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.05)'
+                      bgcolor: 'var(--overlay-subtle)'
                     }
                   }
                 }}>
@@ -881,7 +881,7 @@ const QuizManagement = () => {
           // maxWidth="md"
           PaperProps={{
             sx: {
-              bgcolor: '#121212',
+              bgcolor: 'var(--bg)',
               color: colors.textPrimary,
               backgroundImage: 'none',
               // borderRadius: '20px',
@@ -915,7 +915,7 @@ const QuizManagement = () => {
                   }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: 'rgba(255,255,255,0.03)',
+                      bgcolor: 'var(--overlay-subtle)',
                       '& fieldset': { borderColor: colors.border },
                       '&:hover fieldset': { borderColor: colors.primary },
                       '&.Mui-focused fieldset': { borderColor: colors.primary },
@@ -1048,7 +1048,7 @@ const QuizManagement = () => {
                             }}
                             sx={{
                               '& .MuiOutlinedInput-root': {
-                                bgcolor: 'rgba(255,255,255,0.02)',
+                                bgcolor: 'var(--overlay-subtle)',
                                 '& fieldset': { borderColor: colors.border },
                               }
                             }}
@@ -1197,7 +1197,7 @@ const QuizManagement = () => {
                   bgcolor: colors.primary,
                   fontWeight: 'bold',
                   px: 4,
-                  '&:hover': { bgcolor: '#6a5acd' }
+                  '&:hover': { bgcolor: 'var(--accent-hover)' }
                 }}
               >
                 {editingQuestion ? 'Update Question' : 'Save Question'}
@@ -1214,7 +1214,7 @@ const QuizManagement = () => {
           fullWidth
           PaperProps={{
             sx: {
-              bgcolor: '#121212',
+              bgcolor: 'var(--bg)',
               color: colors.textPrimary,
               backgroundImage: 'none',
               borderRadius: '20px',
@@ -1276,7 +1276,7 @@ const QuizManagement = () => {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(255,255,255,0.04)',
+                    bgcolor: 'var(--overlay-subtle)',
                     '& fieldset': { borderColor: colors.border },
                     '&:hover fieldset': { borderColor: colors.primary },
                     '&.Mui-focused fieldset': { borderColor: colors.primary },

@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -255,10 +256,10 @@ const PerfAssessmentDashboard = () => {
   }, [selectedResult]);
 
   const colors = {
-    background: '#2d2d2d',
+    background: tok('--surface'),
     surface: 'transparent',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: tok('--border'),
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',
@@ -510,7 +511,7 @@ const PerfAssessmentDashboard = () => {
           color: colors.textPrimary
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -521,7 +522,7 @@ const PerfAssessmentDashboard = () => {
           max: 2
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },
@@ -564,7 +565,7 @@ const PerfAssessmentDashboard = () => {
           stepSize: 1,
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -576,7 +577,7 @@ const PerfAssessmentDashboard = () => {
           }
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },
@@ -881,13 +882,13 @@ const PerfAssessmentDashboard = () => {
                     top: '1px',
                   },
                   '& input': {
-                    caretcolor: '#ffffff',
+                    caretcolor: tok('--text'),
                   },
                   '& input:-webkit-autofill': {
                     WebkitBoxShadow: `0 0 0 1000px ${colors.surface} inset`,
                     WebkitTextFillColor: colors.textPrimary,
                     transition: 'background-color 5000s ease-in-out 0s',
-                    caretcolor: '#ffffff',
+                    caretcolor: tok('--text'),
                   },
                 }}
               />
@@ -959,7 +960,7 @@ const PerfAssessmentDashboard = () => {
                 },
                 '&:disabled': {
                   backgroundColor: '#555',
-                  color: '#999'
+                  color: tok('--text-muted')
                 },
                 minWidth: isMobile ? undefined : '120px',
                 width: isMobile ? '100%' : undefined
@@ -982,8 +983,8 @@ const PerfAssessmentDashboard = () => {
                     borderColor: colors.primary,
                   },
                   '&:disabled': {
-                    borderColor: '#555',
-                    color: '#999'
+                    borderColor: tok('--border'),
+                    color: tok('--text-muted')
                   },
                   minWidth: isMobile ? undefined : '180px',
                   width: isMobile ? '100%' : undefined
@@ -1434,11 +1435,11 @@ const PerfAssessmentDashboard = () => {
                   }}>
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
-                      <Typography sx={{ color: "white" }}>{selectedResult.teamName}</Typography>
+                      <Typography sx={{ color: tok('--text') }}>{selectedResult.teamName}</Typography>
                     </Box>
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
-                      <Typography sx={{ color: "white" }}>
+                      <Typography sx={{ color: tok('--text') }}>
                         {new Date(selectedResult.submittedAt).toLocaleString()}
                       </Typography>
                     </Box>
@@ -1453,17 +1454,17 @@ const PerfAssessmentDashboard = () => {
                     </Box>
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Percentage</Typography>
-                      <Typography sx={{ color: "white" }}>{selectedResult.percentage}%</Typography>
+                      <Typography sx={{ color: tok('--text') }}>{selectedResult.percentage}%</Typography>
                     </Box>
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Total Score</Typography>
-                      <Typography sx={{ color: "white" }}>
+                      <Typography sx={{ color: tok('--text') }}>
                         {selectedResult.percentage}/100
                       </Typography>
                     </Box>
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Questions Scored</Typography>
-                      <Typography sx={{ color: "white" }}>
+                      <Typography sx={{ color: tok('--text') }}>
                         {selectedResult.userAnswers.filter(a => a.type === 'options' || a.isScored || a.score > 0).length}/{selectedResult.userAnswers.length}
                       </Typography>
                     </Box>
@@ -1662,7 +1663,7 @@ const PerfAssessmentDashboard = () => {
                             Overall Accuracy
                           </Typography>
                           <Typography sx={{
-                            color: "white",
+                            color: tok('--text'),
                             fontSize: isMobile ? '0.9rem' : '1rem'
                           }}>
                             {selectedResult.percentage}%
@@ -2106,7 +2107,7 @@ const PerfAssessmentDashboard = () => {
         PaperProps={{
           sx: {
             bgcolor: '#1e1e24',
-            color: '#fff',
+            color: tok('--text'),
             borderRadius: '16px',
             border: '1px solid rgba(59, 130, 246, 0.4)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
@@ -2119,14 +2120,14 @@ const PerfAssessmentDashboard = () => {
             <Edit sx={{ color: '#60a5fa', fontSize: '1.6rem' }} />
             <span>Edit Online Exam Assessment</span>
           </Box>
-          <IconButton onClick={() => setEditDialogOpen(false)} disabled={savingEdit} sx={{ color: '#94a3b8' }}>
+          <IconButton onClick={() => setEditDialogOpen(false)} disabled={savingEdit} sx={{ color: tok('--text-secondary') }}>
             <Close />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ mt: 1 }}>
-          <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2.5 }}>
+          <Typography variant="body2" sx={{ color: tok('--text-secondary'), mb: 2.5 }}>
             Modify theoretical examination scores, accuracy stats, and assessor remarks for{" "}
-            <strong style={{ color: '#fff' }}>{currentResult?.candidateName || currentResult?.teamName}</strong>.
+            <strong style={{ color: tok('--text') }}>{currentResult?.candidateName || currentResult?.teamName}</strong>.
           </Typography>
 
           <Grid container spacing={2}>
@@ -2140,13 +2141,13 @@ const PerfAssessmentDashboard = () => {
                 InputProps={{ inputProps: { min: 0, max: 100 } }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    color: tok('--text'),
+                    bgcolor: tok('--overlay-subtle'),
+                    '& fieldset': { borderColor: tok('--border') },
                     '&:hover fieldset': { borderColor: '#60a5fa' },
                     '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
                   },
-                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
                 }}
               />
@@ -2161,13 +2162,13 @@ const PerfAssessmentDashboard = () => {
                 InputProps={{ inputProps: { min: 0 } }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    color: tok('--text'),
+                    bgcolor: tok('--overlay-subtle'),
+                    '& fieldset': { borderColor: tok('--border') },
                     '&:hover fieldset': { borderColor: '#60a5fa' },
                     '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
                   },
-                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
                 }}
               />
@@ -2182,13 +2183,13 @@ const PerfAssessmentDashboard = () => {
                 InputProps={{ inputProps: { min: 1 } }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    color: tok('--text'),
+                    bgcolor: tok('--overlay-subtle'),
+                    '& fieldset': { borderColor: tok('--border') },
                     '&:hover fieldset': { borderColor: '#60a5fa' },
                     '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
                   },
-                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
                 }}
               />
@@ -2203,13 +2204,13 @@ const PerfAssessmentDashboard = () => {
                 onChange={(e) => setEditingRemarks(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    color: '#fff',
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                    color: tok('--text'),
+                    bgcolor: tok('--overlay-subtle'),
+                    '& fieldset': { borderColor: tok('--border') },
                     '&:hover fieldset': { borderColor: '#60a5fa' },
                     '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
                   },
-                  '& .MuiInputLabel-root': { color: '#94a3b8' },
+                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
                 }}
               />
@@ -2222,8 +2223,8 @@ const PerfAssessmentDashboard = () => {
             onClick={() => setEditDialogOpen(false)}
             disabled={savingEdit}
             sx={{
-              borderColor: 'rgba(255,255,255,0.2)',
-              color: '#e2e8f0',
+              borderColor: tok('--border'),
+              color: tok('--text-secondary'),
               borderRadius: '8px',
               textTransform: 'none',
               fontWeight: 600

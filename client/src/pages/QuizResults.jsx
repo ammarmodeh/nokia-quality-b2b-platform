@@ -186,53 +186,53 @@ const QuizResults = () => {
       dir={isIQ ? 'ltr' : 'rtl'}
       style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
     >
-      <div className="w-full max-w-md bg-[#111111] border-2 border-white p-8 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] text-center">
+      <div className="w-full max-w-md bg-[var(--bg)] border-2 border-white p-8 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] text-center">
         <span className="inline-block px-2 py-0.5 bg-white text-black text-[10px] font-bold uppercase tracking-widest mb-4">
           {labels.completed}
         </span>
 
-        <h1 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">
+        <h1 className="text-3xl font-black text-[var(--text)] mb-2 uppercase tracking-tight">
           {labels.finished}
         </h1>
 
         <div className="mb-6 py-4 border-y border-white/10">
-          <p className="text-gray-400 text-xs uppercase font-bold tracking-widest mb-1">{labels.score}</p>
-          <div className="text-5xl font-black text-white italic">
+          <p className="text-[var(--text-muted)] text-xs uppercase font-bold tracking-widest mb-1">{labels.score}</p>
+          <div className="text-5xl font-black text-[var(--text)] italic">
             {stats.percentage}%
           </div>
         </div>
 
         <div className="space-y-4 mb-8">
           <div className="bg-white/5 border border-white/10 p-4">
-            <span className="block text-[10px] uppercase text-gray-400 font-bold mb-2 pb-1 border-b border-white/10 text-center">
+            <span className="block text-[10px] uppercase text-[var(--text-muted)] font-bold mb-2 pb-1 border-b border-white/10 text-center">
               {labels.mcSection}
             </span>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-black text-green-400">{stats.correctMC}<span className="text-xs font-normal text-white/40">/{stats.totalMC}</span></span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase">{labels.correct}</span>
+                <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{labels.correct}</span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-black text-red-500">{stats.incorrectMC}</span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase">{labels.incorrect}</span>
+                <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{labels.incorrect}</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white/5 border border-white/10 p-4">
-            <span className="block text-[10px] uppercase text-gray-400 font-bold mb-2 pb-1 border-b border-white/10 text-center">
+            <span className="block text-[10px] uppercase text-[var(--text-muted)] font-bold mb-2 pb-1 border-b border-white/10 text-center">
               {labels.essaySection}
             </span>
             <div className="flex justify-center items-end gap-2">
-              <span className="text-3xl font-black text-white">{stats.answeredEssay}<span className="text-sm font-normal text-white/40">/{stats.totalEssay}</span></span>
+              <span className="text-3xl font-black text-[var(--text)]">{stats.answeredEssay}<span className="text-sm font-normal text-white/40">/{stats.totalEssay}</span></span>
               <span className="text-[10px] font-bold text-blue-400 uppercase pb-1">{labels.answered}</span>
             </div>
           </div>
         </div>
 
         <div className={`p-4 bg-white/5 border-${isIQ ? 'l' : 'r'}-4 border-white mb-8 ${isIQ ? 'text-left' : 'text-right'}`}>
-          <p className="text-[13px] leading-relaxed text-gray-300">
-            <strong className="text-white">{labels.note}</strong> {labels.noteContent}
+          <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
+            <strong className="text-[var(--text)]">{labels.note}</strong> {labels.noteContent}
           </p>
         </div>
 

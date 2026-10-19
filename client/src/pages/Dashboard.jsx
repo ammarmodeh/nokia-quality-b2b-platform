@@ -1,3 +1,4 @@
+import { alpha } from "../theme/colorFns";
 import { MdError } from "react-icons/md";
 // src/Dashboard.js
 import { useState, useEffect, Suspense, lazy } from "react";
@@ -17,7 +18,7 @@ import ReasonCategoriesDialog from "../components/ReasonCategoriesDialog";
 import AIInsightButton from "../components/AIInsightButton";
 import ActionPlanButton from "../components/ActionPlanButton";
 import AIHistoryButton from "../components/AIHistoryButton";
-import { alpha } from "@mui/material/styles";
+
 
 // Lazy load components
 const Chart = lazy(() => import("../components/Chart"));
@@ -176,8 +177,8 @@ const Dashboard = () => {
             p: { xs: 3, md: 4 },
             mb: 5,
             borderRadius: 4,
-            background: 'linear-gradient(135deg, #0f172a4b 0%, #1e293b 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'linear-gradient(135deg, #0f172a4b 0%, var(--surface) 100%)',
+            border: '1px solid var(--border)',
             position: 'relative',
             overflow: 'hidden',
             boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
@@ -224,7 +225,7 @@ const Dashboard = () => {
                   sx={{
                     fontSize: '0.85rem',
                     fontWeight: 600,
-                    color: '#f8fafc'
+                    color: 'var(--text)'
                   }}
                 >
                   Dashboard
@@ -235,7 +236,7 @@ const Dashboard = () => {
                 variant={isMobile ? "h5" : "h3"}
                 fontWeight="600"
                 sx={{
-                  color: '#ffffff',
+                  color: 'var(--text)',
                   letterSpacing: '-0.02em',
                   mb: 1,
                   display: 'flex',
@@ -259,13 +260,13 @@ const Dashboard = () => {
               {/* <Typography
                 variant="body1"
                 sx={{
-                  color: '#94a3b8',
+                  color: 'var(--text-secondary)',
                   fontWeight: 500,
                   maxWidth: '600px',
                   lineHeight: 1.6
                 }}
               >
-                QoS-related tickets statistics from <span style={{ color: '#ffffff', fontWeight: 700 }}>2026</span> until <span style={{ color: '#ffffff', fontWeight: 700 }}>{todayDate}</span>.
+                QoS-related tickets statistics from <span style={{ color: 'var(--text)', fontWeight: 700 }}>2026</span> until <span style={{ color: 'var(--text)', fontWeight: 700 }}>{todayDate}</span>.
               </Typography> */}
             </Box>
 
@@ -277,8 +278,8 @@ const Dashboard = () => {
               sx={{
                 p: 2,
                 borderRadius: 3,
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'var(--overlay-subtle)',
+                border: '1px solid var(--border)',
               }}
             >
 
@@ -297,7 +298,7 @@ const Dashboard = () => {
                     }
                   }}
                 />
-                <Divider orientation="vertical" flexItem sx={{ height: 45, my: 'auto', borderColor: 'rgba(255,255,255,0.1)' }} />
+                <Divider orientation="vertical" flexItem sx={{ height: 45, my: 'auto', borderColor: 'var(--border)' }} />
                 <Box
                   component="img"
                   src="/images/Orange-Logo.png"
@@ -341,7 +342,7 @@ const Dashboard = () => {
               <AIHistoryButton />
             </Stack>
           </Box>
-          <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.05)' }} elevation={0}>
+          <Paper sx={{ p: 0, overflow: 'hidden', borderRadius: 3, bgcolor: 'var(--bg)', border: '1px solid var(--border)' }} elevation={0}>
             <Box p={3}>
               <Suspense fallback={<MoonLoader color="#959595" size={30} />}>
                 <Chart tasks={tasks} samplesData={samplesData} settings={settings} />

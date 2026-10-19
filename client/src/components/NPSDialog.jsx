@@ -125,46 +125,46 @@ export default function NPSDialog({ open, handleClose, name }) {
         >
           <CloseIcon />
         </IconButton>
-        <DialogContent dividers className="bg-[#302f2f] dark:text-gray-300">
-          <Typography variant="h6" gutterBottom className="dark:text-white">
+        <DialogContent dividers className="bg-[#302f2f] dark:text-[var(--text-secondary)]">
+          <Typography variant="h6" gutterBottom className="dark:text-[var(--text)]">
             1. Detractor Customers (Score 1-6)
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             <strong>Violation Consequences:</strong>
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • First-time offense: Verbal warning and mandatory coaching session on quality improvement.
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • Second-time offense (within 3 months): Formal warning and financial deduction (if applicable).
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • Third-time offense (3+ occurrences within 6 months): Stronger penalties such as long-term suspension. Upon returning, the individual must attend a performance review meeting.
           </Typography>
 
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-white">
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-[var(--text)]">
             2. Passive Customers (Score 7-8)
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             <strong>Violation Consequences:</strong>
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • First-time offense: Verbal warning and guidance on improvement areas.
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • Second-time offense (within 3 months): Performance improvement session.
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • Third-time offense (3+ occurrences within 6 months): Closer monitoring. If another passive customer is recorded, it will be counted as one detractor in impact scaling, leading to the same consequence as a first-time detractor offense.
           </Typography>
 
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-white">
+          <Typography variant="h6" gutterBottom sx={{ mt: 2 }} className="dark:text-[var(--text)]">
             Fairness Measures Considerations:
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • <strong>Customer Issue Validation:</strong> Before penalizing a team, confirm whether the customer’s issue resulted from an actual violation or external factors (e.g., unresolved technical issues).
           </Typography>
-          <Typography gutterBottom className="dark:text-gray-300">
+          <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • <strong>Impact Scaling:</strong> Every three passive customer cases will be considered equivalent to one detractor.
           </Typography>
         </DialogContent>
@@ -181,7 +181,7 @@ export default function NPSDialog({ open, handleClose, name }) {
                 onClick={handleAgree}
                 sx={{
                   backgroundColor: "green",
-                  color: "white",
+                  color: "var(--text)",
                   "&:hover": {
                     backgroundColor: "#4caf50",
                   },
@@ -195,7 +195,7 @@ export default function NPSDialog({ open, handleClose, name }) {
                 onClick={handleDisagree}
                 sx={{
                   backgroundColor: "red",
-                  color: "white",
+                  color: "var(--text)",
                   "&:hover": {
                     backgroundColor: "#d32f2f",
                   },

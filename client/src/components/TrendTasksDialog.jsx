@@ -108,28 +108,28 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
             fullScreen={isMobile}
             PaperProps={{
                 sx: {
-                    backgroundColor: '#2d2d2d',
-                    color: '#fff',
+                    backgroundColor: 'var(--surface)',
+                    color: 'var(--text)',
                     maxHeight: '90vh'
                 }
             }}
         >
             <DialogTitle sx={{
-                borderBottom: '1px solid #3d3d3d',
+                borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 pb: 2
             }}>
                 <Box>
-                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
                         {entityName} - Task Details
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#b3b3b3' }}>
+                    <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
                         {analysisType === 'team' ? 'Team' : 'Reason'} Analysis • {tasksToDisplay.length} task{tasksToDisplay.length !== 1 ? 's' : ''}
                     </Typography>
                 </Box>
-                <IconButton onClick={onClose} size="small" sx={{ color: '#b3b3b3' }}>
+                <IconButton onClick={onClose} size="small" sx={{ color: 'var(--text-secondary)' }}>
                     <MdClose size={24} />
                 </IconButton>
             </DialogTitle>
@@ -138,7 +138,7 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
                 {/* Period Filter */}
                 <Stack direction={isMobile ? 'column' : 'row'} spacing={2} alignItems={isMobile ? 'flex-start' : 'center'} sx={{ mb: 3 }}>
                     <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" sx={{ color: '#b3b3b3', mb: 0.5, display: 'block' }}>
+                        <Typography variant="caption" sx={{ color: 'var(--text-secondary)', mb: 0.5, display: 'block' }}>
                             Filter by Period
                         </Typography>
                         <ToggleButtonGroup
@@ -148,14 +148,14 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
                             size="small"
                             sx={{
                                 '& .MuiToggleButton-root': {
-                                    color: '#b3b3b3',
-                                    borderColor: '#3d3d3d',
+                                    color: 'var(--text-secondary)',
+                                    borderColor: 'var(--border)',
                                     fontSize: isMobile ? '0.7rem' : '0.8rem',
                                     padding: isMobile ? '4px 8px' : '6px 12px',
                                     '&.Mui-selected': {
-                                        bgcolor: '#7b68ee',
-                                        color: '#fff',
-                                        '&:hover': { bgcolor: '#6a5acd' }
+                                        bgcolor: 'var(--accent)',
+                                        color: 'var(--text)',
+                                        '&:hover': { bgcolor: 'var(--accent-hover)' }
                                     }
                                 }
                             }}
@@ -185,40 +185,40 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
 
                 {/* Tasks Table */}
                 {tasksToDisplay.length > 0 ? (
-                    <TableContainer component={Paper} sx={{ backgroundColor: '#1e1e1e', maxHeight: isMobile ? 'none' : '60vh' }}>
+                    <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', maxHeight: isMobile ? 'none' : '60vh' }}>
                         <Table stickyHeader size={isMobile ? 'small' : 'medium'}>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>SLID</TableCell>
-                                    {!isMobile && <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Request #</TableCell>}
-                                    <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Customer</TableCell>
-                                    {!isMobile && <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Team</TableCell>}
-                                    <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Interview Date</TableCell>
-                                    <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Score</TableCell>
-                                    {!isMobile && <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Reason</TableCell>}
-                                    {!isMobile && <TableCell sx={{ backgroundColor: '#2d2d2d', color: '#b3b3b3', fontWeight: 'bold' }}>Status</TableCell>}
+                                    <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>SLID</TableCell>
+                                    {!isMobile && <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Request #</TableCell>}
+                                    <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Customer</TableCell>
+                                    {!isMobile && <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Team</TableCell>}
+                                    <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Interview Date</TableCell>
+                                    <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Score</TableCell>
+                                    {!isMobile && <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Reason</TableCell>}
+                                    {!isMobile && <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Status</TableCell>}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {tasksToDisplay.map((task, index) => (
-                                    <TableRow key={task._id || index} hover sx={{ '&:hover': { backgroundColor: '#252525' } }}>
-                                        <TableCell sx={{ color: '#fff', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
+                                    <TableRow key={task._id || index} hover sx={{ '&:hover': { backgroundColor: 'var(--surface)' } }}>
+                                        <TableCell sx={{ color: 'var(--text)', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
                                             {task.slid || 'N/A'}
                                         </TableCell>
                                         {!isMobile && (
-                                            <TableCell sx={{ color: '#fff', fontSize: '0.875rem' }}>
+                                            <TableCell sx={{ color: 'var(--text)', fontSize: '0.875rem' }}>
                                                 {task.requestNumber || 'N/A'}
                                             </TableCell>
                                         )}
-                                        <TableCell sx={{ color: '#fff', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
+                                        <TableCell sx={{ color: 'var(--text)', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
                                             {task.customerName || 'N/A'}
                                         </TableCell>
                                         {!isMobile && (
-                                            <TableCell sx={{ color: '#fff', fontSize: '0.875rem' }}>
+                                            <TableCell sx={{ color: 'var(--text)', fontSize: '0.875rem' }}>
                                                 {task.teamName || 'N/A'}
                                             </TableCell>
                                         )}
-                                        <TableCell sx={{ color: '#fff', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
+                                        <TableCell sx={{ color: 'var(--text)', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
                                             {task.interviewDate ? format(new Date(task.interviewDate), 'MMM d, yyyy') : 'N/A'}
                                         </TableCell>
                                         <TableCell>
@@ -234,7 +234,7 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
                                             />
                                         </TableCell>
                                         {!isMobile && (
-                                            <TableCell sx={{ color: '#fff', fontSize: '0.875rem' }}>
+                                            <TableCell sx={{ color: 'var(--text)', fontSize: '0.875rem' }}>
                                                 {Array.isArray(task.reason) ? task.reason.join(', ') : (task.reason || 'N/A')}
                                             </TableCell>
                                         )}
@@ -244,8 +244,8 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
                                                     label={task.status || 'N/A'}
                                                     size="small"
                                                     sx={{
-                                                        backgroundColor: '#3d3d3d',
-                                                        color: '#fff',
+                                                        backgroundColor: 'var(--surface-hover)',
+                                                        color: 'var(--text)',
                                                         fontSize: '0.75rem'
                                                     }}
                                                 />
@@ -258,15 +258,15 @@ const TrendTasksDialog = ({ open, onClose, entityName, entityData, analysisType,
                     </TableContainer>
                 ) : (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" sx={{ color: '#6b7280' }}>
+                        <Typography variant="body2" sx={{ color: 'var(--text-muted)' }}>
                             No tasks found for the selected period.
                         </Typography>
                     </Box>
                 )}
             </DialogContent>
 
-            <DialogActions sx={{ borderTop: '1px solid #3d3d3d', p: 2 }}>
-                <Button onClick={onClose} sx={{ color: '#b3b3b3' }}>
+            <DialogActions sx={{ borderTop: '1px solid var(--border)', p: 2 }}>
+                <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>
                     Close
                 </Button>
             </DialogActions>

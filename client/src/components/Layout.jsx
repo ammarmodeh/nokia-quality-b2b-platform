@@ -24,18 +24,18 @@ const Layout = () => {
   };
 
   return (
-    <div className="h-screen w-full relative overflow-y-auto" style={{ backgroundColor: '#1a1a1a' }}>
+    <div className="h-screen w-full relative overflow-y-auto" style={{ backgroundColor: 'var(--bg)' }}>
       <div
         // fixed positions the sidebar relative to the viewport, but since you haven't specified right-0 (to stick it to the right), it defaults to the left edge of the screen.
         className={clsx(
-          "h-screen flex-col border-r bg-[#2d2d2d]",
+          "h-screen flex-col border-r bg-[var(--surface)]",
           "z-40 fixed w-68 transition-transform duration-300",
           {
             "translate-x-0": sidebarOpen, // No horizontal translation
             "-translate-x-full": !sidebarOpen, // Moves element left by 100% of its width (negative translation)
           }
         )}
-        style={{ borderColor: '#3d3d3d' }}
+        style={{ borderColor: 'var(--border)' }}
       >
         <Sidebar
           toggleSidebar={toggleSidebar}
@@ -67,10 +67,10 @@ const Layout = () => {
       <FieldTeamsFloatingTable open={tableOpen} onClose={() => setTableOpen(false)} />
 
       {/* Main content area */}
-      <main className="flex flex-col bg-[#1a1a1a] w-full h-full">
+      <main className="flex flex-col bg-[var(--bg)] w-full h-full">
         <header
-          className="h-[55px] w-full flex justify-between items-center border-b bg-[#2d2d2d] px-4 sticky top-0 z-20"
-          style={{ borderColor: '#3d3d3d' }}
+          className="h-[55px] w-full flex justify-between items-center border-b bg-[var(--surface)] px-4 sticky top-0 z-20"
+          style={{ borderColor: 'var(--border)' }}
         >
           <Navbar
             toggleSidebar={toggleSidebar}
@@ -78,7 +78,7 @@ const Layout = () => {
           />
         </header>
         <div
-          className="h-[calc(100vh-55px)] w-full overflow-y-auto overflow-x-auto px-4 py-6 bg-[#1a1a1a] relative"
+          className="h-[calc(100vh-55px)] w-full overflow-y-auto overflow-x-auto px-4 py-6 bg-[var(--bg)] relative"
         >
           <Outlet />
         </div>

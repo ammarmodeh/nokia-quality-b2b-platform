@@ -567,11 +567,11 @@ const NotificationPanel = () => {
 
   const menuStyles = {
     '& .MuiPaper-root': {
-      backgroundColor: '#2d2d2d',
-      color: '#b3b3b3',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text-secondary)',
       width: '420px',
       borderRadius: '12px',
-      border: `1px solid #e5e7eb`,
+      border: `1px solid var(--border)`,
       padding: '8px 0',
       maxHeight: '80vh',
       overflow: 'hidden',
@@ -582,8 +582,8 @@ const NotificationPanel = () => {
       m: '4px',
       fontSize: '14px',
       '&:hover': {
-        backgroundColor: '#FFFFFF0F',
-        color: '#ffffff',
+        backgroundColor: 'var(--overlay-subtle)',
+        color: 'var(--text)',
       },
     },
   };
@@ -621,7 +621,7 @@ const NotificationPanel = () => {
               padding: "4px",
               fontWeight: 'bold',
               backgroundColor: '#FF4757',
-              color: 'white'
+              color: 'var(--text)'
             }
           }}
         >
@@ -651,7 +651,7 @@ const NotificationPanel = () => {
           px: 3,
           py: 2,
           borderBottom: `1px solid #FFFFFF24`,
-          backgroundColor: '#2d2d2d'
+          backgroundColor: 'var(--surface)'
         }}>
           <Stack
             direction="row"
@@ -660,21 +660,21 @@ const NotificationPanel = () => {
             sx={{ mb: 1 }}
           >
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff', fontSize: '20px' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'var(--text)', fontSize: '20px' }}>
                 Notifications
               </Typography>
-              <Typography variant="body2" sx={{ color: '#b3b3b3', mt: 0.5, fontSize: '12px' }}>
+              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mt: 0.5, fontSize: '12px' }}>
                 {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
               </Typography>
             </Box>
             <IconButton
               onClick={handleClose}
               sx={{
-                color: "#b3b3b3",
+                color: "var(--text-secondary)",
                 padding: '4px',
                 "&:hover": {
-                  color: "#ffffff",
-                  backgroundColor: '#FFFFFF0F',
+                  color: "var(--text)",
+                  backgroundColor: 'var(--overlay-subtle)',
                 }
               }}
             >
@@ -690,7 +690,7 @@ const NotificationPanel = () => {
                   disabled={loading}
                   startIcon={loading ? <CircularProgress size={16} /> : <IoMdCheckmarkCircleOutline />}
                   sx={{
-                    color: "#b3b3b3",
+                    color: "var(--text-secondary)",
                     textTransform: 'none',
                     fontSize: '0.75rem',
                     padding: '4px 8px',
@@ -710,7 +710,7 @@ const NotificationPanel = () => {
                   disabled={loading}
                   startIcon={<IoMdTrash />}
                   sx={{
-                    color: "#b3b3b3",
+                    color: "var(--text-secondary)",
                     textTransform: 'none',
                     fontSize: '0.75rem',
                     padding: '4px 8px',
@@ -755,14 +755,14 @@ const NotificationPanel = () => {
             }}>
               <IoMdNotificationsOutline size={48} color="#555" />
               <Typography variant="body1" sx={{
-                color: "#b3b3b3",
+                color: "var(--text-secondary)",
                 mt: 2,
                 fontSize: '0.95rem'
               }}>
                 No notifications to display
               </Typography>
               <Typography variant="body2" sx={{
-                color: "#666",
+                color: "var(--text-muted)",
                 mt: 1,
                 fontSize: '0.85rem'
               }}>
@@ -787,7 +787,7 @@ const NotificationPanel = () => {
                       whiteSpace: 'normal',
                       alignItems: 'flex-start',
                       "&:hover": {
-                        backgroundColor: isUnread ? '#00000042' : '#FFFFFF0F',
+                        backgroundColor: isUnread ? '#00000042' : 'var(--overlay-subtle)',
                       },
                       backgroundColor: isUnread ? '#39393aff' : 'transparent',
                       borderLeft: isUnread ? '3px solid #666061' : '3px solid transparent',
@@ -802,7 +802,7 @@ const NotificationPanel = () => {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: '#2d2d2d',
+                        backgroundColor: 'var(--surface)',
                         animation: 'pulse 1.5s infinite',
                       } : {}
                     }}
@@ -858,7 +858,7 @@ const NotificationPanel = () => {
 
                         {content.actionUser && (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="caption" sx={{ color: '#777' }}>
+                            <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
                               {content.actionText}:
                             </Typography>
                             {renderUserAvatar(content.actionUser, isUnread)}
@@ -869,7 +869,7 @@ const NotificationPanel = () => {
                   </MenuItem>
                   {index < memoizedNotifications.length - 1 && (
                     <Divider sx={{
-                      borderColor: '#383838',
+                      borderColor: 'var(--border)',
                       mx: 3,
                       my: 0,
                     }} />

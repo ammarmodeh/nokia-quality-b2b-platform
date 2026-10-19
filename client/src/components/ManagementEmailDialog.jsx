@@ -492,14 +492,14 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
       fullWidth
       PaperProps={{
         sx: {
-          bgcolor: '#1a1a1a',
-          color: '#fff',
+          bgcolor: 'var(--bg)',
+          color: 'var(--text)',
           borderRadius: 3,
           backgroundImage: 'none',
         },
       }}
     >
-      <DialogTitle sx={{ borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <DialogTitle sx={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <EmailIcon sx={{ color: 'primary.main' }} />
           <Typography variant="h6" fontWeight="bold">Generate Management Report</Typography>
@@ -514,7 +514,7 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
           value={tab}
           onChange={(e, v) => setTab(v)}
           sx={{
-            borderBottom: '1px solid #333',
+            borderBottom: '1px solid var(--border)',
             '& .MuiTab-root': { color: 'grey.500' },
             '& .Mui-selected': { color: 'primary.main' },
           }}
@@ -535,8 +535,8 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                color: '#fff',
-                '& fieldset': { borderColor: '#333' },
+                color: 'var(--text)',
+                '& fieldset': { borderColor: 'var(--border)' },
                 '&:hover fieldset': { borderColor: 'primary.main' },
               },
               '& .MuiInputLabel-root': { color: 'grey.500' },
@@ -554,10 +554,10 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
               fontFamily: 'inherit',
               fontSize: '0.9rem',
               color: 'grey.300',
-              bgcolor: '#262626',
+              bgcolor: 'var(--surface)',
               p: 3,
               borderRadius: 2,
-              border: '1px solid #333',
+              border: '1px solid var(--border)',
               direction: tab === 1 ? 'rtl' : 'ltr',
               lineHeight: 1.6,
             }}
@@ -567,7 +567,7 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: '1px solid #333', p: 2, justifyContent: 'space-between' }}>
+      <DialogActions sx={{ borderTop: '1px solid var(--border)', p: 2, justifyContent: 'space-between' }}>
         <Typography variant="caption" color="grey.500" sx={{ ml: 1 }}>
           * Stats are automatically calculated based on current dashboard data.
         </Typography>

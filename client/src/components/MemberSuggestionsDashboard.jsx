@@ -102,7 +102,7 @@ const MemberSuggestionsDashboard = () => {
   return (
     <Box sx={{ p: isMobile ? 1 : 3 }}>
       <Typography variant="h5" gutterBottom sx={{
-        color: '#7b68ee',
+        color: 'var(--accent-text)',
         fontWeight: 'bold',
         fontSize: isMobile ? '1.2rem' : '1.5rem',
         mb: 2
@@ -118,31 +118,31 @@ const MemberSuggestionsDashboard = () => {
         flex: 1,
         width: "100%",
         border: 0,
-        color: "#ffffff",
+        color: "var(--text)",
         "&.MuiTableContainer-root": {
-          backgroundColor: '#2d2d2d',
+          backgroundColor: 'var(--surface)',
         },
         "& .MuiTable-root": {
-          backgroundColor: "#2d2d2d",
+          backgroundColor: "var(--surface)",
         },
         "& .MuiTableHead-root": {
-          backgroundColor: "#2d2d2d",
+          backgroundColor: "var(--surface)",
           "& .MuiTableCell-root": {
-            color: "#b3b3b3",
+            color: "var(--text-secondary)",
             fontSize: "0.875rem",
             fontWeight: "bold",
-            borderBottom: "1px solid #e5e7eb",
+            borderBottom: "1px solid var(--border)",
           }
         },
         "& .MuiTableBody-root": {
           "& .MuiTableCell-root": {
-            borderBottom: "1px solid #e5e7eb",
-            color: "#ffffff",
+            borderBottom: "1px solid var(--border)",
+            color: "var(--text)",
           },
           "& .MuiTableRow-root": {
-            backgroundColor: "#2d2d2d",
+            backgroundColor: "var(--surface)",
             "&:hover": {
-              backgroundColor: "#2d2d2d",
+              backgroundColor: "var(--surface)",
             },
           }
         },
@@ -183,8 +183,8 @@ const MemberSuggestionsDashboard = () => {
                       label={suggestion.category}
                       size="small"
                       sx={{
-                        backgroundColor: '#3a3a3a',
-                        color: '#ffffff',
+                        backgroundColor: 'var(--surface-hover)',
+                        color: 'var(--text)',
                         textTransform: 'capitalize'
                       }}
                     />
@@ -195,7 +195,7 @@ const MemberSuggestionsDashboard = () => {
                       color={statusOptions[suggestion.status]?.color || 'default'}
                       size="small"
                       sx={{
-                        color: '#ffffff',
+                        color: 'var(--text)',
                         '&.MuiChip-colorWarning': {
                           backgroundColor: '#ff9800',
                         },
@@ -225,8 +225,8 @@ const MemberSuggestionsDashboard = () => {
                       size="small"
                       onClick={() => fetchResponseLog(suggestion._id)}
                       sx={{
-                        color: '#b3b3b3',
-                        borderColor: '#3d3d3d',
+                        color: 'var(--text-secondary)',
+                        borderColor: 'var(--border)',
                         '&:hover': {
                           backgroundColor: 'rgba(170, 170, 170, 0.08)',
                           borderColor: '#666',
@@ -243,7 +243,7 @@ const MemberSuggestionsDashboard = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body1" sx={{ color: '#ffffff' }}>
+                  <Typography variant="body1" sx={{ color: 'var(--text)' }}>
                     You haven&apos;t submitted any suggestions yet
                   </Typography>
                 </TableCell>
@@ -261,28 +261,28 @@ const MemberSuggestionsDashboard = () => {
         fullWidth
         sx={{
           "& .MuiDialog-paper": {
-            backgroundColor: '#2d2d2d',
-            color: '#ffffff',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
             boxShadow: 'none',
             borderRadius: '8px',
-            border: '1px solid #3d3d3d',
+            border: '1px solid var(--border)',
           }
         }}
       >
         <DialogTitle sx={{
-          backgroundColor: '#2d2d2d',
-          color: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
         }}>
           Response History: {selectedSuggestion?.title}
         </DialogTitle>
-        <DialogContent dividers sx={{ backgroundColor: '#2d2d2d', color: '#ffffff' }}>
-          <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
+        <DialogContent dividers sx={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}>
+          <Typography variant="h6" gutterBottom sx={{ color: 'var(--accent-text)' }}>
             Original Suggestion
           </Typography>
           <Typography variant="body1" paragraph sx={{
-            color: '#ffffff',
-            backgroundColor: '#2d2d2d',
+            color: 'var(--text)',
+            backgroundColor: 'var(--surface)',
             p: 2,
             borderRadius: '4px',
           }}>
@@ -291,21 +291,21 @@ const MemberSuggestionsDashboard = () => {
 
           <Divider sx={{ my: 2, backgroundColor: '#e5e7eb' }} />
 
-          <Typography variant="h6" gutterBottom sx={{ color: '#7b68ee' }}>
+          <Typography variant="h6" gutterBottom sx={{ color: 'var(--accent-text)' }}>
             Response Log
           </Typography>
 
           {responseLog.length === 0 ? (
-            <Typography variant="body1" sx={{ color: '#b3b3b3' }}>
+            <Typography variant="body1" sx={{ color: 'var(--text-secondary)' }}>
               No responses yet
             </Typography>
           ) : (
-            <List sx={{ backgroundColor: '#2d2d2d', borderRadius: '4px' }}>
+            <List sx={{ backgroundColor: 'var(--surface)', borderRadius: '4px' }}>
               {responseLog.map((response, index) => (
                 <React.Fragment key={index}>
-                  <ListItem alignItems="flex-start" sx={{ color: '#ffffff' }}>
+                  <ListItem alignItems="flex-start" sx={{ color: 'var(--text)' }}>
                     <ListItemAvatar>
-                      <Avatar sx={{ backgroundColor: '#7b68ee' }}>
+                      <Avatar sx={{ backgroundColor: 'var(--accent)' }}>
                         {response.respondedBy?.name?.charAt(0) || 'A'}
                       </Avatar>
                     </ListItemAvatar>
@@ -318,7 +318,7 @@ const MemberSuggestionsDashboard = () => {
                             color={statusOptions[response.status]?.color || 'default'}
                             sx={{
                               mr: 1,
-                              color: '#ffffff',
+                              color: 'var(--text)',
                               '&.MuiChip-colorWarning': {
                                 backgroundColor: '#ff9800',
                               },
@@ -342,7 +342,7 @@ const MemberSuggestionsDashboard = () => {
                             component="span"
                             variant="body2"
                             sx={{
-                              color: '#b3b3b3',
+                              color: 'var(--text-secondary)',
                               display: 'block',
                               mb: 1
                             }}
@@ -352,7 +352,7 @@ const MemberSuggestionsDashboard = () => {
                           {response.response}
                         </>
                       }
-                      sx={{ color: '#ffffff' }}
+                      sx={{ color: 'var(--text)' }}
                     />
                   </ListItem>
                   {index < responseLog.length - 1 && <Divider variant="inset" component="li" sx={{ backgroundColor: '#e5e7eb' }} />}
@@ -362,15 +362,15 @@ const MemberSuggestionsDashboard = () => {
           )}
         </DialogContent>
         <DialogActions sx={{
-          backgroundColor: '#2d2d2d',
-          borderTop: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
         }}>
           <Button
             onClick={() => setDetailDialogOpen(false)}
             sx={{
-              color: '#ffffff',
+              color: 'var(--text)',
               '&:hover': {
-                backgroundColor: '#2a2a2a',
+                backgroundColor: 'var(--surface)',
               }
             }}
           >

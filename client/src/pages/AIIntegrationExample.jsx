@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import { Bar } from 'react-chartjs-2';
@@ -37,15 +38,15 @@ const AIIntegrationExample = () => {
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#2d2d2d', minHeight: '100vh', color: '#ffffff' }}>
+    <Box sx={{ p: 3, backgroundColor: tok('--surface'), minHeight: '100vh', color: tok('--text') }}>
       <Typography variant="h4" sx={{ mb: 4, color: '#90caf9' }}>
         AI Integration Example
       </Typography>
 
       {/* Example 1: Chart with AI Button */}
-      <Paper sx={{ p: 3, mb: 4, backgroundColor: '#2d2d2d' }}>
+      <Paper sx={{ p: 3, mb: 4, backgroundColor: tok('--surface') }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: '#ffffff' }}>
+          <Typography variant="h6" sx={{ color: tok('--text') }}>
             Tasks by Priority
           </Typography>
           <AIInsightButton
@@ -56,14 +57,14 @@ const AIIntegrationExample = () => {
           />
         </Box>
         <Box sx={{ height: 300 }}>
-          <Bar data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ffffff' } } }, scales: { y: { ticks: { color: '#ffffff' } }, x: { ticks: { color: '#ffffff' } } } }} />
+          <Bar data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { labels: { color: tok('--text') } } }, scales: { y: { ticks: { color: tok('--text') } }, x: { ticks: { color: tok('--text') } } } }} />
         </Box>
       </Paper>
 
       {/* Example 2: Table with AI Button */}
-      <Paper sx={{ p: 3, backgroundColor: '#2d2d2d' }}>
+      <Paper sx={{ p: 3, backgroundColor: tok('--surface') }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ color: '#ffffff' }}>
+          <Typography variant="h6" sx={{ color: tok('--text') }}>
             Recent Tasks
           </Typography>
           <AIInsightButton
@@ -96,14 +97,14 @@ const AIIntegrationExample = () => {
       </Paper>
 
       {/* Instructions */}
-      <Paper sx={{ p: 3, mt: 4, backgroundColor: '#2d2d2d', border: '1px solid #3f51b5' }}>
+      <Paper sx={{ p: 3, mt: 4, backgroundColor: tok('--surface'), border: '1px solid #3f51b5' }}>
         <Typography variant="h6" sx={{ mb: 2, color: '#90caf9' }}>
           How to Add AI to Your Pages
         </Typography>
-        <Typography variant="body2" sx={{ mb: 2, color: '#aaa' }}>
+        <Typography variant="body2" sx={{ mb: 2, color: tok('--text-secondary') }}>
           Simply import the AIInsightButton and add it next to any chart or table:
         </Typography>
-        <Box sx={{ p: 2, backgroundColor: '#252525', borderRadius: 1, fontFamily: 'monospace', fontSize: '12px' }}>
+        <Box sx={{ p: 2, backgroundColor: tok('--surface'), borderRadius: 1, fontFamily: 'monospace', fontSize: '12px' }}>
           {`import AIInsightButton from '../components/AIInsightButton';
 
 <AIInsightButton 

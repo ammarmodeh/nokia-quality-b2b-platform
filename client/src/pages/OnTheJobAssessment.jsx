@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -322,7 +323,7 @@ const OnTheJobAssessment = () => {
     background: 'transparent', // Deeper, more modern dark
     surface: 'rgba(23, 23, 28, 0.7)', // Glass surface
     surfaceElevated: 'rgba(30, 30, 40, 0.8)',
-    border: 'rgba(255, 255, 255, 0.08)',
+    border: tok('--border'),
     primary: '#6366f1', // Indigo (Modern Premium)
     primaryHover: 'rgba(99, 102, 241, 0.15)',
     secondary: '#a855f7', // Purple accent
@@ -1246,7 +1247,7 @@ const OnTheJobAssessment = () => {
           }
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
       y: {
@@ -1257,7 +1258,7 @@ const OnTheJobAssessment = () => {
           }
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
+          color: tok('--overlay-subtle')
         }
       },
     },

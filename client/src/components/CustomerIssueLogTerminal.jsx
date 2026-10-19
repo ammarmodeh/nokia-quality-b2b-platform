@@ -101,7 +101,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
           color: '#00ff41', // Matrix/CMD Green
           fontFamily: 'Consolas, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace',
           // borderRadius: 2,
-          border: '1px solid #333',
+          border: '1px solid var(--border)',
         }
       }}
     >
@@ -109,7 +109,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--border)',
         p: 2
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -118,12 +118,12 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
             CUSTOMER_ISSUE_AUDIT_LOG.exe
           </Typography>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: '#666' }}>
+        <IconButton onClick={onClose} sx={{ color: 'var(--text-muted)' }}>
           <MdClose />
         </IconButton>
       </DialogTitle>
 
-      <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center', backgroundColor: '#1a1a1a' }}>
+      <Box sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'center', backgroundColor: 'var(--bg)' }}>
         <TextField
           size="small"
           placeholder="Filter by SLID... (Press Enter to scan)"
@@ -133,13 +133,13 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <MdSearch color="#666" />
+                <MdSearch color="var(--text-muted)" />
               </InputAdornment>
             ),
             sx: {
               color: '#00ff41',
               fontFamily: 'inherit',
-              '& fieldset': { borderColor: '#333' }
+              '& fieldset': { borderColor: 'var(--border)' }
             }
           }}
           sx={{ flexGrow: 1 }}
@@ -150,7 +150,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
           onClick={() => fetchLogs(search)}
           sx={{
             color: '#00ff41',
-            borderColor: '#333',
+            borderColor: 'var(--border)',
             fontFamily: 'inherit',
             fontSize: '0.75rem',
             '&:hover': { borderColor: '#00ff41' }
@@ -158,7 +158,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
         >
           SCAN
         </Button>
-        <Typography variant="caption" sx={{ color: '#666' }}>
+        <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
           Total entries: {logs.length}
         </Typography>
       </Box>
@@ -178,7 +178,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
               <Box key={group.date}>
                 <Typography sx={{
                   fontFamily: 'inherit',
-                  color: '#7b68ee',
+                  color: 'var(--accent-text)',
                   mb: 1,
                   display: 'flex',
                   alignItems: 'center',
@@ -196,10 +196,10 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
                       borderLeft: `2px solid ${getLogColor(log.action)}`,
                       pl: 1.5,
                       cursor: 'pointer',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' }
+                      '&:hover': { backgroundColor: 'var(--overlay-subtle)' }
                     }} onClick={() => toggleExpand(log._id)}>
                       <Box sx={{ display: 'flex', gap: 1, mb: 0.5 }}>
-                        <Typography component="span" sx={{ fontFamily: 'inherit', color: '#888' }}>
+                        <Typography component="span" sx={{ fontFamily: 'inherit', color: 'var(--text-muted)' }}>
                           [{format(new Date(log.timestamp), 'HH:mm:ss')}]
                         </Typography>
                         <Typography component="span" sx={{
@@ -209,11 +209,11 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
                         }}>
                           [{log.action}]
                         </Typography>
-                        <Typography component="span" sx={{ fontFamily: 'inherit', color: '#fff' }}>
+                        <Typography component="span" sx={{ fontFamily: 'inherit', color: 'var(--text)' }}>
                           User: {log.performedBy}
                         </Typography>
                       </Box>
-                      <Typography sx={{ fontFamily: 'inherit', color: '#aaa', fontSize: '0.85rem' }}>
+                      <Typography sx={{ fontFamily: 'inherit', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                         {log.details}
                       </Typography>
 
@@ -223,7 +223,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
                           p: 1.5,
                           backgroundColor: '#000',
                           borderRadius: 1,
-                          border: '1px solid #333',
+                          border: '1px solid var(--border)',
                           fontSize: '0.75rem',
                           color: '#00ff41',
                           overflowX: 'auto',
@@ -231,16 +231,16 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
                         }}>
                           {log.changes ? (
                             <>
-                              <Typography sx={{ fontFamily: 'inherit', color: '#7b68ee', mb: 1 }}>DETECTED_CHANGES:</Typography>
+                              <Typography sx={{ fontFamily: 'inherit', color: 'var(--accent-text)', mb: 1 }}>DETECTED_CHANGES:</Typography>
                               {Object.entries(log.changes).map(([field, delta]) => (
-                                <Box key={field} sx={{ mb: 1, borderLeft: '1px dashed #333', pl: 1 }}>
+                                <Box key={field} sx={{ mb: 1, borderLeft: '1px dashed var(--border)', pl: 1 }}>
                                   <Typography component="span" sx={{ fontFamily: 'inherit', color: '#ffeb3b', mr: 1 }}>
                                     {field.toUpperCase()}:
                                   </Typography>
                                   <Typography component="span" sx={{ fontFamily: 'inherit', color: '#f44336' }}>
                                     {typeof delta.from === 'object' ? JSON.stringify(delta.from) : (delta.from || 'NULL')}
                                   </Typography>
-                                  <Typography component="span" sx={{ fontFamily: 'inherit', color: '#888', mx: 1 }}>
+                                  <Typography component="span" sx={{ fontFamily: 'inherit', color: 'var(--text-muted)', mx: 1 }}>
                                     {` >>> `}
                                   </Typography>
                                   <Typography component="span" sx={{ fontFamily: 'inherit', color: '#4caf50' }}>
@@ -251,7 +251,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
                               <Divider sx={{ my: 1.5, borderColor: '#222' }} />
                             </>
                           ) : null}
-                          <Typography sx={{ fontFamily: 'inherit', color: '#7b68ee', mb: 0.5 }}>FULL_DATA_PAYLOAD:</Typography>
+                          <Typography sx={{ fontFamily: 'inherit', color: 'var(--accent-text)', mb: 0.5 }}>FULL_DATA_PAYLOAD:</Typography>
                           {JSON.stringify(log.newData || log.prevData, null, 2)}
                         </Box>
                       )}
@@ -275,7 +275,7 @@ const CustomerIssueLogTerminal = ({ open, onClose, slidFilter = "" }) => {
         )}
       </DialogContent>
 
-      <Box sx={{ p: 1.5, borderTop: '1px solid #333', textAlign: 'right', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ p: 1.5, borderTop: '1px solid var(--border)', textAlign: 'right', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="caption" sx={{ color: '#444' }}>
           AUDIT_SERVICE_ACTIVE: SUCCESS
         </Typography>

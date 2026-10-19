@@ -1,3 +1,4 @@
+import { tok } from "../theme/tokens";
 import { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend, Tooltip } from 'chart.js';
@@ -30,10 +31,10 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 
 const MainStats = () => {
   const colors = {
-    background: '#2d2d2d',
+    background: tok('--surface'),
     surface: '#ffffff',
     surfaceElevated: '#252525',
-    border: '#e5e7eb',
+    border: tok('--border'),
     primary: '#7b68ee',
     primaryHover: 'rgba(62, 166, 255, 0.08)',
     textPrimary: '#ffffff',

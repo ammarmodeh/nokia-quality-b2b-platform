@@ -159,7 +159,7 @@ const SubtaskManagementDialog = ({ open, onClose, taskId, onUpdate }) => {
                         onChange={(e) => handleNoteChange(index, e.target.value)}
                         onBlur={handleSaveNote}
                         size="small"
-                        InputProps={{ disableUnderline: true, style: { fontSize: '0.875rem', color: '#666' } }}
+                        InputProps={{ disableUnderline: true, style: { fontSize: '0.875rem', color: 'var(--text-muted)' } }}
                       />
                     }
                   />
