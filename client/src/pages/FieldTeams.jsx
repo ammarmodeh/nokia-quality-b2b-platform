@@ -1,35 +1,31 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import {
-  Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton,
-  useMediaQuery, List, ListItem, ListItemText, Chip,
-  Avatar, Menu, MenuItem, ListItemIcon, Checkbox, FormControlLabel,
-  Tabs, Tab, Paper, Badge
-} from '@mui/material';
-import {
-  Edit as EditIcon, Delete as DeleteIcon, PauseCircleOutline as PauseCircleOutlineIcon, Block as BlockIcon,
-  PlayCircleOutline as PlayCircleOutlineIcon, BeachAccess as BeachAccessIcon, CheckCircleOutline as CheckCircleOutlineIcon,
-  Cancel as CancelIcon, CancelOutlined as CancelOutlinedIcon, History as HistoryIcon, Phone as PhoneIcon,
-  DeviceHub as DeviceHubIcon, Laptop as LaptopIcon, CheckCircle as CheckCircleIcon, TaskAlt as TaskAltIcon,
-  Pending as PendingIcon, Refresh as RefreshIcon, Visibility,
-  MoreVert, Gavel as GavelIcon, AddCircleOutline as AddCircleOutlineIcon
-} from '@mui/icons-material';
-import { DataGrid } from '@mui/x-data-grid';
+import { Box, TextField, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip, Typography, IconButton, useMediaQuery, Chip, Menu, MenuItem, ListItemIcon, Checkbox, FormControlLabel, Tabs, Tab, Paper } from '@mui/material';
+import { Delete as DeleteIcon, PauseCircleOutline as PauseCircleOutlineIcon, Block as BlockIcon, PlayCircleOutline as PlayCircleOutlineIcon, BeachAccess as BeachAccessIcon, History as HistoryIcon, Refresh as RefreshIcon, Visibility, Gavel as GavelIcon, AddCircleOutline as AddCircleOutlineIcon } from '@mui/icons-material';
 import XLSX from 'xlsx-js-style';
 import { useSelector } from 'react-redux';
 import { FaSignOutAlt } from 'react-icons/fa';
-import { MdClose, MdOutlineSearch } from 'react-icons/md';
 import { SuspendTeamDialog } from '../components/SuspendTeamDialog';
 import { TerminateTeamDialog } from '../components/TerminateTeamDialog';
 import { ReactivateTeamDialog } from '../components/ReactivateTeamDialog';
 import EditTeamDialog from '../components/EditTeamDialog';
 import AddTeamForm from '../components/AddTeamForm';
+import PageHeader from '../components/ui/PageHeader';
+import StatCard from '../components/ui/StatCard';
+import FilterChip from '../components/ui/FilterChip';
+import ErrorState from '../components/ui/ErrorState';
+import PageLoader from '../components/ui/PageLoader';
+import TeamsTable from './fieldTeams/TeamsTable';
+import TeamSheet from './fieldTeams/TeamSheet';
+import { TEAM_STATUSES, teamStatusOf } from './fieldTeams/teamUtils';
+import InputBase from '@mui/material/InputBase';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
+import FilterAltOffOutlined from '@mui/icons-material/FilterAltOffOutlined';
 import FieldTeamDetailsDialog from '../components/FieldTeamDetailsDialog';
 import api from '../api/api';
-import CopyMUICell from '../components/CopyMUICell';
-import { RiFileExcel2Fill } from 'react-icons/ri';
-import {
-  DialogContentText,
-} from '@mui/material';
+import { DialogContentText } from '@mui/material';
 
 const FieldTeamForm = () => {
   const user = useSelector((state) => state?.auth?.user);
@@ -57,10 +53,6 @@ const FieldTeamForm = () => {
   const [leaveEndDate, setLeaveEndDate] = useState('');
   const [leaveUseToday, setLeaveUseToday] = useState(false);
   const [resignationReason, setResignationReason] = useState('');
-  const [paginationModel, setPaginationModel] = useState({
-    pageSize: 10,
-    page: 0,
-  });
 
   // NEW: State for View Details and Delete Confirmation
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
@@ -984,670 +976,153 @@ const FieldTeamForm = () => {
     );
   }, [teams, searchText]);
 
-  // Columns for DataGrid
-  const columns = useMemo(() => [
-    {
-      field: 'teamName',
-      headerName: 'Team Name',
-      flex: 1.5,
-      headerClassName: 'dark-header',
-      minWidth: 200,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: 'var(--accent)', width: 32, height: 32, fontSize: '0.875rem' }}>
-            {params.value.charAt(0).toUpperCase()}
-          </Avatar>
-          <Typography variant="body2" sx={{ fontWeight: 500, color: 'var(--text)' }}>
-            {params.value}
-          </Typography>
-        </Box>
-      ),
-    },
-    ...(user.role === 'Admin' ? [
-      {
-        field: 'teamCode',
-        headerName: 'Team ID',
-        width: 130,
-        headerClassName: 'dark-header',
-        renderCell: (params) => <CopyMUICell value={params.value || 'N/A'} />,
-      },
-      {
-        field: 'quizCode',
-        headerName: 'Quiz Code',
-        width: 130,
-        headerClassName: 'dark-header',
-        renderCell: (params) => <CopyMUICell value={params.value} />,
-      }
-    ] : []),
-    {
-      field: 'teamStatus',
-      headerName: 'Status',
-      width: 120,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        let color = 'var(--text-muted)'; // Default Grey
-        let label = 'N/A';
-
-        if (params.row.isTerminated) {
-          color = '#d32f2f'; // Red
-          label = 'Terminated';
-        } else if (params.row.isSuspended) {
-          color = '#ed6c02'; // Orange
-          label = 'Suspended';
-        } else if (params.row.isOnLeave) {
-          color = '#9c27b0'; // Purple
-          label = 'On Leave';
-        } else if (params.row.isActive) {
-          color = '#2e7d32'; // Green
-          label = 'Active';
-        } else {
-          label = 'Inactive';
-        }
-
-        return (
-          <Chip
-            label={label}
-            size="small"
-            sx={{
-              bgcolor: `${color}22`,
-              color: color,
-              border: `1px solid ${color}44`,
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              height: 24
-            }}
-          />
-        );
-      },
-    },
-    {
-      field: 'canTakeQuiz',
-      headerName: 'Quiz Access',
-      width: 120,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => (
-        <Chip
-          label={params.value ? "Allowed" : "Blocked"}
-          size="small"
-          icon={params.value ? <CheckCircleIcon style={{ fontSize: 14 }} /> : <CancelIcon style={{ fontSize: 14 }} />}
-          sx={{
-            bgcolor: params.value ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-            color: params.value ? '#4caf50' : '#f44336',
-            border: params.value ? '1px solid #4caf5040' : '1px solid #f4433640',
-            height: 24,
-            '& .MuiChip-icon': { color: 'inherit' }
-          }}
-        />
-      ),
-    },
-    {
-      field: 'teamCompany',
-      headerName: 'Company',
-      width: 140,
-      headerClassName: 'dark-header',
-      renderCell: (params) => (
-        <Chip
-          label={params.value || 'N/A'}
-          size="small"
-          sx={{
-            bgcolor: 'var(--surface-hover)',
-            color: 'var(--text-secondary)',
-            border: '1px solid var(--border)',
-            height: 24,
-            fontSize: '0.75rem'
-          }}
-        />
-      ),
-    },
-    {
-      field: 'contactNumber',
-      headerName: 'Contact',
-      minWidth: 140,
-      flex: 1,
-      headerClassName: 'dark-header',
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1} alignItems="center" height="100%">
-          <PhoneIcon sx={{ fontSize: 16, color: 'var(--text-muted)' }} />
-          <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>{params.value}</Typography>
-        </Stack>
-      ),
-    },
-    {
-      field: 'lastEvaluation',
-      headerName: 'Performance',
-      minWidth: 140,
-      flex: 1,
-      headerClassName: 'dark-header',
-      renderCell: (params) => {
-        const latestEval = params.row.evaluationHistory?.[0];
-        if (!latestEval) return <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>No Data</Typography>;
-
-        return (
-          <Stack direction="column" justifyContent="center" height="100%">
-            <Typography variant="body2" sx={{ fontWeight: 600, color: latestEval.percentage >= 90 ? '#4caf50' : latestEval.percentage >= 70 ? '#ff9800' : '#f44336' }}>
-              {latestEval.percentage}%
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-              {new Date(latestEval.submittedAt).toLocaleDateString()}
-            </Typography>
-          </Stack>
-        );
-      },
-    },
-    {
-      field: 'requiredEscalation',
-      headerName: 'Required Escalation (Matrix)',
-      minWidth: 260,
-      flex: 1.6,
-      headerClassName: 'dark-header',
-      renderCell: (params) => {
-        const metrics = teamMetricsMap[params.row._id];
-        const label = metrics?.requiredConsequence || 'Compliant (0 Violation)';
-        const color = metrics?.consequenceColor || '#10b981';
-        return (
-          <Tooltip title={`Period: ${activeDateRange.label} | ${metrics?.accDet || 0} Accountable Detractors, ${metrics?.accNeu || 0} Accountable Neutrals (${metrics?.points || 0} Matrix Units)`}>
-            <Chip
-              label={label}
-              size="small"
-              sx={{
-                bgcolor: `${color}22`,
-                color: color,
-                border: `1px solid ${color}66`,
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                height: 26,
-              }}
-            />
-          </Tooltip>
-        );
-      },
-    },
-    {
-      field: 'accIssues',
-      headerName: 'Acc. Issues',
-      width: 130,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        const metrics = teamMetricsMap[params.row._id];
-        const det = metrics?.accDet || 0;
-        const neu = metrics?.accNeu || 0;
-        const hasIssues = det > 0 || neu > 0;
-        return (
-          <Tooltip title={`${det} Acc. Detractors, ${neu} Acc. Neutrals in ${activeDateRange.label}`}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: hasIssues ? '#f87171' : '#4ade80', fontSize: '0.8rem' }}>
-              {hasIssues ? `${det} Det | ${neu} Neu` : '0 Issues'}
-            </Typography>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      field: 'escalationAction',
-      headerName: 'Latest Action Taken',
-      minWidth: 180,
-      flex: 1.3,
-      headerClassName: 'dark-header',
-      renderCell: (params) => {
-        const val = params.value;
-        if (!val || val === '-') return <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>None Assigned</Typography>;
-        return (
-          <Typography variant="body2" sx={{ fontWeight: 600, color: '#f43f5e' }}>
-            {val}
-          </Typography>
-        );
-      },
-    },
-    {
-      field: 'escalationStatus',
-      headerName: 'Escalation Status',
-      width: 145,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        const val = params.value || 'Pending';
-        let color = 'var(--text-muted)';
-        if (val === 'Completed' || val === 'Closed' || val === 'Compliant') color = '#10b981';
-        else if (val === 'Action Taken' || val === 'Warning Issued' || val === 'Training Assigned') color = '#f59e0b';
-        else if (val === '1 Week Suspension' || val === '1 Month Suspension' || val === 'Termination') color = '#ef4444';
-        else if (val === 'Under Review' || val === 'In Progress') color = '#3b82f6';
-        else color = '#a855f7';
-
-        return (
-          <Chip
-            label={val}
-            size="small"
-            sx={{
-              bgcolor: `${color}22`,
-              color: color,
-              border: `1px solid ${color}55`,
-              fontWeight: 600,
-              fontSize: '0.72rem',
-              height: 24,
-              cursor: 'pointer'
-            }}
-            onClick={() => handleOpenEscalationDialog(params.row, 0)}
-          />
-        );
-      },
-    },
-    {
-      field: 'escalationDate',
-      headerName: 'Action Date',
-      width: 125,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        if (!params.value) return <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>-</Typography>;
-        return (
-          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-            {new Date(params.value).toLocaleDateString()}
-          </Typography>
-        );
-      },
-    },
-    {
-      field: 'escalationHistory',
-      headerName: 'Warning History',
-      width: 140,
-      headerClassName: 'dark-header',
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params) => {
-        const count = (params.value || []).length;
-        return (
-          <Chip
-            icon={<HistoryIcon style={{ fontSize: 14 }} />}
-            label={`${count} ${count === 1 ? 'Warning' : 'Warnings'}`}
-            size="small"
-            clickable
-            onClick={() => handleOpenEscalationDialog(params.row, 1)}
-            sx={{
-              bgcolor: count > 0 ? 'rgba(236, 72, 153, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              color: count > 0 ? '#f472b6' : '#94a3b8',
-              border: count > 0 ? '1px solid rgba(236, 72, 153, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-              fontWeight: 600,
-              fontSize: '0.72rem',
-              height: 24,
-              '& .MuiChip-icon': { color: 'inherit' }
-            }}
-          />
-        );
-      },
-    },
-    ...(user.role === 'Admin' ? [{
-      field: 'actions',
-      headerName: 'Actions',
-      width: 200,
-      headerClassName: 'dark-header',
-      align: 'right',
-      headerAlign: 'right',
-      renderCell: (params) => (
-        <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center" height="100%">
-          <Tooltip title="View History">
-            <IconButton size="small" onClick={() => handleViewHistoryClick(params.row._id)} sx={{ color: '#0288d1', '&:hover': { bgcolor: '#0288d122' } }}>
-              <HistoryIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title={params.row.canTakeQuiz ? "Block Quiz" : "Allow Quiz"}>
-            <IconButton
-              size="small"
-              onClick={() => handleToggleQuizPermission(params.row._id, !params.row.canTakeQuiz)}
-              sx={{
-                color: params.row.canTakeQuiz ? '#f44336' : '#4caf50',
-                '&:hover': { bgcolor: params.row.canTakeQuiz ? '#f4433622' : '#4caf5022' }
-              }}
-            >
-              {params.row.canTakeQuiz ? <CancelIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Edit Team">
-            <IconButton size="small" onClick={() => handleEditClick(params.row)} sx={{ color: 'var(--accent-text)', '&:hover': { bgcolor: '#7b68ee22' } }}>
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="More Actions">
-            <IconButton size="small" onClick={(e) => handleMenuOpen(e, params.row)} sx={{ color: 'var(--text-secondary)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: '#fff' } }}>
-              <MoreVert fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
-    }] : []),
-
-  ], [handleDeleteClick, handleEditClick, handleOnLeaveClick, handleReactivateClick, handleResignedClick, handleSuspendClick, handleTerminateClick, handleToggleQuizPermission, handleViewHistoryClick, handleViewLogsClick, user.role]);
+  // ---- Presentation state (filters, sheet, add dialog) ----
+  const [addOpen, setAddOpen] = useState(false);
+  const [sheetTeamId, setSheetTeamId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState([]);
+  const [companyFilter, setCompanyFilter] = useState([]);
+  const [escFilter, setEscFilter] = useState([]);
+  const [quizFilter, setQuizFilter] = useState([]);
+  const [selection, setSelection] = useState([]);
+  const sheetTeam = useMemo(() => teams.find((t) => t._id === sheetTeamId) || null, [teams, sheetTeamId]);
+  const companyOptions = useMemo(() => {
+    const m = new Map();
+    teams.forEach((t) => t.teamCompany && m.set(t.teamCompany, (m.get(t.teamCompany) || 0) + 1));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([v, n]) => ({ value: v, label: v, hint: n }));
+  }, [teams]);
+  const visibleTeams = useMemo(() => filteredTeams.filter((t) => {
+    if (statusFilter.length && !statusFilter.includes(teamStatusOf(t).label)) return false;
+    if (companyFilter.length && !companyFilter.includes(t.teamCompany)) return false;
+    if (quizFilter.length && !quizFilter.includes(t.canTakeQuiz ? "Allowed" : "Blocked")) return false;
+    if (escFilter.length) {
+      const lvl = teamMetricsMap[t._id]?.consequenceLevel ?? 0;
+      const bucket = lvl === 0 ? "Compliant" : lvl <= 2 ? "Warning / training" : "Formal warning or worse";
+      if (!escFilter.includes(bucket)) return false;
+    }
+    return true;
+  }), [filteredTeams, statusFilter, companyFilter, quizFilter, escFilter, teamMetricsMap]);
+  const filtersActive = searchText || statusFilter.length || companyFilter.length || quizFilter.length || escFilter.length;
 
   return (
-    <Box
-      sx={{
-        // maxWidth: '1100px',
-        mx: 'auto',
-        p: 2,
-        px: isMobile ? 0 : undefined
-      }}
-    >
-      <Box sx={{ minHeight: '100vh', py: 3, color: 'var(--text)' }}>
-        {loading && <Typography>Loading...</Typography>}
-        {errorMessage && <Typography color="error">{errorMessage}</Typography>}
-        <AddTeamForm onAddTeam={handleAddTeam} loading={loading} errorMessage={errorMessage} user={user} />
-        <Divider sx={{ my: 4, backgroundColor: '#e5e7eb' }} />
-        <Box sx={{ mt: 4 }}>
-          <Stack direction="row" flexDirection={'row'} justifyContent="space-between" gap={2} alignItems="center" sx={{ mb: 2 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                width: '100%',
-                maxWidth: '600px',
-                py: 1,
-                px: 2,
-                gap: 1,
-                borderRadius: '999px',
-                backgroundColor: 'var(--surface)',
-                border: '1px solid var(--border)',
-                '&:focus-within': {
-                  borderColor: 'var(--accent)',
-                },
-              }}
-            >
-              <MdOutlineSearch className="text-[var(--text-muted)] text-xl" />
-              <TextField
-                fullWidth
-                variant="standard"
-                placeholder="Search by team name"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                sx={{
-                  '& .MuiInputBase-root': {
-                    backgroundColor: 'transparent',
-                    color: 'var(--text)',
-                  },
-                  '& .MuiInputBase-input': {
-                    fontSize: '14px',
-                    color: 'var(--text)',
-                    padding: 0,
-                  },
-                  '& .MuiInput-root:before': {
-                    borderBottom: 'none',
-                  },
-                  '& .MuiInput-root:after': {
-                    borderBottom: 'none',
-                  },
-                  '& .MuiInput-root:hover:not(.Mui-disabled):before': {
-                    borderBottom: 'none',
-                  },
-                }}
-                InputProps={{
-                  disableUnderline: true,
-                  style: { color: 'var(--text)' },
-                  endAdornment: searchText && (
-                    <IconButton
-                      size="small"
-                      onClick={() => setSearchText('')}
-                      sx={{ color: 'var(--text-secondary)', '&:hover': { color: 'var(--text)' } }}
-                    >
-                      <MdClose className="text-xl" />
-                    </IconButton>
-                  ),
-                }}
-              />
-            </Box>
-            <Tooltip title="Refresh Data">
-              <IconButton
-                onClick={() => setUpdateState(prev => !prev)}
-                disabled={loading}
-                sx={{
-                  color: 'var(--accent-text)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(123, 104, 238, 0.1)',
-                  },
-                  animation: loading ? 'spin 1s linear infinite' : 'none',
-                  '@keyframes spin': {
-                    '0%': { transform: 'rotate(0deg)' },
-                    '100%': { transform: 'rotate(360deg)' },
-                  },
-                }}
-              >
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Export to Excel">
-              <IconButton
-                onClick={handleExportToExcel}
-                size={isMobile ? "small" : "medium"}
-                sx={{
-                  color: '#4caf50',
-                  '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                  }
-                }}
-              >
-                <RiFileExcel2Fill fontSize={isMobile ? "16px" : "20px"} />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-
-          {/* Dynamic Escalation Calculation Period Bar */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              mb: 2.5,
-              bgcolor: '#121124',
-              border: '1px solid #3730a3',
-              borderRadius: 2.5,
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              justifyContent: 'space-between',
-              alignItems: isMobile ? 'flex-start' : 'center',
-              gap: 2
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              <GavelIcon sx={{ color: '#818cf8', fontSize: 24 }} />
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: 'var(--text)', fontWeight: 700 }}>
-                  Dynamic Escalation Matrix Analysis
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                  Calculating required consequence from accountable issues for: <strong style={{ color: '#a5b4fc' }}>{activeDateRange.label}</strong>
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              <TextField
-                select
-                size="small"
-                label="Analysis Period"
-                value={escalationPeriod}
-                onChange={(e) => setEscalationPeriod(e.target.value)}
-                SelectProps={{ native: true }}
-                sx={{
-                  minWidth: 200,
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: '#1e1b4b',
-                    color: 'var(--text)',
-                    '& fieldset': { borderColor: '#4338ca' },
-                    '&:hover fieldset': { borderColor: '#818cf8' },
-                    '&.Mui-focused fieldset': { borderColor: '#818cf8' },
-                  },
-                  '& .MuiInputLabel-root': { color: '#a5b4fc' },
-                }}
-              >
-                <option value="Cumulative" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Cumulative (From 01/06/2026)</option>
-                <option value="jun_2026" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>June 2026</option>
-                <option value="jul_2026" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>July 2026</option>
-                <option value="aug_2026" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>August 2026</option>
-                <option value="custom" style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>Custom Date Range...</option>
-              </TextField>
-
-              {escalationPeriod === 'custom' && (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <TextField
-                    size="small"
-                    type="date"
-                    label="From"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      width: 140,
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: '#1e1b4b',
-                        color: 'var(--text)',
-                        '& fieldset': { borderColor: '#4338ca' },
-                        '& input': { color: 'var(--text)', fontSize: '0.8rem', py: 1 }
-                      },
-                      '& .MuiInputLabel-root': { color: '#a5b4fc' },
-                    }}
-                  />
-                  <TextField
-                    size="small"
-                    type="date"
-                    label="To"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      width: 140,
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: '#1e1b4b',
-                        color: 'var(--text)',
-                        '& fieldset': { borderColor: '#4338ca' },
-                        '& input': { color: 'var(--text)', fontSize: '0.8rem', py: 1 }
-                      },
-                      '& .MuiInputLabel-root': { color: '#a5b4fc' },
-                    }}
-                  />
-                </Stack>
+    <Box>
+      <Box>
+        <PageHeader
+          title="Field Teams"
+          description="Field technicians, their status, assessments and accountability."
+          actions={
+            <>
+              <Tooltip title="Refresh">
+                <IconButton aria-label="Refresh" onClick={() => setUpdateState((prev) => !prev)} disabled={loading} sx={{ width: 32, height: 32, border: '1px solid var(--border)', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-xs)' }}>
+                  <RefreshIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 17 }} />} onClick={handleExportToExcel}>Export</Button>
+              {user.role === 'Admin' && (
+                <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => setAddOpen(true)}>Add team</Button>
               )}
-            </Box>
-          </Paper>
+            </>
+          }
+        />
 
-          <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Chip size="small" label={`Total: ${teamStatusStats.total}`} sx={{ bgcolor: 'var(--overlay-subtle)', color: '#fff', fontWeight: 600 }} />
-            <Chip size="small" label={`Active: ${teamStatusStats.active}`} sx={{ bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', border: '1px solid #4caf5040', fontWeight: 600 }} />
-            <Chip size="small" label={`Inactive: ${teamStatusStats.inactive}`} sx={{ bgcolor: 'rgba(244, 67, 54, 0.1)', color: '#f44336', border: '1px solid #f4433640', fontWeight: 600 }} />
-            {teamStatusStats.onLeave > 0 && <Chip size="small" label={`On Leave: ${teamStatusStats.onLeave}`} sx={{ bgcolor: 'rgba(156, 39, 176, 0.1)', color: '#9c27b0', border: '1px solid #9c27b040', fontWeight: 600 }} />}
-            {teamStatusStats.terminated > 0 && <Chip size="small" label={`Terminated: ${teamStatusStats.terminated}`} sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#d32f2f', border: '1px solid #d32f2f40', fontWeight: 600 }} />}
-            {teamStatusStats.resigned > 0 && <Chip size="small" label={`Resigned: ${teamStatusStats.resigned}`} sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#d32f2f', border: '1px solid #d32f2f40', fontWeight: 600 }} />}
-            {teamStatusStats.suspended > 0 && <Chip size="small" label={`Suspended: ${teamStatusStats.suspended}`} sx={{ bgcolor: 'rgba(237, 108, 2, 0.1)', color: '#ed6c02', border: '1px solid #ed6c0240', fontWeight: 600 }} />}
-          </Box>
+        {errorMessage && !addOpen && !openEditDialog && (
+          <ErrorState title="Something went wrong" message={errorMessage} onRetry={() => { setErrorMessage(''); setUpdateState((p) => !p); }} sx={{ mb: 2 }} />
+        )}
 
-          <Box
-            sx={{
-              width: '100%',
-              height: '400px',
-              overflow: 'hidden',
-              backgroundColor: 'var(--bg)',
-              borderRadius: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <DataGrid
-              rows={filteredTeams}
-              columns={columns}
-              getRowId={(row) => row._id} // Changed to use _id for unique row ID
-              pageSizeOptions={[5, 10, 25]}
-              paginationModel={paginationModel}
-              onPaginationModelChange={setPaginationModel}
-              checkboxSelection
-              disableRowSelectionOnClick
-              sx={{
-                flex: 1,
-                width: '100%',
-                border: 0,
-                color: 'var(--text)',
-                bgcolor: 'var(--bg)',
-                '& .MuiDataGrid-main': {
-                  bgcolor: 'var(--bg)',
-                },
-                '& .MuiDataGrid-columnHeaders': {
-                  bgcolor: 'var(--bg)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '0.875rem',
-                  fontWeight: 'bold',
-                  borderBottom: '1px solid var(--border)',
-                },
-                '& .MuiDataGrid-columnHeaderTitle': {
-                  fontWeight: 600,
-                  color: '#ddd'
-                },
-                '& .MuiDataGrid-cell': {
-                  borderBottom: '1px solid #222',
-                  display: 'flex',
-                  alignItems: 'center',
-                  '&:focus': {
-                    outline: 'none',
-                  },
-                },
-                '& .MuiDataGrid-row': {
-                  bgcolor: 'var(--bg)',
-                  '&:hover': {
-                    bgcolor: 'var(--bg)',
-                  },
-                  '&.Mui-selected': {
-                    bgcolor: 'rgba(123, 104, 238, 0.08)',
-                    '&:hover': {
-                      bgcolor: 'rgba(123, 104, 238, 0.12)',
-                    },
-                  },
-                },
-                '& .MuiDataGrid-footerContainer': {
-                  bgcolor: 'var(--bg)',
-                  borderTop: '1px solid var(--border)',
-                  '& .MuiTablePagination-root': {
-                    color: 'var(--text-secondary)',
-                  },
-                  '& .MuiTablePagination-selectIcon': {
-                    color: 'var(--text-secondary)',
-                  },
-                  '& .MuiIconButton-root': {
-                    color: 'var(--text-secondary)',
-                    '&.Mui-disabled': {
-                      color: '#444',
-                    },
-                  },
-                },
-                '& .MuiCheckbox-root': {
-                  color: '#555',
-                  '&.Mui-checked': {
-                    color: 'var(--accent-text)',
-                  }
-                },
-                '& .MuiDataGrid-virtualScroller': {
-                  '&::-webkit-scrollbar': {
-                    width: '6px',
-                    height: '6px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'var(--surface-hover)',
-                    borderRadius: '3px',
-                    '&:hover': {
-                      backgroundColor: '#555'
-                    }
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'var(--bg)',
-                  },
-                }
-              }}
-            />
-          </Box>
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, 1fr)' }, mb: 2.5 }}>
+          <StatCard label="Total teams" value={teamStatusStats.total} loading={loading && !teams.length} onClick={() => setStatusFilter([])} />
+          <StatCard label="Active" value={teamStatusStats.active} loading={loading && !teams.length} onClick={() => setStatusFilter(['Active'])} icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'var(--success)' }} />} />
+          <StatCard label="On leave" value={teamStatusStats.onLeave} loading={loading && !teams.length} onClick={() => setStatusFilter(['On leave'])} icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'var(--info)' }} />} />
+          <StatCard label="Suspended" value={teamStatusStats.suspended} loading={loading && !teams.length} onClick={() => setStatusFilter(['Suspended'])} icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'var(--warning)' }} />} />
+          <StatCard
+            label="Left / inactive"
+            value={teamStatusStats.terminated + teamStatusStats.resigned + teamStatusStats.otherInactive}
+            hint={`${teamStatusStats.terminated} terminated · ${teamStatusStats.resigned} resigned`}
+            loading={loading && !teams.length}
+            onClick={() => setStatusFilter(['Terminated', 'Resigned', 'Inactive'])}
+            sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}
+          />
         </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 32, px: 1.25, width: { xs: '100%', sm: 260 }, mr: 0.5, borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-xs)', '&:focus-within': { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-ring)' } }}>
+            <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)' }} />
+            <InputBase value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search name, code, company, phone…" inputProps={{ 'aria-label': 'Search teams' }} sx={{ flex: 1, fontSize: 13 }} />
+            {searchText && (
+              <IconButton size="small" aria-label="Clear search" onClick={() => setSearchText('')} sx={{ p: 0.25 }}>
+                <CloseIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            )}
+          </Box>
+          <FilterChip label="Status" options={TEAM_STATUSES.map((v) => ({ value: v, label: v, hint: teams.filter((t) => teamStatusOf(t).label === v).length }))} value={statusFilter} onChange={setStatusFilter} />
+          <FilterChip label="Company" options={companyOptions} value={companyFilter} onChange={setCompanyFilter} />
+          <FilterChip label="Escalation" options={['Compliant', 'Warning / training', 'Formal warning or worse'].map((v) => ({ value: v, label: v }))} value={escFilter} onChange={setEscFilter} />
+          <FilterChip label="Quiz access" options={[{ value: 'Allowed', label: 'Allowed' }, { value: 'Blocked', label: 'Blocked' }]} value={quizFilter} onChange={setQuizFilter} />
+          {filtersActive ? (
+            <Button variant="text" size="small" startIcon={<FilterAltOffOutlined sx={{ fontSize: 16 }} />} onClick={() => { setSearchText(''); setStatusFilter([]); setCompanyFilter([]); setEscFilter([]); setQuizFilter([]); }} sx={{ color: 'var(--text-secondary)', height: 28 }}>
+              Clear
+            </Button>
+          ) : null}
+          <Box sx={{ flex: 1 }} />
+          <TextField select value={escalationPeriod} onChange={(e) => setEscalationPeriod(e.target.value)} sx={{ width: 250 }} slotProps={{ htmlInput: { 'aria-label': 'Escalation analysis period' } }}>
+            <MenuItem value="Cumulative">Escalation period: Cumulative (from Jun 1)</MenuItem>
+            <MenuItem value="jun_2026">Escalation period: June 2026</MenuItem>
+            <MenuItem value="jul_2026">Escalation period: July 2026</MenuItem>
+            <MenuItem value="aug_2026">Escalation period: August 2026</MenuItem>
+            <MenuItem value="custom">Escalation period: Custom range…</MenuItem>
+          </TextField>
+          {escalationPeriod === 'custom' && (
+            <>
+              <TextField type="date" label="From" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
+              <TextField type="date" label="To" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
+            </>
+          )}
+        </Box>
+
+        {loading && !teams.length ? (
+          <PageLoader />
+        ) : (
+          <TeamsTable
+            rows={visibleTeams}
+            metrics={teamMetricsMap}
+            isAdmin={user.role === 'Admin'}
+            selection={selection}
+            onSelection={setSelection}
+            onOpen={(t) => setSheetTeamId(t._id)}
+            onToggleQuiz={handleToggleQuizPermission}
+            onMenu={handleMenuOpen}
+            onWarnings={(t) => handleOpenEscalationDialog(t, 1)}
+          />
+        )}
+
+        <TeamSheet
+          team={sheetTeam}
+          open={Boolean(sheetTeam)}
+          onClose={() => setSheetTeamId(null)}
+          metrics={sheetTeam ? teamMetricsMap[sheetTeam._id] : null}
+          periodLabel={activeDateRange.label}
+          tasks={allTasks}
+          isAdmin={user.role === 'Admin'}
+          onEdit={handleEditClick}
+          onMenu={handleMenuOpen}
+          onEscalation={handleOpenEscalationDialog}
+          onHistory={handleViewHistoryClick}
+        />
+
+        <Dialog open={addOpen} onClose={() => setAddOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Add field team</DialogTitle>
+          <DialogContent>
+            <AddTeamForm
+              onAddTeam={async (data) => {
+                const ok = await handleAddTeam(data);
+                if (ok) setAddOpen(false);
+                return ok;
+              }}
+              loading={loading}
+              errorMessage={errorMessage}
+              user={user}
+            />
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Dialog */}
         <EditTeamDialog
@@ -2045,25 +1520,7 @@ const FieldTeamForm = () => {
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
-          PaperProps={{
-            sx: {
-              bgcolor: 'var(--bg)',
-              color: 'var(--text)',
-              border: '1px solid var(--border)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5)',
-              minWidth: 180,
-              '& .MuiMenuItem-root': {
-                fontSize: '0.875rem',
-                py: 1,
-                px: 2,
-                '&:hover': { bgcolor: 'var(--surface-hover)' }
-              },
-              '& .MuiListItemIcon-root': {
-                minWidth: 32,
-                color: 'var(--text-secondary)'
-              }
-            }
-          }}
+          slotProps={{ paper: { sx: { minWidth: 220 } } }}
         >
           {(menuTeam?.isSuspended || menuTeam?.isOnLeave) && (
             <MenuItem onClick={() => { handleReactivateClick(menuTeam._id); handleMenuClose(); }}>
