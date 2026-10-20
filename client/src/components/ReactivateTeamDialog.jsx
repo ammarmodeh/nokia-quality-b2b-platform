@@ -1,4 +1,5 @@
 import api from "../api/api";
+import AsyncButton from './ui/AsyncButton';
 import {
   Dialog,
   DialogTitle,
@@ -71,16 +72,14 @@ export const ReactivateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatu
         >
           Cancel
         </Button>
-        <Button
+        <AsyncButton
+          pendingLabel="Reactivating…"
           onClick={handleReactivate}
           variant="contained"
           size={isMobile ? "small" : "medium"}
-          sx={{ '&:hover': {
-              backgroundColor: '#2563EB'
-            } }}
         >
           Reactivate
-        </Button>
+        </AsyncButton>
       </DialogActions>
     </Dialog>
   );

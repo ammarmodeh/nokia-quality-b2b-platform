@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import AsyncButton from './ui/AsyncButton';
 import api from "../api/api";
 import {
   Dialog,
@@ -79,16 +80,14 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
         >
           Cancel
         </Button>
-        <Button
+        <AsyncButton
+          pendingLabel="Terminating…"
           onClick={handleSubmit(onSubmit)}
-          variant="contained"
+          variant="contained" color="error"
           size={isMobile ? "small" : "medium"}
-          sx={{ '&:hover': {
-              backgroundColor: '#2563EB'
-            } }}
         >
           Terminate
-        </Button>
+        </AsyncButton>
       </DialogActions>
     </Dialog>
   );

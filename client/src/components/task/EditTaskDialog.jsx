@@ -191,7 +191,7 @@ const EditTaskDialog = ({
   };
 
   const user = useSelector((state) => state?.auth?.user);
-  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm();
 
   const [priority, setPriority] = useState("");
   const [department, setDepartment] = useState(DEPARTMENT[0]);
@@ -1149,7 +1149,7 @@ const EditTaskDialog = ({
             {/* Actions */}
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
               <Button onClick={handleClose} variant="outlined">Cancel</Button>
-              <Button type="submit" variant="contained" color="primary">Update Task</Button>
+              <Button type="submit" variant="contained" loading={isSubmitting} loadingPosition="start" startIcon={<span />}>{isSubmitting ? "Saving…" : "Update task"}</Button>
             </Box>
           </Stack>
         </form>

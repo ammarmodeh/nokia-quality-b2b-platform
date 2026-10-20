@@ -86,7 +86,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
 
   const handleFormSubmit = (data) => {
     console.log("EditTeamDialog: Submitting with data:", data, "forceRegenerate:", forceRegenerate);
-    onSubmit({ ...data, forceRegenerateQuizCode: forceRegenerate });
+    return onSubmit({ ...data, forceRegenerateQuizCode: forceRegenerate });
   };
 
   return (
@@ -509,9 +509,10 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           <Button
             type="submit"
             variant="contained"
-            disableElevation
-            disabled={loading}
-            sx={{ px: 4, py: 1, '&:hover': { backgroundColor: '#6652e0' } }}
+            loading={loading}
+            loadingPosition="start"
+            startIcon={<span />}
+            sx={{ px: 4, py: 1 }}
           >
             {loading ? 'Saving Changes...' : 'Save Changes'}
           </Button>

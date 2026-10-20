@@ -313,10 +313,11 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
       <Button
         type="submit"
         variant="contained"
-        disabled={loading || user.role !== 'Admin'}
-        startIcon={loading ? null : <Add />}
-        disableElevation
-        sx={{ mt: 4, py: 1.2, '&:hover': { bgcolor: '#6652e0' } }}
+        disabled={user.role !== 'Admin'}
+        loading={loading}
+        loadingPosition="start"
+        startIcon={<Add />}
+        sx={{ mt: 4, py: 1.2 }}
       >
         {loading ? 'Adding...' : 'Create Team'}
       </Button>

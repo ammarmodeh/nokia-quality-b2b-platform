@@ -1,4 +1,5 @@
 import { alpha } from "../theme/colorFns";
+import AsyncButton from './ui/AsyncButton';
 import { useState, useEffect } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Select, FormControl, InputLabel, Box, Typography, useTheme, useMediaQuery, IconButton, Grid, Checkbox, FormControlLabel, Tooltip } from "@mui/material";
 import { useSelector } from "react-redux";
@@ -403,7 +404,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     return true;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isAdmin) return;
 
     if (!validateForm()) return;
@@ -416,7 +417,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       resolveDate: formData.resolveDateKnown ? formData.resolveDate : null,
       closedAt: formData.closedAtKnown ? formData.closedAt : null
     };
-    onSubmit(submitData, issue?._id); // Pass ID if editing
+    // keep the dialog (and the typed data) open until the server confirms
+    const ok = await onSubmit(submitData, issue?._id);
+    if (ok === false) return;
     if (!issue) localStorage.removeItem('customerIssueFormData');
     onClose();
   };
@@ -1176,9 +1179,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         </Button>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="outlined" onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit} disabled={!isAdmin}>
+          <AsyncButton variant="contained" onClick={handleSubmit} disabled={!isAdmin} pendingLabel="Saving…">
             {issue ? 'Save changes' : 'Submit'}
-          </Button>
+          </AsyncButton>
         </Box>
       </DialogActions>
 

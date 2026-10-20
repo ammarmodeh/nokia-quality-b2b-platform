@@ -239,7 +239,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
     handleSubmit,
     register,
     watch,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm({ defaultValues: initialValues || {} });
 
   const [priority, setPriority] = useState(task?.priority?.toUpperCase() || "Not specified");
@@ -419,8 +419,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
           <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
             {task ? 'Update Task' : 'Add Task'}
           </Typography>
-          <Button autoFocus color="inherit" type="submit" form="task-form">
-            Create
+          <Button autoFocus variant="contained" type="submit" form="task-form" loading={isSubmitting} loadingPosition="start" startIcon={<span />}>
+            {isSubmitting ? 'Creating…' : 'Create'}
           </Button>
         </Toolbar>
       </AppBar>

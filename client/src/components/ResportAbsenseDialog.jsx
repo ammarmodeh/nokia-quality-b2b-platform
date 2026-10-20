@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AsyncButton from './ui/AsyncButton';
 import {
   Dialog,
   DialogTitle,
@@ -43,7 +44,7 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!sessionDate) {
       setDateError('Session date is required');
       return;
@@ -55,7 +56,7 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
       return;
     }
 
-    onSave({
+    return onSave({
       sessionDate: parsedDate.toISOString(),
       reason
     });
@@ -158,17 +159,15 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
         >
           Cancel
         </Button>
-        <Button
+        <AsyncButton
+          pendingLabel="Saving…"
           onClick={handleSubmit}
           color="error"
           variant="contained"
           disabled={!!dateError}
-          sx={{ '&:hover': {
-              backgroundColor: '#DC2626',
-            } }}
         >
           Report Absence
-        </Button>
+        </AsyncButton>
       </DialogActions>
     </Dialog>
   );
