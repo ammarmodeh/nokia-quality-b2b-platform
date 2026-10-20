@@ -21,7 +21,14 @@ export const tablesApi = {
   restoreField: (id, key) => d(api.post(`${base(id)}/fields/${key}/restore`)),
 
   rows: (id, params) => d(api.get(`${base(id)}/rows`, { params })),
-  createRow: (id, data) => d(api.post(`${base(id)}/rows`, { data })),
+  createRow: (id, data, extra = {}) => d(api.post(`${base(id)}/rows`, { data, ...extra })),
+  recheckTeams: (id, ids) => d(api.post(`${base(id)}/rows/recheck-teams`, ids ? { ids } : {})),
+
+  createGroup: (id, body) => d(api.post(`${base(id)}/groups`, body)),
+  updateGroup: (id, key, body) => d(api.patch(`${base(id)}/groups/${key}`, body)),
+  deleteGroup: (id, key) => d(api.delete(`${base(id)}/groups/${key}`)),
+  groupRows: (id, key, body) => d(api.post(`${base(id)}/groups/${key}/rows`, body)),
+  groupToTable: (id, key, body) => changed(d(api.post(`${base(id)}/groups/${key}/to-table`, body))),
   updateRow: (id, rowId, body) => d(api.patch(`${base(id)}/rows/${rowId}`, body)),
   bulk: (id, items) => d(api.post(`${base(id)}/rows/bulk`, { items })),
   deleteRows: (id, ids) => d(api.post(`${base(id)}/rows/delete`, { ids })),

@@ -69,6 +69,8 @@ export const CORE_CONCEPTS = {
   severity: { label: "Severity / score", types: ["singleSelect", "rating", "number"], hint: "Dashboard severity" },
   customerId: { label: "Customer / account ID", types: ["text", "phone", "number", "autoNumber"], hint: "Global search, linking to tasks" },
   location: { label: "Location", types: ["text", "longText"], hint: "Location filters" },
+  slid: { label: "SLID", types: ["text", "number"], hint: "Ties this row to the same SLID in other trackers and in Team analysis" },
+  teamCode: { label: "Team code", types: ["text", "number", "singleSelect"], hint: "Counts the row for the team that held this code on the row's date (kept even if the code moves to someone else later)" },
 };
 
 const empty = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);

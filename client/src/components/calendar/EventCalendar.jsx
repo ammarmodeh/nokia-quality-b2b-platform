@@ -47,9 +47,9 @@ const EventChip = ({ ev, onOpen, dense = true }) => (
   </Box>
 );
 
-const EventCalendar = ({ events, onOpen, onMove, onCreate, weekStartsOn = 0, initialView = "month", toolbarExtra, height }) => {
+const EventCalendar = ({ events, onOpen, onMove, onCreate, weekStartsOn = 0, initialView = "month", initialDate, toolbarExtra, height }) => {
   const [view, setView] = useState(initialView);
-  const [cursor, setCursor] = useState(() => startOfDay(new Date()));
+  const [cursor, setCursor] = useState(() => startOfDay(initialDate && !Number.isNaN(new Date(initialDate).getTime()) ? new Date(initialDate) : new Date()));
   const [more, setMore] = useState(null);
   const [over, setOver] = useState(null);
 

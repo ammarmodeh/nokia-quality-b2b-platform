@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Box, Tooltip, IconButton, Typography } from "@mui/material";
 import ChevronRight from "@mui/icons-material/ChevronRight";
 import KeyboardDoubleArrowLeft from "@mui/icons-material/KeyboardDoubleArrowLeft";
 import KeyboardDoubleArrowRight from "@mui/icons-material/KeyboardDoubleArrowRight";
-import { visibleSections, withCustomTables } from "./navConfig";
+import Add from "@mui/icons-material/Add";
+import { visibleSections, withCustomTables, withCustomTrackers } from "./navConfig";
+import { useTrackers } from "../../hooks/useTrackers";
+import TrackerDialog from "../trackers/TrackerDialog";
 import api from "../../api/api";
 
 export const Brand = ({ collapsed }) => (
@@ -51,6 +54,7 @@ const itemSx = (active, collapsed) => ({
 const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showCollapse = true }) => {
   const user = useSelector((s) => s?.auth?.user);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [tables, setTables] = useState([]);
   useEffect(() => {
     if (!user) return undefined;
@@ -60,7 +64,12 @@ const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showColl
     window.addEventListener("custom-tables-changed", load);
     return () => { off = true; window.removeEventListener("custom-tables-changed", load); };
   }, [user]);
-  const sections = useMemo(() => withCustomTables(visibleSections(user), tables), [user, tables]);
+  const { custom: trackers } = useTrackers();
+  const trackerKey = trackers.map((t) => `${t.label}|${t.path}`).join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sections = useMemo(() => withCustomTables(withCustomTrackers(visibleSections(user), trackers), tables), [user, tables, trackerKey]);
+  const [addingTracker, setAddingTracker] = useState(false);
+  const isAdmin = user?.role === "Admin";
   const [openGroups, setOpenGroups] = useState({});
 
   // Only one item is highlighted, even when two links share a path.
@@ -125,9 +134,12 @@ const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showColl
                       {open && (
                         <Box sx={{ ml: "21px", pl: 1.25, borderLeft: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "2px", mt: "2px" }}>
                           {item.children.map((c) => (
-                            <Box key={c.to} component={Link} to={c.to} onClick={onNavigate} sx={itemSx(activeKey === `${item.label}/${c.to}`, false)}>
-                              {c.label}
-                            </Box>
+                            // table names can be long: one line, cut with an ellipsis, full name on hover
+                            <Tooltip key={c.to} title={c.label.length > 24 ? c.label : ""} placement="right" enterDelay={400}>
+                              <Box component={Link} to={c.to} onClick={onNavigate} sx={{ ...itemSx(activeKey === `${item.label}/${c.to}`, false), minWidth: 0 }}>
+                                <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{c.label}</Box>
+                              </Box>
+                            </Tooltip>
                           ))}
                         </Box>
                       )}
@@ -145,10 +157,18 @@ const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showColl
                   <Tooltip key={item.label} title={item.label} placement="right">{link}</Tooltip>
                 ) : link;
               })}
+              {section.title === "Trackers" && isAdmin && !collapsed && (
+                <Box component="button" type="button" onClick={() => setAddingTracker(true)} sx={{ ...itemSx(false, false), border: 0, background: "none", font: "inherit", width: "100%", color: "var(--text-muted)" }}>
+                  <Add className="nav-icon" />
+                  <span>Add tracker</span>
+                </Box>
+              )}
             </Box>
           </Box>
         ))}
       </Box>
+
+      {addingTracker && <TrackerDialog open onClose={() => setAddingTracker(false)} onSaved={(t) => { setAddingTracker(false); onNavigate?.(); navigate(`/trackers/${t.key}`); }} />}
 
       {showCollapse && (
         <Box sx={{ borderTop: "1px solid var(--border)", p: 1, display: "flex", justifyContent: collapsed ? "center" : "flex-end" }}>

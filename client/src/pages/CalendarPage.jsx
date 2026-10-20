@@ -10,7 +10,7 @@ const CalendarPage = () => {
   const tab = params.get("tab") === "weeks" ? "weeks" : "schedule";
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - var(--topbar-h) - 48px)", minHeight: 620 }}>
-      <PageHeader title="Calendar" description="Booked appointments and visits, tasks, snags, assessments and table rows by date. Drag tasks, appointments and rows to reschedule." sx={{ mb: 1.5 }} />
+      <PageHeader title="Calendar" description="Tickets someone put on the calendar (from any tracker), GAIA follow-up visits and assessments. Use “Put on calendar” on a row, snag or task to add one; drag an entry to reschedule it." sx={{ mb: 1.5 }} />
       <Tabs value={tab} onChange={(_e, v) => setParams(v === "weeks" ? { tab: "weeks" } : {}, { replace: true })} sx={{ mb: 2 }}>
         <Tab value="schedule" label="Schedule" />
         <Tab value="weeks" label="Week numbers" />

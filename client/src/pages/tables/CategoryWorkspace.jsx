@@ -14,8 +14,8 @@ const COPY = {
   DVOC: "Detractor and neutral survey cases. Installation cases are the Tasks board; add tables for maintenance and anything else.",
 };
 
-/** Workspace for a tracker whose records live in custom tables (Closure Call, DVOC). */
-const CategoryWorkspace = ({ category }) => {
+/** Workspace for a tracker whose records live in custom tables (Closure Call, DVOC, and trackers added online). */
+const CategoryWorkspace = ({ category, actions }) => {
   const tax = taxonomyByLabel[category];
   const subs = tax?.subs || [];
   const [params, setParams] = useSearchParams();
@@ -30,7 +30,7 @@ const CategoryWorkspace = ({ category }) => {
   const showTasks = category === "DVOC" && (tab === "all" || tab === "Installation");
   return (
     <Box>
-      <PageHeader title={category} description={COPY[category]} />
+      <PageHeader title={category} description={COPY[category] || tax?.description || "Tables for this tracker. Map a SLID and a Team code field so rows count towards each team."} actions={actions} />
       {subs.length > 1 && (
         <Tabs value={tab} onChange={(_e, v) => setParams((p) => { const n = new URLSearchParams(p); if (v === "all") n.delete("sub"); else n.set("sub", v); return n; }, { replace: true })} sx={{ mb: 2.5 }} aria-label="Sub-category">
           <Tab value="all" label="All" />

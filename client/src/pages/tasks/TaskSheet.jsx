@@ -7,6 +7,7 @@ import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import ContentCopy from "@mui/icons-material/ContentCopy";
 import { toast } from "sonner";
 import Sheet from "../../components/ui/Sheet";
+import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
 import Badge from "../../components/ui/Badge";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
 import { taxonomyOfTask } from "../../constants/taxonomy";
@@ -206,6 +207,8 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
           <Field label="ONT">{task.ontType}</Field>
           <Field label="Extender">{task.freeExtender === "Yes" ? `${task.extenderType || "Yes"}${task.extenderNumber ? ` × ${task.extenderNumber}` : ""}` : task.freeExtender}</Field>
         </Section>
+
+        <CalendarEntriesPanel key={task._id} target={{ kind: "task", id: task._id }} title={[task.customerName, task.slid].filter(Boolean).join(" · ")} sx={{ mb: 2 }} />
 
         <Section title={`Activity${tickets.length ? ` · ${tickets.length}` : ""}`}>
           {!tickets.length && <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)", py: 0.5 }}>No GAIA tickets recorded yet.</Typography>}

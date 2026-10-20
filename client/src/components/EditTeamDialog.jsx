@@ -27,7 +27,8 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useSelector((state) => state.auth);
-  const { register, handleSubmit, reset } = useForm();
+  const { register, handleSubmit, reset, watch } = useForm();
+  const codeChanged = (watch('teamCode') || '').trim() !== (team?.teamCode || '').trim();
   const [fieldTeamsCompany, setFieldTeamsCompany] = useState([]);
   const [forceRegenerate, setForceRegenerate] = useState(false);
 
@@ -86,7 +87,9 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
 
   const handleFormSubmit = (data) => {
     console.log("EditTeamDialog: Submitting with data:", data, "forceRegenerate:", forceRegenerate);
-    return onSubmit({ ...data, forceRegenerateQuizCode: forceRegenerate });
+    const { codeEffectiveFrom, ...rest } = data;
+    // a new code starts on this date; tickets before it stay with whoever held the code then
+    return onSubmit({ ...rest, forceRegenerateQuizCode: forceRegenerate, ...(codeChanged && codeEffectiveFrom ? { codeEffectiveFrom: new Date(`${codeEffectiveFrom}T00:00:00Z`).toISOString() } : {}) });
   };
 
   return (
@@ -185,6 +188,17 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
               InputProps={{ style: { color: 'var(--text)' } }}
               InputLabelProps={{ style: { color: 'var(--text-muted)' }, shrink: true }}
             />
+
+            {codeChanged && (
+              <TextField
+                label="New code starts on"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                {...register('codeEffectiveFrom')}
+                helperText={`Tickets dated before this stay with whoever held ${team?.teamCode || 'the old code'} then; the old code is closed for this team on this date.`}
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
 
             <Box sx={{ position: 'relative' }}>
               <TextField

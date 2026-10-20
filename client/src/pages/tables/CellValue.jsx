@@ -44,7 +44,7 @@ export const CellValue = ({ field, value, row, lookups, wrap = false }) => {
   }
 };
 
-const TAX_OPTIONS = TAXONOMY.flatMap((t) => (t.subs.length ? t.subs.map((s) => ({ category: t.label, sub: s })) : [{ category: t.label, sub: null }]));
+const taxOptions = () => TAXONOMY.flatMap((t) => (t.subs.length ? t.subs.map((s) => ({ category: t.label, sub: s })) : [{ category: t.label, sub: null }]));
 const taxLabel = (o) => [o.category, o.sub].filter(Boolean).join(" · ");
 
 /**
@@ -108,7 +108,7 @@ export const CellEditor = ({ field, value, lookups, onCommit, onCancel, initial,
       );
     case "taxonomy":
       return (
-        <Autocomplete size="small" openOnFocus options={TAX_OPTIONS} getOptionLabel={taxLabel} isOptionEqualToValue={(a, b) => taxLabel(a) === taxLabel(b)}
+        <Autocomplete size="small" openOnFocus options={taxOptions()} getOptionLabel={taxLabel} isOptionEqualToValue={(a, b) => taxLabel(a) === taxLabel(b)}
           value={draft && typeof draft === "object" ? draft : null} onChange={(_e, v) => onCommit(v || null)}
           renderInput={(p) => <TextField {...p} autoFocus={autoFocus} sx={sx} onKeyDown={(e) => e.key === "Escape" && onCancel?.()} />} />
       );

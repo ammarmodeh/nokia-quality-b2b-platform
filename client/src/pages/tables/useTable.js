@@ -95,9 +95,9 @@ export const useTable = (id) => {
   );
 
   const addRow = useCallback(
-    async (data = {}) => {
+    async (data = {}, extra) => {
       try {
-        const row = await tablesApi.createRow(id, data);
+        const row = await tablesApi.createRow(id, data, extra);
         setRows((list) => [...list, row]);
         setTotal((n) => n + 1);
         return row;
@@ -156,8 +156,13 @@ export const useTable = (id) => {
   }, []);
 
   const replaceRow = useCallback((row) => setRows((list) => list.map((r) => (r._id === row._id ? row : r))), []);
+  /** Local group membership change after POST groups/:key/rows. */
+  const setRowGroups = useCallback((ids, key, add) => {
+    const set = new Set(ids);
+    setRows((list) => list.map((r) => (set.has(r._id) ? { ...r, groups: add ? [...new Set([...(r.groups || []), key])] : (r.groups || []).filter((g) => g !== key) } : r)));
+  }, []);
 
-  return { table, setTable, fields, views, setViews, rows, total, loading, error, reload, loadRows, updateCells, addRow, addRows, deleteRows, dropRows, replaceRow, toast, setToast, notify };
+  return { table, setTable, fields, views, setViews, rows, total, loading, error, reload, loadRows, updateCells, addRow, addRows, deleteRows, dropRows, replaceRow, setRowGroups, toast, setToast, notify };
 };
 
 export { errText };

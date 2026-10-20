@@ -8,6 +8,7 @@ import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOu
 import { toast } from "sonner";
 import api from "../../api/api";
 import Sheet from "../../components/ui/Sheet";
+import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
 import Badge from "../../components/ui/Badge";
 import { fmt, reportedDate, snagTypeOf, sourceOf, statusOf } from "./snagUtils";
 
@@ -183,6 +184,8 @@ const SnagSheet = ({ snag, open, onClose, isAdmin, onPatch, onEdit, onRecordTick
           {snag.resolutionDetails && <Box sx={{ mt: 0.5 }}><Note text={snag.resolutionDetails} /></Box>}
           {snag.latestGaia && <Field label="Latest GAIA">{`${snag.latestGaia.mainCategory || ""} ${snag.latestGaia.status ? `· ${snag.latestGaia.status}` : ""}`.trim()}</Field>}
         </Section>
+
+        <CalendarEntriesPanel key={snag._id} target={{ kind: "issue", id: snag._id }} title={[snag.customerName, snag.slid].filter(Boolean).join(" · ")} sx={{ mb: 2 }} />
 
         <Section title="Activity">
           <ActivityLog issueId={snag._id} />

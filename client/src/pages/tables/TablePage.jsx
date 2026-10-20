@@ -26,7 +26,15 @@ import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import EditOutlined from "@mui/icons-material/EditOutlined";
 import ArchiveOutlined from "@mui/icons-material/ArchiveOutlined";
 import Close from "@mui/icons-material/Close";
-import EventAvailableOutlined from "@mui/icons-material/EventAvailableOutlined";
+import FolderSpecialOutlined from "@mui/icons-material/FolderSpecialOutlined";
+import PlaylistRemoveOutlined from "@mui/icons-material/PlaylistRemoveOutlined";
+import ContentCopyOutlined from "@mui/icons-material/ContentCopyOutlined";
+import DeleteOutline from "@mui/icons-material/DeleteOutline";
+import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
+import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
+import SegmentedControl from "../../components/ui/SegmentedControl";
+import GroupDialog, { groupColor } from "./GroupDialog";
+import AnalysisPanel from "./AnalysisPanel";
 import PageHeader from "../../components/ui/PageHeader";
 import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
 import ErrorState from "../../components/ui/ErrorState";
@@ -35,13 +43,12 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import Badge from "../../components/ui/Badge";
 import EventCalendar from "../../components/calendar/EventCalendar";
 import { downloadWorkbook } from "../../components/dataio/parse";
-import { taxonomyByLabel, taxonomyLabel } from "../../constants/taxonomy";
+import { taxonomyByLabel, taxonomyLabel, trackerPath } from "../../constants/taxonomy";
 import GridView from "./GridView";
 import KanbanView from "./KanbanView";
 import FieldManagerSheet from "./FieldManagerSheet";
 import RowSheet from "./RowSheet";
 import ImportHistorySheet from "./ImportHistorySheet";
-import CalendarFieldsDialog from "./CalendarFieldsDialog";
 import BulkBar from "../../components/ui/BulkBar";
 import SafeDeleteDialog from "../../components/ui/SafeDeleteDialog";
 import { bulkDelete, DELETE_PATHS } from "../../api/bulkDelete";
@@ -58,11 +65,7 @@ const VIEW_ICON = { grid: TableRowsOutlined, kanban: ViewKanbanOutlined, calenda
 const VIEW_STATE_KEYS = ["filters", "sorts", "groupBy", "hiddenFields", "columnOrder", "frozen", "cardFields", "dateField"];
 const pickState = (v) => Object.fromEntries(VIEW_STATE_KEYS.map((k) => [k, v?.[k] ?? (["filters", "sorts", "hiddenFields", "columnOrder", "cardFields"].includes(k) ? [] : k === "frozen" ? 1 : null)]));
 
-const workspacePath = (t) => {
-  const c = taxonomyByLabel[t.issueCategory];
-  const path = { "Closure Call": "/closure-call", "OJO Snags": "/ojo-snags", DVOC: "/dvoc", TCRM: "/tcrm", TRC: "/trc", "Internal Audit (FAT)": "/internal-audit" }[t.issueCategory];
-  return { path: path || "/dashboard", label: c?.label || t.issueCategory };
-};
+const workspacePath = (t) => ({ path: trackerPath(t.issueCategory), label: taxonomyByLabel[t.issueCategory]?.label || t.issueCategory });
 
 const exportRows = (table, fields, rows, lookups, fmt = "xlsx") => {
   const header = fields.map((f) => f.label);
@@ -146,8 +149,15 @@ const TablePage = () => {
   const [widths, setWidths] = useState({});
   const [confirm, setConfirm] = useState(null);
   const [rename, setRename] = useState(null);
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [deletingRows, setDeletingRows] = useState(null); // rows to delete permanently
+  const [groupDialog, setGroupDialog] = useState(null); // { group? } | { fromSelection }
+  const [groupMenu, setGroupMenu] = useState(null); // { anchor, group }
+  const [addToAnchor, setAddToAnchor] = useState(null);
+  const [deletingGroup, setDeletingGroup] = useState(null);
+  const [recheck, setRecheck] = useState(null); // null | "ask" | "running"
+  const groupKey = params.get("group");
+  const mode = params.get("mode") === "analysis" ? "analysis" : "rows";
+  const setParam = (k, v) => setParams((p) => { const n = new URLSearchParams(p); if (v) n.set(k, v); else n.delete(k); return n; }, { replace: true });
 
   // ordered + visible fields for this view
   const ordered = useMemo(() => {
@@ -157,11 +167,24 @@ const TablePage = () => {
   }, [fields, state.columnOrder]);
   const visible = useMemo(() => ordered.filter((f) => !state.hiddenFields?.includes(f.key)), [ordered, state.hiddenFields]);
 
+  // row groups: picked members plus rows matching the group's rule
+  const groups = useMemo(() => [...(table?.groups || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [table]);
+  const members = useMemo(() => {
+    const out = {};
+    for (const g of groups) {
+      const ruled = g.filters?.length ? new Set(applyView(rows, fields, { filters: g.filters }, lookups, "").map((r) => r._id)) : null;
+      out[g.key] = new Set(rows.filter((r) => r.groups?.includes(g.key) || ruled?.has(r._id)).map((r) => r._id));
+    }
+    return out;
+  }, [groups, rows, fields, lookups]);
+  const group = groups.find((g) => g.key === groupKey) || null;
+  const scoped = useMemo(() => (group ? rows.filter((r) => members[group.key]?.has(r._id)) : rows), [rows, group, members]);
+
   const shown = useMemo(() => {
-    let list = applyView(rows, fields, state, lookups, q);
+    let list = applyView(scoped, fields, state, lookups, q);
     if (batch) list = list.filter((r) => r.importBatchId === batch._id);
     return list;
-  }, [rows, fields, state, lookups, q, batch]);
+  }, [scoped, fields, state, lookups, q, batch]);
   const groupField = fields.find((f) => f.key === state.groupBy);
   const items = useMemo(() => groupRows(shown, view?.type === "grid" ? groupField : null, lookups, collapsed), [shown, groupField, lookups, collapsed, view]);
   const openRow = rows.find((r) => r._id === openRowId) || null;
@@ -232,7 +255,34 @@ const TablePage = () => {
     }
   };
 
-  if (t.loading) return <PageLoader />;
+  const saveGroup = async ({ name, description, color, filters, withSelection }) => {
+    if (groupDialog?.group) {
+      t.setTable(await tablesApi.updateGroup(id, groupDialog.group.key, { name, description, color, filters }));
+      t.notify(`Group “${name}” saved`, "neutral");
+    } else {
+      const rowIds = withSelection ? [...selected] : [];
+      const out = await tablesApi.createGroup(id, { name, description, color, filters, rowIds });
+      t.setTable(out.table);
+      if (rowIds.length) { t.setRowGroups(rowIds, out.key, true); setSelected(new Set()); }
+      setParam("group", out.key);
+      t.notify(`Group “${name}” created`, "neutral");
+    }
+    setGroupDialog(null);
+  };
+  const changeMembers = async (g, ids, add) => {
+    setAddToAnchor(null);
+    try {
+      const out = await tablesApi.groupRows(id, g.key, add ? { add: ids } : { remove: ids });
+      t.setRowGroups(ids, g.key, add);
+      setSelected(new Set());
+      const n = add ? out.added : out.removed;
+      t.notify(add ? `${n} row${n === 1 ? "" : "s"} added to “${g.name}”${n < ids.length ? ` (${ids.length - n} already in it)` : ""}` : `${n} row${n === 1 ? "" : "s"} removed from “${g.name}”`, "neutral");
+    } catch (e) {
+      t.notify(errText(e));
+    }
+  };
+
+  if (t.loading) return <PageLoader variant="table" />;
   if (t.error) return <Box sx={{ p: 3 }}><ErrorState title="Couldn't open this table" message={t.error} onRetry={t.reload} /></Box>;
   if (!table) return null;
 
@@ -244,6 +294,9 @@ const TablePage = () => {
   const dateField = fields.find((f) => f.key === state.dateField) || dateFields.find((f) => f.coreMapping === "date") || dateFields[0];
   const kanbanField = fields.find((f) => f.key === state.groupBy && ["singleSelect", "checkbox"].includes(f.type));
   const selectedRows = rows.filter((r) => selected.has(r._id));
+  const pickedInGroup = group ? selectedRows.filter((r) => r.groups?.includes(group.key)) : [];
+  const fromCode = fields.some((f) => f.coreMapping === "teamCode") && !fields.some((f) => f.coreMapping === "fieldTeam" && f.type === "fieldTeam");
+  const label = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - var(--topbar-h) - 48px)", minHeight: 520 }}>
@@ -261,10 +314,30 @@ const TablePage = () => {
             <Button variant="outlined" startIcon={<ImportExportOutlined sx={{ fontSize: 17 }} />} endIcon={<ExpandMore sx={{ fontSize: 16 }} />} onClick={(e) => setDataAnchor(e.currentTarget)}>Data</Button>
             <Button variant="outlined" startIcon={<ViewColumnOutlined sx={{ fontSize: 17 }} />} onClick={() => setFieldsOpen(true)}>Fields</Button>
             {isAdmin && <IconButton aria-label="Table options" onClick={(e) => setMoreAnchor(e.currentTarget)}><MoreHoriz /></IconButton>}
-            <Button variant="contained" startIcon={<Add />} onClick={async () => { const r = await t.addRow(); if (r) setOpenRowId(r._id); }}>New row</Button>
+            <Button variant="contained" startIcon={<Add />} onClick={async () => { const r = await t.addRow({}, group ? { groups: [group.key] } : undefined); if (r) setOpenRowId(r._id); }}>New row</Button>
           </>
         }
       />
+
+      {/* groups: tables inside this table, each with its own rows and analysis */}
+      <Box role="tablist" aria-label="Row groups" sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1.25, overflowX: "auto", pb: 0.25 }}>
+        {[{ key: null, name: "All rows", count: rows.length }, ...groups.map((g) => ({ ...g, count: members[g.key]?.size || 0 }))].map((g) => {
+          const active = (g.key || null) === (group?.key || null);
+          return (
+            <Box key={g.key || "all"} component="button" type="button" role="tab" aria-selected={active}
+              onClick={() => { setParam("group", g.key); setSelected(new Set()); }}
+              onContextMenu={g.key ? (e) => { e.preventDefault(); setGroupMenu({ anchor: e.currentTarget, group: g }); } : undefined}
+              title={g.description || undefined}
+              sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, height: 30, px: 1.25, borderRadius: "999px", font: "inherit", fontSize: 12.5, fontWeight: 500, whiteSpace: "nowrap", cursor: "pointer", border: "1px solid", borderColor: active ? "var(--accent)" : "var(--border)", backgroundColor: active ? "var(--accent-subtle)" : "var(--surface)", color: active ? "var(--accent-text)" : "var(--text-secondary)", "&:hover": { color: "var(--text)", borderColor: active ? "var(--accent)" : "var(--border-strong)" } }}>
+              {g.key ? <Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: groupColor(g.color), flexShrink: 0 }} /> : <TableRowsOutlined sx={{ fontSize: 15 }} />}
+              <Box component="span" sx={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</Box>
+              <Box component="span" sx={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>{g.count.toLocaleString()}</Box>
+              {g.key && active && <Box component="span" role="button" aria-label={`Options for ${g.name}`} onClick={(e) => { e.stopPropagation(); setGroupMenu({ anchor: e.currentTarget, group: g }); }} sx={{ display: "inline-flex", ml: 0.25, color: "var(--text-muted)" }}><ExpandMore sx={{ fontSize: 16 }} /></Box>}
+            </Box>
+          );
+        })}
+        <Button size="small" startIcon={<Add sx={{ fontSize: 16 }} />} onClick={() => setGroupDialog({})} sx={{ color: "var(--text-secondary)", whiteSpace: "nowrap", flexShrink: 0 }}>Group</Button>
+      </Box>
 
       {/* views bar */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, borderBottom: "1px solid var(--border)", mb: 1.5, overflowX: "auto" }}>
@@ -322,7 +395,9 @@ const TablePage = () => {
             <Button size="small" variant="contained" onClick={saveView}>Save view</Button>
           </>
         )}
-        <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{shown.length === rows.length ? `${rows.length} rows` : `${shown.length} of ${rows.length} rows`}</Typography>
+        <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{shown.length === scoped.length ? label(scoped.length, "row", "rows") : `${shown.length.toLocaleString()} of ${label(scoped.length, "row", "rows")}`}{group ? ` in “${group.name}”` : ""}</Typography>
+        <SegmentedControl size="sm" ariaLabel="Show rows or analysis" value={mode} onChange={(v) => setParam("mode", v === "analysis" ? "analysis" : null)}
+          options={[{ value: "rows", label: "Rows", icon: <TableRowsOutlined sx={{ fontSize: 15 }} /> }, { value: "analysis", label: "Analysis", icon: <InsightsOutlined sx={{ fontSize: 15 }} /> }]} />
       </Box>
 
       {selectedRows.length > 0 && (
@@ -331,10 +406,18 @@ const TablePage = () => {
           onExport={() => exportRows(table, visible, selectedRows, lookups)}
           onDelete={() => setDeletingRows(selectedRows)}
           onClear={() => setSelected(new Set())}
-        />
+        >
+          <Button variant="outlined" startIcon={<FolderSpecialOutlined sx={{ fontSize: 16 }} />} endIcon={<ExpandMore sx={{ fontSize: 16 }} />} onClick={(e) => setAddToAnchor(e.currentTarget)}>Add to group</Button>
+          {group && pickedInGroup.length > 0 && (
+            <Button variant="outlined" startIcon={<PlaylistRemoveOutlined sx={{ fontSize: 16 }} />} onClick={() => changeMembers(group, pickedInGroup.map((r) => r._id), false)}>Remove from “{group.name}”</Button>
+          )}
+        </BulkBar>
       )}
 
-      {view?.type === "kanban" ? (
+      {mode === "analysis" ? (
+        <AnalysisPanel rows={shown} fields={fields} lookups={lookups} title={`${group ? `Group “${group.name}”` : "All rows"}${state.filters?.length || q ? " · with the current filters and search" : ""}`}
+          onFilter={(f, v) => { setState({ filters: [...(state.filters || []).filter((x) => x.field !== f.key), { field: f.key, op: "eq", value: v }] }); setParam("mode", null); }} />
+      ) : view?.type === "kanban" ? (
         <KanbanView rows={shown} groupField={kanbanField} primary={primary} cardFields={(state.cardFields || []).map((k) => fields.find((f) => f.key === k)).filter(Boolean)} lookups={lookups} canEdit
           onUpdateCells={t.updateCells} onAddRow={async (data) => { const r = await t.addRow(data); if (r) setOpenRowId(r._id); }} onOpenRow={(r) => setOpenRowId(r._id)}
           onPickGroup={statusChoices.length ? <Button variant="outlined" onClick={() => setState({ groupBy: statusChoices[0].key })}>Use “{statusChoices[0].label}”</Button> : isAdmin ? <Button variant="outlined" onClick={() => setFieldsOpen(true)}>Add a single-select field</Button> : null} />
@@ -365,6 +448,24 @@ const TablePage = () => {
       )}
 
       {/* menus */}
+      <Menu anchorEl={addToAnchor} open={Boolean(addToAnchor)} onClose={() => setAddToAnchor(null)}>
+        {groups.map((g) => (
+          <MenuItem key={g.key} onClick={() => changeMembers(g, selectedRows.map((r) => r._id), true)}>
+            <ListItemIcon><Box sx={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: groupColor(g.color) }} /></ListItemIcon>{g.name}
+          </MenuItem>
+        ))}
+        {groups.length > 0 && <Divider />}
+        <MenuItem onClick={() => { setAddToAnchor(null); setGroupDialog({ fromSelection: true }); }}><ListItemIcon><Add fontSize="small" /></ListItemIcon>New group from {label(selectedRows.length, "row", "rows")}…</MenuItem>
+      </Menu>
+
+      <Menu anchorEl={groupMenu?.anchor} open={Boolean(groupMenu)} onClose={() => setGroupMenu(null)}>
+        <MenuItem onClick={() => { setGroupDialog({ group: groupMenu.group }); setGroupMenu(null); }}><ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon>Rename, colour & rule…</MenuItem>
+        <MenuItem onClick={() => { const g = groupMenu.group; setGroupMenu(null); setParam("group", g.key); setParam("mode", "analysis"); }}><ListItemIcon><InsightsOutlined fontSize="small" /></ListItemIcon>Analyse this group</MenuItem>
+        <MenuItem onClick={() => { const g = groupMenu.group; setGroupMenu(null); exportRows({ ...table, name: `${table.name} - ${g.name}` }, visible, rows.filter((r) => members[g.key]?.has(r._id)), lookups); }}><ListItemIcon><FileDownloadOutlined fontSize="small" /></ListItemIcon>Export this group (.xlsx)</MenuItem>
+        {isAdmin && <MenuItem onClick={async () => { const g = groupMenu.group; setGroupMenu(null); try { const out = await tablesApi.groupToTable(id, g.key, { name: `${table.name} · ${g.name}` }); t.notify(`Copied ${label(out.rows, "row", "rows")} to the new table “${out.table.name}”`, "neutral"); } catch (e) { t.notify(errText(e)); } }}><ListItemIcon><ContentCopyOutlined fontSize="small" /></ListItemIcon>Copy to a separate table</MenuItem>}
+        <Divider />
+        <MenuItem onClick={() => { setDeletingGroup(groupMenu.group); setGroupMenu(null); }} sx={{ color: "var(--danger)" }}><ListItemIcon><DeleteOutline fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Delete group (keeps the rows)</MenuItem>
+      </Menu>
       <Menu anchorEl={dataAnchor} open={Boolean(dataAnchor)} onClose={() => setDataAnchor(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
         <MenuItem onClick={() => { setDataAnchor(null); setImportOpen(true); }}><ListItemIcon><FileUploadOutlined fontSize="small" /></ListItemIcon>Import from Excel / CSV…</MenuItem>
         <MenuItem onClick={() => { setDataAnchor(null); exportRows(table, visible, shown, lookups, "xlsx"); }}><ListItemIcon><FileDownloadOutlined fontSize="small" /></ListItemIcon>Export this view (.xlsx)</MenuItem>
@@ -378,7 +479,7 @@ const TablePage = () => {
         <MenuItem onClick={() => { setMoreAnchor(null); setRename({ table: true, label: table.name, description: table.description }); }}><ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon>Rename & describe</MenuItem>
         <MenuItem onClick={async () => { setMoreAnchor(null); try { await tablesApi.saveAsTemplate(id, { withRows: false }); t.notify("Saved to the template library", "neutral"); } catch (e) { t.notify(errText(e)); } }}><ListItemIcon><BookmarkAddOutlined fontSize="small" /></ListItemIcon>Save as template</MenuItem>
         <MenuItem onClick={async () => { setMoreAnchor(null); try { await tablesApi.saveAsTemplate(id, { withRows: true }); t.notify("Saved as a template with 20 sample rows", "neutral"); } catch (e) { t.notify(errText(e)); } }}><ListItemIcon><BookmarkAddOutlined fontSize="small" /></ListItemIcon>Save as template with sample rows</MenuItem>
-        <MenuItem onClick={() => { setMoreAnchor(null); setCalendarOpen(true); }}><ListItemIcon><EventAvailableOutlined fontSize="small" /></ListItemIcon>Calendar dates…</MenuItem>
+        {fromCode && <MenuItem onClick={() => { setMoreAnchor(null); setRecheck("ask"); }}><ListItemIcon><GroupsOutlined fontSize="small" /></ListItemIcon>Re-check teams from codes…</MenuItem>}
         <Divider />
         <MenuItem onClick={() => { setMoreAnchor(null); setConfirm("archive"); }} sx={{ color: "var(--danger)" }}><ListItemIcon><ArchiveOutlined fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Archive table</MenuItem>
       </Menu>
@@ -451,7 +552,18 @@ const TablePage = () => {
       <ConfirmDialog open={confirm === "archive"} title={`Archive “${table.name}”?`} description="The table and its rows are hidden from the workspace and sidebar. Nothing is deleted; an admin can restore it from the workspace's archived list." confirmLabel="Archive table" danger
         onClose={() => setConfirm(null)} onConfirm={async () => { try { await tablesApi.update(id, { archived: true }); navigate(ws.path); } catch (e) { t.notify(errText(e)); setConfirm(null); } }} />
 
-      <CalendarFieldsDialog open={calendarOpen} onClose={() => setCalendarOpen(false)} table={table} onSaved={(tb) => { t.setTable(tb); t.notify("Calendar dates saved", "neutral"); }} />
+      {groupDialog && (
+        <GroupDialog open onClose={() => setGroupDialog(null)} group={groupDialog.group} fields={fields} lookups={lookups}
+          selectedCount={groupDialog.fromSelection || selected.size ? selected.size : 0} currentFilters={groupDialog.group ? [] : state.filters || []} onSave={saveGroup} />
+      )}
+      <ConfirmDialog open={Boolean(deletingGroup)} title={`Delete the group “${deletingGroup?.name}”?`} confirmLabel="Delete group" danger
+        description={`The tab and its rule go away. Its ${label(members[deletingGroup?.key]?.size || 0, "row stays", "rows stay")} in “${table.name}”; nothing is deleted from the table.`}
+        onClose={() => setDeletingGroup(null)}
+        onConfirm={async () => { try { t.setTable(await tablesApi.deleteGroup(id, deletingGroup.key)); if (groupKey === deletingGroup.key) setParam("group", null); t.notify(`Group “${deletingGroup.name}” deleted`, "neutral"); setDeletingGroup(null); } catch (e) { t.notify(errText(e)); setDeletingGroup(null); } }} />
+      <ConfirmDialog open={Boolean(recheck)} loading={recheck === "running"} title="Re-check teams from codes?" confirmLabel={selected.size ? `Re-check ${label(selected.size, "row", "rows")}` : "Re-check all rows"}
+        description={`Each row's team is normally fixed when the row is saved: the team that held its code on its date. Re-checking looks the team up again from the current code history${selected.size ? " for the selected rows" : " for every row"}. Use it after correcting a code's history.`}
+        onClose={() => setRecheck(null)}
+        onConfirm={async () => { setRecheck("running"); try { const out = await tablesApi.recheckTeams(id, selected.size ? [...selected] : undefined); await t.loadRows(); t.notify(`Checked ${label(out.checked, "row", "rows")}: ${out.changed} changed team${out.unmatched ? `, ${out.unmatched} with a code no team held on that date` : ""}`, "neutral"); } catch (e) { t.notify(errText(e)); } setRecheck(null); }} />
 
       {rename && (
         <ConfirmDialog open title={rename.field ? "Rename field" : rename.view ? "Rename view" : "Rename table"} confirmLabel="Save"

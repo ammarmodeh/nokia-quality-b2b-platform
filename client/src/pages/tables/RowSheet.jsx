@@ -15,6 +15,8 @@ import { FIELD_TYPES, READ_ONLY, formatValue, parseInput } from "./fieldTypes";
 import { filesApi, tablesApi } from "./tablesApi";
 import { rawOf } from "./viewUtils";
 import { errText } from "./useTable";
+import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
+import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
 
 const AddTask = lazy(() => import("../../components/task/AddTask"));
 
@@ -108,7 +110,7 @@ const RowSheet = ({ open, onClose, table, fields, row, lookups, canEdit, onUpdat
     const val = (f) => (f ? formatValue(f, rawOf(f, row), row, lookups) : undefined);
     const dateVal = (f) => (f && rawOf(f, row) ? String(rawOf(f, row)).slice(0, 10) : undefined);
     return {
-      slid: val(byConcept.customerId || pick(/slid|int\b/i)),
+      slid: val(byConcept.slid || byConcept.customerId || pick(/slid|int\b/i)),
       customerName: val(pick(/customer name|cust name/i)),
       contactNumber: val(pick(/contact|phone/i)),
       requestNumber: val(pick(/req(uest)? ?(no|number)/i)),
@@ -164,6 +166,26 @@ const RowSheet = ({ open, onClose, table, fields, row, lookups, canEdit, onUpdat
               </Box>
             );
           })}
+
+          {byConcept.teamCode && (
+            <Box sx={{ mt: 2, p: 1.5, borderRadius: "10px", border: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 1 }}>
+              <GroupsOutlined sx={{ fontSize: 18, color: "var(--text-muted)", mt: "1px" }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: 13 }}>
+                  {row.fieldTeamId ? <>Counts for <b>{lookups.teams[row.fieldTeamId]?.teamName || "a team"}</b></> : row.teamResolution?.code ? "No team found for this code" : "No team code yet"}
+                </Typography>
+                {row.teamResolution?.code && (
+                  <Typography sx={{ fontSize: 12, color: "var(--text-secondary)", mt: 0.25 }}>
+                    {row.teamResolution.source === "none"
+                      ? `No team held code ${row.teamResolution.code} on ${new Date(row.teamResolution.on).toLocaleDateString()}. Fix the code, or add the period in Field Teams → Team codes.`
+                      : `Held code ${row.teamResolution.code} on ${new Date(row.teamResolution.on).toLocaleDateString()}${row.teamResolution.source === "current" ? " (the code had no recorded history, so its current holder was used)" : ""}. Kept even if the code moves to someone else later.`}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          <CalendarEntriesPanel target={{ kind: "row", id: row._id, tableId: table._id }} title={title} canEdit={canEdit} sx={{ mt: 2 }} />
 
           <Box sx={{ mt: 2, p: 1.5, borderRadius: "10px", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
             <TaskAltOutlined sx={{ fontSize: 18, color: "var(--text-muted)" }} />

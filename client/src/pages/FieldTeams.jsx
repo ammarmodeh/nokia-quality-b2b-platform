@@ -30,6 +30,10 @@ import SafeDeleteDialog from '../components/ui/SafeDeleteDialog';
 import BulkBar from '../components/ui/BulkBar';
 import { exportRows } from '../utils/exportRows';
 import { bulkDelete, DELETE_PATHS } from '../api/bulkDelete';
+import TeamCodesDialog from '../components/teams/TeamCodesDialog';
+import QueryStatsOutlined from '@mui/icons-material/QueryStatsOutlined';
+import PinOutlined from '@mui/icons-material/PinOutlined';
+import { useNavigate } from 'react-router-dom';
 
 // Every field of a team, for the backup taken before a permanent delete.
 const TEAM_BACKUP_COLUMNS = [
@@ -62,6 +66,8 @@ const EVAL_BACKUP_COLUMNS = [
 const FieldTeamForm = () => {
   const user = useSelector((state) => state?.auth?.user);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [codesFor, setCodesFor] = useState(null); // 'all' | team
   const [errorMessage, setErrorMessage] = useState('');
   const [teams, setTeams] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
@@ -963,6 +969,8 @@ const FieldTeamForm = () => {
                   <RefreshIcon sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
+              <Button variant="outlined" startIcon={<PinOutlined sx={{ fontSize: 17 }} />} onClick={() => setCodesFor('all')}>Team codes</Button>
+              <Button variant="outlined" startIcon={<QueryStatsOutlined sx={{ fontSize: 17 }} />} onClick={() => navigate('/team-analysis')}>Analysis</Button>
               <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 17 }} />} onClick={handleExportToExcel}>Team report</Button>
               <DataMenu entity="fieldTeams" viewRows={visibleTeams} selectedRows={teams.filter((t) => selection.includes(t._id))} filename="field-teams" onImported={() => setUpdateState((p) => !p)} />
               {user.role === 'Admin' && (
@@ -1431,6 +1439,16 @@ const FieldTeamForm = () => {
             View Full Details
           </MenuItem>
 
+          <MenuItem onClick={() => { navigate(`/team-analysis/${menuTeam._id}`); handleMenuClose(); }}>
+            <ListItemIcon><QueryStatsOutlined fontSize="small" sx={{ color: 'var(--accent-text)' }} /></ListItemIcon>
+            Team analysis
+          </MenuItem>
+
+          <MenuItem onClick={() => { setCodesFor(menuTeam); handleMenuClose(); }}>
+            <ListItemIcon><PinOutlined fontSize="small" sx={{ color: 'var(--text-secondary)' }} /></ListItemIcon>
+            Team code history
+          </MenuItem>
+
           <MenuItem onClick={() => { handleViewLogsClick(menuTeam._id); handleMenuClose(); }}>
             <ListItemIcon><HistoryIcon fontSize="small" sx={{ color: 'var(--text-secondary)' }} /></ListItemIcon>
             View State Logs
@@ -1760,6 +1778,7 @@ const FieldTeamForm = () => {
         </Dialog>
 
       </Box>
+      {codesFor && <TeamCodesDialog open teams={teams} team={codesFor === 'all' ? null : codesFor} onClose={() => setCodesFor(null)} />}
     </Box>
   );
 };

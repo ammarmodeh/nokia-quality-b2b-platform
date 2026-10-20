@@ -10,7 +10,35 @@ export const TAXONOMY = [
   { key: "dvoc", label: "DVOC", color: "#16A34A", subs: ["Installation", "Maintenance"] },
 ];
 
+export const BUILT_IN_COUNT = TAXONOMY.length;
 export const taxonomyByLabel = Object.fromEntries(TAXONOMY.map((c) => [c.label, c]));
+
+// ---- Trackers added online ---------------------------------------------------
+// They join TAXONOMY / taxonomyByLabel in place, so every existing import sees them.
+// Components that list trackers re-render through useTrackers().
+let trackerVersion = 0;
+const listeners = new Set();
+export const registerTrackers = (list = []) => {
+  TAXONOMY.splice(BUILT_IN_COUNT, TAXONOMY.length);
+  for (const k of Object.keys(taxonomyByLabel)) if (!TAXONOMY.some((t) => t.label === k)) delete taxonomyByLabel[k];
+  for (const t of list) {
+    if (taxonomyByLabel[t.name]) continue;
+    const entry = { key: t.key, label: t.name, color: t.color || "#475569", subs: t.subs || [], custom: true, id: t._id, description: t.description, path: `/trackers/${t.key}` };
+    TAXONOMY.push(entry);
+    taxonomyByLabel[t.name] = entry;
+  }
+  trackerVersion++;
+  listeners.forEach((fn) => fn(trackerVersion));
+};
+export const onTrackersChange = (fn) => {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+};
+export const customTrackers = () => TAXONOMY.slice(BUILT_IN_COUNT);
+
+const BUILT_IN_PATHS = { "Closure Call": "/closure-call", "OJO Snags": "/ojo-snags", DVOC: "/dvoc", TCRM: "/tcrm", TRC: "/trc", "Internal Audit (FAT)": "/internal-audit" };
+/** Workspace page of a tracker (built-in or added online). */
+export const trackerPath = (category) => BUILT_IN_PATHS[category] || taxonomyByLabel[category]?.path || "/dashboard";
 
 export const taxonomyLabel = (category, subCategory) =>
   [category, subCategory].filter(Boolean).join(" · ");

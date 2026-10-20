@@ -26,7 +26,7 @@ import { errText } from "./useTable";
 
 const SOURCE = { built_in: ["Built-in", "accent"], uploaded: ["Uploaded", "info"], saved_from_table: ["Saved", "neutral"] };
 const TYPES = Object.entries(FIELD_TYPES).filter(([t]) => !READ_ONLY.includes(t));
-const TAX_VALUES = TAXONOMY.flatMap((t) => (t.subs.length ? t.subs.map((s) => ({ category: t.label, sub: s })) : [{ category: t.label, sub: null }]));
+const taxValues = () => TAXONOMY.flatMap((t) => (t.subs.length ? t.subs.map((s) => ({ category: t.label, sub: s })) : [{ category: t.label, sub: null }]));
 
 const downloadTemplateFile = (tpl) => {
   const lists = tpl.fields.filter((f) => f.options?.choices?.length);
@@ -77,7 +77,7 @@ const TemplateEditor = ({ initial, onClose, onSaved }) => {
         <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
           <TextField label="Name" value={t.name} onChange={(e) => setT({ ...t, name: e.target.value })} sx={{ flex: 1, minWidth: 220 }} />
           <TextField select label="Tracker" value={`${t.issueCategory}|${t.issueSubCategory || ""}`} onChange={(e) => { const [c, s] = e.target.value.split("|"); setT({ ...t, issueCategory: c, issueSubCategory: s || null }); }} sx={{ minWidth: 220 }}>
-            {TAX_VALUES.map((v) => <MenuItem key={`${v.category}|${v.sub || ""}`} value={`${v.category}|${v.sub || ""}`}>{taxonomyLabel(v.category, v.sub)}</MenuItem>)}
+            {taxValues().map((v) => <MenuItem key={`${v.category}|${v.sub || ""}`} value={`${v.category}|${v.sub || ""}`}>{taxonomyLabel(v.category, v.sub)}</MenuItem>)}
           </TextField>
         </Box>
         <TextField label="Description" value={t.description || ""} onChange={(e) => setT({ ...t, description: e.target.value })} multiline minRows={2} />

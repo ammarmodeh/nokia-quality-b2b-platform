@@ -14,6 +14,9 @@ import PhoneCallbackOutlined from "@mui/icons-material/PhoneCallbackOutlined";
 import SupportAgentOutlined from "@mui/icons-material/SupportAgentOutlined";
 import GavelOutlined from "@mui/icons-material/GavelOutlined";
 import VerifiedOutlined from "@mui/icons-material/VerifiedOutlined";
+import TrackChangesOutlined from "@mui/icons-material/TrackChangesOutlined";
+import QueryStatsOutlined from "@mui/icons-material/QueryStatsOutlined";
+import { customTrackers } from "../../constants/taxonomy";
 
 // Single source of truth for the sidebar and the command palette.
 // Only pages that are part of the redesign scope are listed here; anything
@@ -52,7 +55,10 @@ export const NAV_SECTIONS = [
   },
   {
     title: "Teams",
-    items: [{ label: "Field Teams", to: "/fieldTeams", icon: GroupsOutlined, keywords: "technicians members" }],
+    items: [
+      { label: "Field Teams", to: "/fieldTeams", icon: GroupsOutlined, keywords: "technicians members" },
+      { label: "Team analysis", to: "/team-analysis", icon: QueryStatsOutlined, keywords: "team code slid performance 360" },
+    ],
   },
   {
     title: "Assessments",
@@ -103,10 +109,22 @@ export const resolveCrumbs = (pathname, user) => {
   if (EXTRA_TITLES[pathname]) return EXTRA_TITLES[pathname];
   if (pathname.startsWith("/tasks/view-task")) return ["Tasks", "Task details"];
   if (pathname.startsWith("/tables/")) return ["Trackers", "Table"];
+  if (pathname.startsWith("/team-analysis/")) return ["Teams", "Team analysis"];
+  if (pathname.startsWith("/trackers/")) return ["Trackers", customTrackers().find((t) => t.path === pathname)?.label || "Tracker"];
   const match = flatPages(user)
     .filter((p) => pathname === p.to || pathname.startsWith(p.to + "/"))
     .sort((a, b) => b.to.length - a.to.length)[0];
   return match ? [match.section, match.label] : [];
+};
+
+/** Trackers added online join the Trackers section, after the built-in ones. */
+export const withCustomTrackers = (sections, trackers = []) => {
+  if (!trackers.length) return sections;
+  return sections.map((s) =>
+    s.title !== "Trackers"
+      ? s
+      : { ...s, items: [...s.items, ...trackers.map((t) => ({ label: t.label, to: t.path, icon: TrackChangesOutlined, category: t.label, keywords: `tracker ${t.description || ""}`, custom: true }))] }
+  );
 };
 
 /**

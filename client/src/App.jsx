@@ -52,6 +52,8 @@ const LabAssessment = lazy(() => import("./pages/LabAssessment"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const TablePage = lazy(() => import("./pages/tables/TablePage"));
 const CategoryWorkspace = lazy(() => import("./pages/tables/CategoryWorkspace"));
+const TrackerWorkspace = lazy(() => import("./pages/tables/TrackerWorkspace"));
+const TeamAnalysisPage = lazy(() => import("./pages/teams/TeamAnalysisPage"));
 const QuizManagement = lazy(() => import("./pages/QuizManagement"));
 const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnalytics"));
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
@@ -178,6 +180,9 @@ const App = () => {
           <Route path="/internal-audit" element={<CustomerIssuesList key="FAT" tracker="Internal Audit (FAT)" />} />
           <Route path="/closure-call" element={<CategoryWorkspace key="cc" category="Closure Call" />} />
           <Route path="/dvoc" element={<CategoryWorkspace key="dvoc" category="DVOC" />} />
+          <Route path="/trackers/:key" element={<TrackerWorkspace />} />
+          <Route path="/team-analysis" element={<TeamAnalysisPage />} />
+          <Route path="/team-analysis/:teamId" element={<TeamAnalysisPage />} />
           <Route path="/tables/:id" element={<TablePage />} />
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
           <Route path="/change-password" element={<Navigate to="/settings?tab=security" replace />} />
