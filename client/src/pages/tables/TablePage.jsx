@@ -108,7 +108,7 @@ const TablePage = () => {
   }, [q, setParams]);
 
   const [selected, setSelected] = useState(new Set());
-  const [openRowId, setOpenRowId] = useState(null);
+  const [openRowId, setOpenRowId] = useState(() => params.get("row")); // ?row=<id> opens a row (calendar links)
   const [fieldsOpen, setFieldsOpen] = useState(null); // true | field to edit
   const [dataAnchor, setDataAnchor] = useState(null);
   const [moreAnchor, setMoreAnchor] = useState(null);

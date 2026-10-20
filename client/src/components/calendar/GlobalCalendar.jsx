@@ -1,0 +1,237 @@
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { Box, Button, Dialog, DialogContent, DialogTitle, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Typography } from "@mui/material";
+import ViewKanbanOutlined from "@mui/icons-material/ViewKanbanOutlined";
+import TableChartOutlined from "@mui/icons-material/TableChartOutlined";
+import api from "../../api/api";
+import EventCalendar from "./EventCalendar";
+import FilterChip from "../ui/FilterChip";
+import Sheet from "../ui/Sheet";
+import Badge from "../ui/Badge";
+import TaxonomyBadge from "../ui/TaxonomyBadge";
+import { TAXONOMY, taxonomyByLabel, taxonomyLabel, taxonomyOfIssue, taxonomyOfTask } from "../../constants/taxonomy";
+import { statusMeta, taskDate, taskTitle } from "../../pages/tasks/taskUtils";
+import { tablesApi } from "../../pages/tables/tablesApi";
+
+const AddTask = lazy(() => import("../task/AddTask"));
+
+const SOURCES = [
+  { value: "tasks", label: "Tasks (DVOC)" },
+  { value: "snags", label: "Snags & complaints" },
+  { value: "lab", label: "Lab assessments" },
+  { value: "ojt", label: "On-the-job assessments" },
+  { value: "tables", label: "Custom tables" },
+];
+const ASSESSMENT_COLOR = { lab: "#0D9488", ojt: "#6366F1" };
+const idOf = (u) => (u && typeof u === "object" ? u._id : u);
+const teamOf = (x) => x?.teamName || x?.fieldTeamName || x?.fieldTeamId?.teamName || null;
+const utcDay = (d) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString();
+
+/**
+ * One calendar for everything dated in the app: DVOC tasks (interview date),
+ * snags / complaints (reported date), lab and on-the-job assessments, and custom
+ * table rows whose date field feeds the calendar. Tasks and table rows can be
+ * dragged to another day; an empty day can start a new task or table row.
+ */
+const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
+  const navigate = useNavigate();
+  const [data, setData] = useState({ tasks: [], snags: [], lab: [], ojt: [], tables: [], tableList: [] });
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState([]);
+  const [sources, setSources] = useState(["tasks", "snags", "lab", "ojt", "tables"]);
+  const [cats, setCats] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [assignees, setAssignees] = useState([]);
+  const [users, setUsers] = useState({});
+  const [open, setOpen] = useState(null);
+  const [creating, setCreating] = useState(null); // day
+  const [taskFor, setTaskFor] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [weekStartsOn, setWeekStartsOn] = useState(0);
+
+  const load = useCallback(async () => {
+    const from = new Date(Date.now() - 400 * 864e5).toISOString();
+    const to = new Date(Date.now() + 200 * 864e5).toISOString();
+    const reqs = {
+      tasks: api.get("/tasks/get-all-tasks").then((r) => (Array.isArray(r.data) ? r.data : r.data?.tasks || [])),
+      snags: api.get("/customer-issues", { params: { limit: 10000 } }).then((r) => r.data?.data || []),
+      lab: api.get("/lab-assessments").then((r) => r.data || []),
+      ojt: api.get("/on-the-job-assessments").then((r) => r.data || []),
+      tables: tablesApi.calendar({ from, to }),
+      tableList: tablesApi.list(),
+      users: api.get("/users/get-all-users").then((r) => r.data || []),
+      settings: api.get("/settings").then((r) => r.data || {}),
+    };
+    const keys = Object.keys(reqs);
+    const out = await Promise.allSettled(Object.values(reqs));
+    const next = {};
+    const bad = [];
+    out.forEach((r, i) => {
+      if (r.status === "fulfilled") next[keys[i]] = r.value;
+      else { next[keys[i]] = []; if (SOURCES.some((s) => s.value === keys[i])) bad.push(keys[i]); }
+    });
+    setUsers(Object.fromEntries((next.users || []).map((u) => [u._id, u])));
+    setWeekStartsOn(next.settings?.weekStartDay || 0);
+    setData(next);
+    setFailed(bad);
+    setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const events = useMemo(() => {
+    const list = [];
+    if (sources.includes("tasks"))
+      for (const t of data.tasks) {
+        const d = taskDate(t);
+        if (!d) continue;
+        const tax = taxonomyOfTask(t);
+        list.push({ id: `task:${t._id}`, kind: "task", raw: t, date: d, title: taskTitle(t), subtitle: t.slid, color: tax.color, tax, team: t.teamName, assignees: (t.assignedTo || []).map(idOf), draggable: true, status: statusMeta(t.status).label });
+      }
+    if (sources.includes("snags"))
+      for (const s of data.snags) {
+        const d = s.date || s.pisDate || s.createdAt;
+        if (!d) continue;
+        const tax = taxonomyOfIssue(s);
+        list.push({ id: `snag:${s._id}`, kind: "snag", raw: s, date: d, title: s.customerName || s.slid || "Snag", subtitle: tax.label, color: tax.color, tax, team: s.teamName, assignees: [], draggable: false, status: s.solved === "yes" ? "Resolved" : s.dispatched === "yes" ? "Dispatched" : "Open" });
+      }
+    for (const k of ["lab", "ojt"])
+      if (sources.includes(k))
+        for (const a of data[k]) {
+          const d = a.assessmentDate || a.createdAt;
+          if (!d) continue;
+          list.push({ id: `${k}:${a._id}`, kind: k, raw: a, date: d, title: `${k === "lab" ? "Lab" : "OJT"} · ${teamOf(a) || "Team"}`, subtitle: a.overallScore !== undefined ? `${Math.round(a.overallScore)}%` : "", color: ASSESSMENT_COLOR[k], tax: null, team: teamOf(a), assignees: [], draggable: false, status: a.status });
+        }
+    if (sources.includes("tables"))
+      for (const r of data.tables) {
+        const tax = { category: r.issueCategory, subCategory: r.issueSubCategory, color: taxonomyByLabel[r.issueCategory]?.color, label: taxonomyLabel(r.issueCategory, r.issueSubCategory) };
+        list.push({ id: `row:${r.id}`, kind: "row", raw: r, date: r.date, title: r.title, subtitle: r.tableName, color: tax.color, tax, team: null, assignees: [], draggable: true, status: r.status });
+      }
+    return list.filter((e) => (!cats.length || (e.tax && cats.includes(e.tax.category))) && (!teams.length || teams.includes(e.team)) && (!assignees.length || e.assignees.some((a) => assignees.includes(a))));
+  }, [data, sources, cats, teams, assignees]);
+
+  const teamOptions = useMemo(() => {
+    const m = new Map();
+    [...data.tasks, ...data.snags, ...data.lab, ...data.ojt].forEach((x) => { const t = teamOf(x); if (t) m.set(t, (m.get(t) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([v, n]) => ({ value: v, label: v, hint: n }));
+  }, [data]);
+  const assigneeOptions = useMemo(() => Object.values(users).filter((u) => u.isActive !== false).map((u) => ({ value: u._id, label: u.name })), [users]);
+
+  const move = async (ev, day) => {
+    const iso = utcDay(day);
+    const prev = data;
+    try {
+      if (ev.kind === "task") {
+        setData((d) => ({ ...d, tasks: d.tasks.map((t) => (t._id === ev.raw._id ? { ...t, interviewDate: iso } : t)) }));
+        await api.put(`/tasks/update-task/${ev.raw._id}`, { interviewDate: iso });
+      } else if (ev.kind === "row") {
+        setData((d) => ({ ...d, tables: d.tables.map((r) => (r.id === ev.raw.id ? { ...r, date: iso } : r)) }));
+        await tablesApi.updateRow(ev.raw.tableId, ev.raw.id, { data: { [ev.raw.dateField]: ev.raw.dateType === "datetime" ? new Date(new Date(iso).getTime() + (new Date(ev.raw.date).getUTCHours() * 36e5)).toISOString() : iso } });
+      }
+      setToast({ tone: "info", message: `Moved “${ev.title}” to ${format(day, "d MMM")}` });
+    } catch (e) {
+      setData(prev);
+      setToast({ tone: "error", message: e?.response?.data?.message || "Couldn't reschedule" });
+    }
+  };
+
+  const go = (path) => { onNavigate?.(); navigate(path); };
+  const openTarget = (ev) => {
+    if (ev.kind === "task") return go(`/tasks-list?task=${ev.raw._id}`);
+    if (ev.kind === "row") return go(`/tables/${ev.raw.tableId}?row=${ev.raw.id}`);
+    if (ev.kind === "snag") {
+      const path = { "OJO Snags": "/ojo-snags", TCRM: "/tcrm", TRC: "/trc", "Internal Audit (FAT)": "/internal-audit" }[ev.tax?.category] || "/ojo-snags";
+      return go(`${path}?q=${encodeURIComponent(ev.raw.slid || ev.raw.ticketId || "")}`);
+    }
+    return go("/assessment-dashboard");
+  };
+
+  const datedTables = data.tableList.filter((t) => t.fields?.some((f) => f.coreMapping === "date" && !f.archived));
+  const createRow = async (table) => {
+    const day = creating;
+    setCreating(null);
+    const f = table.fields.find((x) => x.coreMapping === "date" && !x.archived);
+    try {
+      const row = await tablesApi.createRow(table._id, { [f.key]: utcDay(day) });
+      go(`/tables/${table._id}?row=${row._id}`);
+    } catch (e) {
+      setToast({ tone: "error", message: e?.response?.data?.message || "Couldn't add the row" });
+    }
+  };
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", height, minHeight: 0 }}>
+      <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1.5, alignItems: "center" }}>
+        <FilterChip label="Show" options={SOURCES} value={sources} onChange={(v) => setSources(v.length ? v : SOURCES.map((s) => s.value))} />
+        <FilterChip label="Tracker" options={TAXONOMY.map((t) => ({ value: t.label, label: t.label }))} value={cats} onChange={setCats} />
+        <FilterChip label="Field team" options={teamOptions} value={teams} onChange={setTeams} searchable />
+        <FilterChip label="Assignee" options={assigneeOptions} value={assignees} onChange={setAssignees} searchable />
+        <Box sx={{ flex: 1 }} />
+        <Typography sx={{ fontSize: 12, color: failed.length ? "var(--warning)" : "var(--text-muted)" }}>
+          {loading ? "Loading…" : failed.length ? `Couldn't load: ${failed.map((k) => SOURCES.find((s) => s.value === k)?.label).join(", ")}` : `${events.length.toLocaleString()} items`}
+        </Typography>
+      </Box>
+      <Box sx={{ display: "flex", gap: 1.25, flexWrap: "wrap", mb: 1.25 }}>
+        {TAXONOMY.map((t) => <Box key={t.label} sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: t.color }} />{t.label}</Box>)}
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: ASSESSMENT_COLOR.lab }} />Lab</Box>
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: ASSESSMENT_COLOR.ojt }} />On-the-job</Box>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <EventCalendar events={events} onOpen={setOpen} onMove={move} onCreate={setCreating} weekStartsOn={weekStartsOn} height="100%" />
+      </Box>
+
+      <Sheet open={Boolean(open)} onClose={() => setOpen(null)} title={open?.title} description={open ? format(new Date(open.date), "EEEE d MMMM yyyy") : ""} width={440}
+        footer={open && <Box sx={{ display: "flex", justifyContent: "flex-end", width: "100%" }}><Button variant="contained" onClick={() => { const e = open; setOpen(null); openTarget(e); }}>Open {open.kind === "task" ? "task" : open.kind === "row" ? "row" : open.kind === "snag" ? "record" : "assessments"}</Button></Box>}>
+        {open && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+            <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+              {open.tax ? <TaxonomyBadge tax={open.tax} /> : <Badge color={open.color}>{open.kind === "lab" ? "Lab assessment" : "On-the-job assessment"}</Badge>}
+              {open.status && <Badge>{open.status}</Badge>}
+            </Box>
+            {[
+              ["SLID", open.raw.slid],
+              ["Ticket", open.raw.ticketId],
+              ["Table", open.kind === "row" ? open.raw.tableName : null],
+              ["Field team", open.team],
+              ["Score", open.kind === "lab" || open.kind === "ojt" ? open.subtitle : open.raw.evaluationScore],
+              ["Assigned to", open.assignees.map((a) => users[a]?.name).filter(Boolean).join(", ")],
+              ["Conducted by", open.raw.conductedBy],
+            ].filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => (
+              <Box key={k} sx={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 1 }}>
+                <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)" }}>{k}</Typography>
+                <Typography dir="auto" sx={{ fontSize: 13 }}>{String(v)}</Typography>
+              </Box>
+            ))}
+            {open.draggable && <Typography sx={{ fontSize: 12, color: "var(--text-muted)" }}>Drag it to another day on the calendar to reschedule.</Typography>}
+          </Box>
+        )}
+      </Sheet>
+
+      <Dialog open={Boolean(creating)} onClose={() => setCreating(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Add on {creating ? format(creating, "EEE d MMM") : ""}</DialogTitle>
+        <DialogContent sx={{ px: 1 }}>
+          <List dense>
+            <ListItemButton onClick={() => { setTaskFor(creating); setCreating(null); }}>
+              <ListItemIcon><ViewKanbanOutlined fontSize="small" /></ListItemIcon>
+              <ListItemText primary="New DVOC task" secondary="Interview date set to this day" />
+            </ListItemButton>
+            {datedTables.map((t) => (
+              <ListItemButton key={t._id} onClick={() => createRow(t)}>
+                <ListItemIcon><TableChartOutlined fontSize="small" /></ListItemIcon>
+                <ListItemText primary={`New row in ${t.name}`} secondary={taxonomyLabel(t.issueCategory, t.issueSubCategory)} />
+              </ListItemButton>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
+      <Suspense fallback={null}>
+        {taskFor && <AddTask open setOpen={(v) => !v && setTaskFor(null)} initialValues={{ interviewDate: format(taskFor, "yyyy-MM-dd") }} onCreated={() => { setTaskFor(null); load(); }} />}
+      </Suspense>
+      <Snackbar open={Boolean(toast)} autoHideDuration={4000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        {toast ? <Alert severity={toast.tone} variant="filled" onClose={() => setToast(null)}>{toast.message}</Alert> : <span />}
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default GlobalCalendar;

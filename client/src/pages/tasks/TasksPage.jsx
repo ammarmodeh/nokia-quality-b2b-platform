@@ -25,11 +25,11 @@ import PageLoader from "../../components/ui/PageLoader";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
 import TaskBoard from "./TaskBoard";
 import TaskTable from "./TaskTable";
-import TaskCalendar from "./TaskCalendar";
+import EventCalendar from "../../components/calendar/EventCalendar";
 import TaskSheet from "./TaskSheet";
 import useTaskActions from "./useTaskActions";
 import { exportTasks } from "./exportTasks";
-import { DATE_RANGES, GROUP_BY, PRIORITIES, STATUSES, filterTasks, statusMeta } from "./taskUtils";
+import { DATE_RANGES, GROUP_BY, PRIORITIES, STATUSES, filterTasks, statusMeta, taskDate, taskTitle } from "./taskUtils";
 
 const AddTask = lazy(() => import("../../components/task/AddTask"));
 const EditTaskDialog = lazy(() => import("../../components/task/EditTaskDialog"));
@@ -322,7 +322,15 @@ const TasksPage = () => {
       ) : f.view === "table" ? (
         <TaskTable tasks={filtered} selection={selection} onSelectionChange={setSelection} onOpen={(t) => setOpenId(t._id)} />
       ) : f.view === "calendar" ? (
-        <TaskCalendar tasks={filtered} onOpen={(t) => setOpenId(t._id)} />
+        <Box sx={{ height: "calc(100vh - var(--topbar-h) - 220px)", minHeight: 560, display: "flex", flexDirection: "column" }}>
+          <EventCalendar
+            events={filtered.filter((t) => taskDate(t)).map((t) => ({ id: t._id, title: taskTitle(t), subtitle: t.slid, date: taskDate(t), color: statusMeta(t.status).color }))}
+            onOpen={(ev) => setOpenId(ev.id)}
+            onMove={(ev, day) => patchOne(ev.id, { interviewDate: new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate())).toISOString() })}
+            onCreate={() => setAddOpen(true)}
+            height="100%"
+          />
+        </Box>
       ) : (
         <TaskBoard tasks={filtered} groupBy={f.group} onOpen={(t) => setOpenId(t._id)} onMove={onMove} onQuickAdd={() => setAddOpen(true)} />
       )}

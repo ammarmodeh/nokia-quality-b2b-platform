@@ -19,7 +19,7 @@ const Dashboard = lazy(() => import("./pages/dashboard/DashboardPage"));
 const AssignedToMe = lazy(() => import("./pages/AssignedToMe"));
 const Trash = lazy(() => import("./pages/Trash"));
 const TaskViewPage = lazy(() => import("./pages/TaskViewPage"));
-const Calender = lazy(() => import("./pages/Calender"));
+const Calender = lazy(() => import("./pages/CalendarPage"));
 const AssignedDetractor = lazy(() => import("./pages/AssignedDetractor"));
 const AssignedNeutral = lazy(() => import("./pages/AssignedNeutral"));
 const BenchmarkTables = lazy(() => import("./pages/BenchmarkTables"));

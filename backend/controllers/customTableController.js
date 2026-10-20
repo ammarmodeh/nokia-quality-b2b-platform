@@ -630,7 +630,8 @@ export const calendarEvents = async (req, res) => {
     rows.map((r) => {
       const t = byId[String(r.tableId)];
       const title = r.data?.[t.primaryField];
-      return { id: r._id, tableId: t._id, tableName: t.name, issueCategory: t.issueCategory, issueSubCategory: t.issueSubCategory, title: typeof title === "object" ? JSON.stringify(title) : title || `#${r.autoNumber}`, date: r.dueDate, status: r.status };
+      const dateField = t.fields.find((f) => f.coreMapping === "date" && !f.archived);
+      return { id: r._id, tableId: t._id, tableName: t.name, issueCategory: t.issueCategory, issueSubCategory: t.issueSubCategory, title: typeof title === "object" ? JSON.stringify(title) : title || `#${r.autoNumber}`, date: r.dueDate, status: r.status, dateField: dateField.key, dateType: dateField.type };
     })
   );
 };

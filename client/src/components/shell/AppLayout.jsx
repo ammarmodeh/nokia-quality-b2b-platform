@@ -10,7 +10,7 @@ import CommandPalette from "./CommandPalette";
 import PageLoader from "../ui/PageLoader";
 import api from "../../api/api";
 
-const CalendarDialog = lazy(() => import("../CalendarDialog"));
+const CalendarDialog = lazy(() => import("../calendar/GlobalCalendarDialog"));
 const AddTask = lazy(() => import("../task/AddTask"));
 const CustomerIssueDialog = lazy(() => import("../CustomerIssueDialog"));
 
