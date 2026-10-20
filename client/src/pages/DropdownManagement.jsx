@@ -9,7 +9,19 @@ import SearchIcon from '@mui/icons-material/Search';
 import PageHeader from '../components/ui/PageHeader';
 import SectionCard from '../components/ui/SectionCard';
 import Sheet from '../components/ui/Sheet';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
+import SafeDeleteDialog from '../components/ui/SafeDeleteDialog';
+import { bulkDelete, DELETE_PATHS } from '../api/bulkDelete';
+
+// Every field of a dropdown option, for the backup taken before a permanent delete.
+const OPTION_COLUMNS = [
+  ['List', (o) => o.category],
+  ['Value', (o) => o.value],
+  ['Label', (o) => o.label],
+  ['Order', (o) => o.order ?? ''],
+  ['Parent', (o) => o.parentValue || o.parent || ''],
+  ['Active', (o) => (o.isActive === false ? 'no' : 'yes')],
+  ['Record ID', (o) => o._id],
+];
 import EmptyState from '../components/ui/EmptyState';
 import PageLoader from '../components/ui/PageLoader';
 import api from '../api/api';
@@ -278,15 +290,6 @@ const DropdownManagement = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await api.delete(`/dropdown-options/delete/${id}`);
-      toast.success('Option deleted successfully');
-      fetchOptions();
-    } catch (error) {
-      toast.error('Failed to delete option');
-    }
-  };
 
   const [currentOptions, setCurrentOptions] = useState([]);
 
@@ -484,18 +487,16 @@ const DropdownManagement = () => {
           </Stack>
         </Sheet>
 
-        <ConfirmDialog
+        <SafeDeleteDialog
           open={Boolean(confirmDelete)}
-          danger
-          title="Delete this option?"
-          description={`"${confirmDelete?.label || confirmDelete?.value || ''}" will be removed from ${CATEGORY_MAP[activeTab] || 'this list'}. Records that already use it keep their stored value.`}
-          confirmLabel="Delete"
           onClose={() => setConfirmDelete(null)}
-          onConfirm={() => {
-            const id = confirmDelete._id;
-            setConfirmDelete(null);
-            handleDelete(id);
-          }}
+          records={confirmDelete ? [{ category: activeTab, ...confirmDelete }] : []}
+          noun={{ one: 'option', many: 'options' }}
+          nameOf={(o) => `${CATEGORY_MAP[o.category] || o.category} · ${o.label || o.value}`}
+          exportColumns={OPTION_COLUMNS}
+          exportFilename="dropdown-option"
+          onDelete={(list) => bulkDelete(DELETE_PATHS.dropdowns, list.map((o) => o._id))}
+          onDeleted={({ deleted }) => { if (deleted.length) fetchOptions(); }}
         />
       </Box>
     </DndProvider>
