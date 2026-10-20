@@ -9,6 +9,7 @@ import api from "../../api/api";
 import Badge from "../ui/Badge";
 import ErrorState from "../ui/ErrorState";
 import { StepRail } from "../ui/Stepper";
+import DuplicateReview, { actionFor } from "./DuplicateReview";
 import { ENTITIES } from "./entities";
 import { autoMap, buildRecords, detectHeaderRow, downloadWorkbook, headerScore, norm, readWorkbook, toApiRow } from "./parse";
 
@@ -70,11 +71,16 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [drag, setDrag] = useState(false);
+  // duplicate review (custom tables): one choice for all duplicates, per-row overrides, repeats in the file
+  const [dupPolicy, setDupPolicy] = useState(null);
+  const [decisions, setDecisions] = useState({}); // { [sheetIdx]: { [row]: action } }
+  const [repeatPolicy, setRepeatPolicy] = useState("skip");
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (!open) {
       setStep(0); setFile(null); setSheets([]); setActive(0); setMode("create"); setKey(""); setValidation(null); setResult(null); setError(null); setLive(null);
+      setDupPolicy(null); setDecisions({}); setRepeatPolicy("skip");
     }
   }, [open]);
 
@@ -82,6 +88,8 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
   const targets = [...new Set(included.map((s) => s.target))];
   const keyOptions = targets.length === 1 ? E[targets[0]].keys : [];
   const effectiveKey = key || keyOptions[0]?.value || "";
+  // tables: the dry run always looks for rows that already exist, then the user decides
+  const reviewDups = targets.length === 1 && Boolean(E[targets[0]]?.reviewDuplicates) && keyOptions.length > 0;
 
   const onFile = async (f) => {
     if (!f) return;
@@ -147,7 +155,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       const size = Math.max(25, Math.min(CHUNK, Math.ceil(records.length / 25)));
       for (let i = 0; i < records.length; i += size) {
         const chunk = records.slice(i, i + size);
-        const opts = { mode, key: effectiveKey || undefined, dryRun };
+        const opts = { mode: reviewDups ? "upsert" : mode, key: effectiveKey || undefined, dryRun };
         const data = importer
           ? await importer.send(chunk, { ...opts, run, final: i + size >= records.length })
           : (await api.post(`/import/${target}`, { rows: chunk.map((r) => toApiRow(target, r, context)), ...opts })).data;
@@ -156,7 +164,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       }
       return results;
     },
-    [mode, effectiveKey, context, E]
+    [mode, effectiveKey, context, E, reviewDups]
   );
 
   // shared progress bookkeeping for the dry run and the import
@@ -205,6 +213,8 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         out[x.s.idx] = { records: x.records, problems: x.problems, server };
       }
       setValidation(out);
+      setDupPolicy(null);
+      setDecisions({});
       setStep(3);
     } catch (e) {
       setError(e?.response?.data?.message || e.message);
@@ -223,18 +233,54 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, key]);
 
+  // duplicates per sheet: rows matching an existing row, or repeating a value earlier in the file
+  const dupsBySheet = useMemo(() => {
+    if (!validation || !reviewDups) return {};
+    const out = {};
+    Object.entries(validation).forEach(([idx, v]) => {
+      const recs = new Map(v.records.map((r) => [r.__row, r]));
+      out[idx] = v.server.filter((r) => r.status !== "error" && (r.existing || r.repeatOf)).map((r) => ({ ...r, key: recs.get(r.row)?.[effectiveKey] }));
+    });
+    return out;
+  }, [validation, reviewDups, effectiveKey]);
+  const decide = (idx) => (row, action) => {
+    // leaving a single choice for "row by row": the other duplicates keep that choice
+    const seed = dupPolicy && dupPolicy !== "custom" && action !== dupPolicy
+      ? Object.fromEntries(Object.entries(dupsBySheet).map(([i, list]) => [i, Object.fromEntries(list.filter((x) => x.existing).map((x) => [x.row, dupPolicy]))]))
+      : null;
+    setDecisions((d) => {
+      const base = seed ? Object.fromEntries(Object.keys(seed).map((i) => [i, { ...seed[i], ...(d[i] || {}) }])) : d;
+      return { ...base, [idx]: { ...(base[idx] || {}), [row]: action } };
+    });
+    if (seed) setDupPolicy("custom");
+  };
+  const choosePolicy = (p) => {
+    setDupPolicy(p);
+    if (p !== "custom") setDecisions({});
+  };
+  const outcomeOf = (idx, r) => {
+    if (r.status === "error") return "invalid";
+    const d = reviewDups && (r.existing || r.repeatOf) ? dupsBySheet[idx]?.find((x) => x.row === r.row) : null;
+    if (!d) return r.action === "update" ? "updated" : r.action === "skip" ? "skipped" : "created";
+    const act = actionFor(d, dupPolicy, decisions[idx] || {}, repeatPolicy);
+    if (!act) return "undecided";
+    if (act === "create") return "created";
+    if (act === "skip" || !d.existing) return "skipped";
+    const n = act === "merge" ? d.existing.blanks : d.existing.changes.length;
+    return n ? "updated" : "skipped";
+  };
+
   const summary = useMemo(() => {
     if (!validation) return null;
-    const c = { created: 0, updated: 0, skipped: 0, invalid: 0 };
-    Object.values(validation).forEach((v) => {
+    const c = { created: 0, updated: 0, skipped: 0, invalid: 0, undecided: 0, duplicates: 0 };
+    Object.entries(validation).forEach(([idx, v]) => {
       c.invalid += new Set(v.problems.map((p) => p.row)).size;
-      v.server.forEach((r) => {
-        if (r.status === "error") c.invalid++;
-        else c[r.action === "update" ? "updated" : r.action === "skip" ? "skipped" : "created"]++;
-      });
+      v.server.forEach((r) => { c[outcomeOf(idx, r)]++; });
+      c.duplicates += (dupsBySheet[idx] || []).length;
     });
     return c;
-  }, [validation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validation, dupsBySheet, dupPolicy, decisions, repeatPolicy]);
 
   const runImport = async () => {
     setStep(4);
@@ -257,7 +303,8 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         push();
         const v = validation[s.idx];
         const okRows = new Set(v.server.filter((r) => r.status !== "error").map((r) => r.row));
-        const toSend = v.records.filter((r) => okRows.has(r.__row));
+        const dupAct = new Map((dupsBySheet[s.idx] || []).map((d) => [d.row, actionFor(d, dupPolicy, decisions[s.idx] || {}, repeatPolicy)]));
+        const toSend = v.records.filter((r) => okRows.has(r.__row)).map((r) => (dupAct.get(r.__row) ? { ...r, __action: dupAct.get(r.__row) } : r));
         let sent = 0;
         const run = toSend.length && E[s.target].importer?.start ? await E[s.target].importer.start({ file, sheet: s.name, mapping: s.mapping, header: s.rows[s.headerIdx] || [] }) : {};
         const res = toSend.length
@@ -467,21 +514,31 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         {step === 3 && validation && summary && (
           <Box sx={{ minHeight: 0, display: "flex", flexDirection: "column" }}>
             <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap", mb: 2 }}>
-              <TextField select label="Import mode" value={mode} onChange={(e) => setMode(e.target.value)} sx={{ width: 230 }}>
-                <MenuItem value="create">Create only</MenuItem>
-                <MenuItem value="upsert" disabled={!keyOptions.length}>Update existing (upsert)</MenuItem>
-                <MenuItem value="skip" disabled={!keyOptions.length}>Skip duplicates</MenuItem>
-              </TextField>
-              <TextField select label="Match on" value={effectiveKey} onChange={(e) => setKey(e.target.value)} sx={{ width: 220 }} disabled={!keyOptions.length}>
+              {!reviewDups && (
+                <TextField select label="Import mode" value={mode} onChange={(e) => setMode(e.target.value)} sx={{ width: 230 }}>
+                  <MenuItem value="create">Create only</MenuItem>
+                  <MenuItem value="upsert" disabled={!keyOptions.length}>Update existing (upsert)</MenuItem>
+                  <MenuItem value="skip" disabled={!keyOptions.length}>Skip duplicates</MenuItem>
+                </TextField>
+              )}
+              <TextField select label={reviewDups ? "Find duplicates by" : "Match on"} value={effectiveKey} onChange={(e) => setKey(e.target.value)} sx={{ width: 220 }} disabled={!keyOptions.length}>
                 {keyOptions.map((k) => <MenuItem key={k.value} value={k.value}>{k.label}</MenuItem>)}
               </TextField>
               <Box sx={{ flex: 1 }} />
               <Badge tone="success">{summary.created} new</Badge>
               <Badge tone="info">{summary.updated} update</Badge>
               <Badge>{summary.skipped} skip</Badge>
+              {summary.undecided > 0 && <Badge tone="warning">{summary.undecided} to decide</Badge>}
               <Badge tone={summary.invalid ? "danger" : "neutral"}>{summary.invalid} invalid</Badge>
             </Box>
             {sheetTabs}
+            {reviewDups && (dupsBySheet[active] || dupsBySheet[included[0]?.idx] || []).length > 0 && (() => {
+              const idx = dupsBySheet[active] ? active : included[0]?.idx;
+              return (
+                <DuplicateReview dups={dupsBySheet[idx]} fields={curFields} keyLabel={keyOptions.find((k) => k.value === effectiveKey)?.label || "the key"} targetLabel={`“${E[targets[0]].tableName || E[targets[0]].label}”`}
+                  policy={dupPolicy} onPolicy={choosePolicy} decisions={decisions[idx] || {}} onDecide={decide(idx)} repeatPolicy={repeatPolicy} onRepeatPolicy={setRepeatPolicy} />
+              );
+            })()}
             {(() => {
               const v = validation[active] || validation[included[0]?.idx];
               if (!v) return null;
@@ -503,9 +560,13 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
                         return (
                           <tr key={rec.__row} style={{ background: bad ? "var(--danger-subtle)" : undefined }}>
                             <td>{rec.__row}</td>
-                            <td>{bad ? <Badge tone="danger">invalid</Badge> : <Badge tone={s?.action === "update" ? "info" : s?.action === "skip" ? "neutral" : "success"}>{s?.action || "new"}</Badge>}</td>
+                            <td>{bad ? <Badge tone="danger">invalid</Badge> : (() => {
+                              const o = s ? outcomeOf(active, s) : "created";
+                              const label = { created: "new", updated: "update", skipped: s?.existing ? "keep old" : "skip", undecided: "decide" }[o] || o;
+                              return <>{s?.existing && <Badge sx={{ mr: 0.5 }}>#{s.existing.autoNumber}</Badge>}<Badge tone={o === "updated" ? "info" : o === "undecided" ? "warning" : o === "skipped" ? "neutral" : "success"}>{label}</Badge></>;
+                            })()}</td>
                             {cols.map((c) => <td key={c} dir="auto">{typeof rec[c] === "object" && rec[c] !== null ? (Array.isArray(rec[c]) ? rec[c].join(", ") : [rec[c].category, rec[c].sub].filter(Boolean).join(" · ")) : String(rec[c] ?? "")}</td>)}
-                            <td style={{ color: bad ? "var(--danger)" : "var(--text-muted)", whiteSpace: "normal", minWidth: 220 }}>{p ? p.join(" | ") : s?.message}</td>
+                            <td style={{ color: bad ? "var(--danger)" : "var(--text-muted)", whiteSpace: "normal", minWidth: 220 }}>{p ? p.join(" | ") : s?.repeatOf ? `Repeats file row ${s.repeatOf}` : s?.existing ? (s.existing.changes.length ? `Already in the table · ${s.existing.changes.length} cell${s.existing.changes.length === 1 ? "" : "s"} differ` : "Already in the table · identical") : s?.message}</td>
                           </tr>
                         );
                       })}
@@ -567,9 +628,13 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         {step === 2 && <Button variant="contained" disabled={!allMappedOk} loading={busy} loadingPosition="start" startIcon={<span />} onClick={validate}>{busy ? "Checking…" : "Validate (dry run)"}</Button>}
         {step === 3 && <Button variant="outlined" onClick={() => setStep(2)}>Back to mapping</Button>}
         {step === 3 && (
-          <Button variant="contained" loading={busy} loadingPosition="start" startIcon={<span />} disabled={!summary || summary.created + summary.updated === 0} onClick={runImport}>
-            Import {summary ? summary.created + summary.updated : 0} row{summary && summary.created + summary.updated === 1 ? "" : "s"}
-          </Button>
+          <Tooltip title={summary?.undecided ? "Choose what to do with the duplicates first" : ""}>
+            <span>
+              <Button variant="contained" loading={busy} loadingPosition="start" startIcon={<span />} disabled={!summary || summary.undecided > 0 || summary.created + summary.updated + (reviewDups && summary.duplicates ? summary.skipped : 0) === 0} onClick={runImport}>
+                {summary?.undecided ? `Decide ${summary.undecided} duplicate${summary.undecided === 1 ? "" : "s"}` : `Import ${summary ? summary.created + summary.updated : 0} row${summary && summary.created + summary.updated === 1 ? "" : "s"}`}
+              </Button>
+            </span>
+          </Tooltip>
         )}
         {step === 5 && <Button variant="contained" onClick={onClose}>Done</Button>}
       </DialogActions>

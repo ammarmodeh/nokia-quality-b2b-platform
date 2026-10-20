@@ -720,34 +720,59 @@ export const importRows = async (req, res) => {
     batch = req.body.batchId ? await ImportBatch.findOne({ _id: req.body.batchId, tableId: t._id }) : await ImportBatch.create({ tableId: t._id, fileId: oid(fileId) ? fileId : undefined, sheet, mapping, mode, matchField, createdBy: req.user._id });
     if (!batch || batch.status !== "running") return fail(res, 400, "Import batch is closed");
   }
+  // rows imported from inside a group tab join that group (new rows and matched existing ones)
+  const groupKeys = (Array.isArray(req.body.groups) ? req.body.groups : []).filter((k) => (t.groups || []).some((g) => g.key === k));
+  const joinGroups = async (id) => groupKeys.length && CustomRow.updateOne({ _id: id }, { $addToSet: { groups: { $each: groupKeys } } });
+  const blank = (v) => v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length);
+  // what an update would change: only cells the file actually fills (empty cells never clear old values)
+  const dayOnly = new Set(t.fields.filter((f) => f.type === "date").map((f) => f.key));
+  // a date field is the same day even if the stored time differs (files carry no time)
+  const same = (k, a, b) => (dayOnly.has(k) && typeof a === "string" && typeof b === "string" ? a.slice(0, 10) === b.slice(0, 10) : JSON.stringify(a ?? null) === JSON.stringify(b ?? null));
+  const diffOf = (existing, data, onlyBlanks = false) => Object.entries(data)
+    .filter(([k, v]) => !blank(v) && (!onlyBlanks || blank(existing.data?.[k])) && !same(k, existing.data?.[k], v))
+    .map(([k, v]) => ({ field: k, old: existing.data?.[k] ?? null, new: v }));
+
   const results = [];
-  const seen = new Set();
+  const seen = new Map(); // match value → first row number in the file
   const resolver = makeResolver();
   for (const [i, r] of rows.entries()) {
     const rowNo = r.__row ?? i + 1;
+    // optional per-row decision from the duplicate review: create | update | merge (fill blanks) | skip
+    const decision = ["create", "update", "merge", "skip"].includes(r.action) ? r.action : null;
     try {
       const { data, errors } = coerceData(t, r.data || {}, { partial: false });
       if (errors.length) throw new Error(errors.map((e) => `${e.label}: ${e.message}`).join("; "));
       let existing = null;
+      let repeatOf = null;
       if (match && data[match.key] !== null && data[match.key] !== undefined) {
         const k = JSON.stringify(data[match.key]);
-        if (dryRun && seen.has(k) && mode !== "create") { results.push({ row: rowNo, action: "skip", status: "ok", message: "Repeated in the file" }); continue; }
-        seen.add(k);
+        if (seen.has(k)) repeatOf = seen.get(k);
+        else seen.set(k, rowNo);
         existing = await CustomRow.findOne({ tableId: t._id, deleted: false, [`data.${match.key}`]: data[match.key] }).lean();
       }
-      if (existing && mode === "skip") { results.push({ row: rowNo, action: "skip", status: "ok", id: existing._id }); continue; }
-      if (existing && mode === "create" && match) throw new Error(`Already exists (${match.label} = ${data[match.key]})`);
-      if (dryRun) {
-        const dup = existing ? null : await checkUnique(t, data);
-        if (dup) throw new Error(dup);
-        results.push({ row: rowNo, action: existing ? "update" : "create", status: "ok" });
+      const dupInfo = existing ? { id: existing._id, autoNumber: existing.autoNumber, changes: diffOf(existing, data), blanks: diffOf(existing, data, true).length } : null;
+      if (decision === "skip") {
+        if (!dryRun && existing) await joinGroups(existing._id);
+        results.push({ row: rowNo, action: "skip", status: "ok", id: existing?._id, existing: dupInfo, repeatOf });
         continue;
       }
-      if (existing) {
-        const out = await patchRow(t, existing, data, req.user, { batchId: batch._id, resolver });
+      if (!decision && dryRun && repeatOf && mode !== "create") { results.push({ row: rowNo, action: "skip", status: "ok", message: "Repeated in the file", repeatOf, existing: dupInfo }); continue; }
+      if (!decision && existing && mode === "skip") { results.push({ row: rowNo, action: "skip", status: "ok", id: existing._id, existing: dupInfo }); continue; }
+      if (!decision && existing && mode === "create" && match) throw new Error(`Already exists (${match.label} = ${data[match.key]})`);
+      const asNew = decision === "create" || !existing;
+      if (dryRun) {
+        const dup = asNew ? await checkUnique(t, data) : null;
+        if (dup) throw new Error(dup);
+        results.push({ row: rowNo, action: asNew ? "create" : "update", status: "ok", existing: dupInfo, repeatOf });
+        continue;
+      }
+      if (!asNew) {
+        const patch = Object.fromEntries(diffOf(existing, data, decision === "merge").map((c) => [c.field, c.new]));
+        const out = await patchRow(t, existing, patch, req.user, { batchId: batch._id, resolver });
+        await joinGroups(existing._id);
         results.push({ row: rowNo, action: out.changed ? "update" : "skip", status: "ok", id: existing._id });
       } else {
-        const row = await insertRow(t, data, req.user, { coerced: true, batchId: batch._id, resolver });
+        const row = await insertRow(t, data, req.user, { coerced: true, batchId: batch._id, resolver, groups: groupKeys });
         results.push({ row: rowNo, action: "create", status: "ok", id: row._id });
       }
     } catch (e) {

@@ -544,7 +544,7 @@ const TablePage = () => {
       {historyOpen && <ImportHistorySheet open onClose={() => setHistoryOpen(false)} table={table} onShowBatch={setBatch} onRolledBack={t.loadRows} notify={t.notify} />}
       <Suspense fallback={null}>
         {importOpen && (
-          <ImportWizard open entity={`table:${table._id}`} allowed={[`table:${table._id}`]} entities={{ [`table:${table._id}`]: tableEntity(table) }}
+          <ImportWizard open entity={`table:${table._id}`} allowed={[`table:${table._id}`]} entities={{ [`table:${table._id}`]: tableEntity(table, group) }}
             onClose={() => setImportOpen(false)} onImported={t.loadRows} />
         )}
       </Suspense>
