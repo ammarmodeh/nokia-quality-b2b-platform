@@ -1,68 +1,57 @@
 import PageHeader from "../components/ui/PageHeader";
 import { tok } from "../theme/tokens";
-import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  IconButton,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
-  Chip,
-  Divider,
-  Card,
-  CardContent,
-  Tooltip,
-  TablePagination,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  useMediaQuery,
-  Stack,
-  Autocomplete,
-  Tabs,
-  Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid
-} from '@mui/material';
-import {
-  Search,
-  ArrowBack,
-  BarChart,
-  Refresh,
-  Save,
-  Download,
-  Edit,
-  Close,
-  Visibility
-} from '@mui/icons-material';
-import { MdPictureAsPdf } from 'react-icons/md';
+import { Autocomplete, Box, Button, Divider, IconButton, ListItemIcon, Menu, MenuItem, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+import ArrowBack from '@mui/icons-material/ArrowBack';
+import Refresh from '@mui/icons-material/Refresh';
+import SaveOutlined from '@mui/icons-material/SaveOutlined';
+import EditOutlined from '@mui/icons-material/EditOutlined';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import MoreHoriz from '@mui/icons-material/MoreHoriz';
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
+import PictureAsPdfOutlined from '@mui/icons-material/PictureAsPdfOutlined';
 import api from '../api/api';
+import { bulkDelete, DELETE_PATHS } from '../api/bulkDelete';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
+import AppDialog from '../components/ui/AppDialog';
+import SafeDeleteDialog from '../components/ui/SafeDeleteDialog';
+import SectionCard from '../components/ui/SectionCard';
+import StatCard from '../components/ui/StatCard';
+import Badge from '../components/ui/Badge';
+import BulkBar from '../components/ui/BulkBar';
+import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
+import PageLoader from '../components/ui/PageLoader';
+import { gridSx } from './tasks/gridSx';
+import { exportRows } from '../utils/exportRows';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend);
 
+// Every column of a quiz result, for exports and the backup before a permanent delete.
+const RESULT_COLUMNS = [
+  ['Team', (r) => r.teamName],
+  ['Taken', (r) => (r.submittedAt ? new Date(r.submittedAt) : '')],
+  ['Score (%)', (r) => r.percentage],
+  ['Points', (r) => r.correctAnswers],
+  ['Questions', (r) => r.userAnswers?.length || r.totalQuestions],
+  ['Essays scored', (r) => (r.userAnswers || []).filter((a) => a.type === 'essay' && (a.isScored || a.score > 0)).length],
+  ['Remarks', (r) => r.remarks || r.feedback || ''],
+  ['Team ID', (r) => r.teamId],
+  ['Record ID', (r) => r._id],
+];
+
 const PerfAssessmentDashboard = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const navigate = useNavigate();
+  const isAdmin = useSelector((st) => st?.auth?.user?.role) === 'Admin';
 
   const [teamId, setTeamId] = useState('');
   const [allTeams, setAllTeams] = useState([]);
@@ -70,9 +59,9 @@ const PerfAssessmentDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedResult, setSelectedResult] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [selection, setSelection] = useState([]);
+  const [rowMenu, setRowMenu] = useState(null); // { anchor, row }
+  const [deleting, setDeleting] = useState(null); // results to delete permanently
   const [currentResult, setCurrentResult] = useState(null);
   const [essayScores, setEssayScores] = useState({});
   const [questionFilter, setQuestionFilter] = useState('all');
@@ -109,7 +98,7 @@ const PerfAssessmentDashboard = () => {
       try {
         const response = await api.get('/settings');
         setSettings(response.data);
-      } catch (err) {
+      } catch {
         console.error('Failed to fetch settings');
       }
     };
@@ -119,7 +108,6 @@ const PerfAssessmentDashboard = () => {
   // Handle URL search params or location state for direct team / result view
   useEffect(() => {
     const paramTeamId = searchParams.get('teamId') || location.state?.teamId;
-    const paramTeamName = searchParams.get('teamName') || location.state?.teamName;
     const paramResultId = searchParams.get('resultId') || location.state?.resultId;
     const directResult = location.state?.selectedResult;
     const isEditMode = searchParams.get('edit') === 'true' || location.state?.mode === 'edit';
@@ -290,9 +278,6 @@ const PerfAssessmentDashboard = () => {
       });
       const data = response.data.data || [];
       setResults(data);
-      if (data.length === 0) {
-        setError('No results found for this Team');
-      }
       return data;
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to fetch results';
@@ -315,6 +300,11 @@ const PerfAssessmentDashboard = () => {
 
   const handleSaveEdit = async () => {
     if (!currentResult?._id) return;
+    const pct = Number(editingScore);
+    if (editingScore === '' || pct < 0 || pct > 100 || editingTotal === '' || Number(editingTotal) < 1 || (editingCorrect !== '' && Number(editingCorrect) < 0)) {
+      toast.error('Check the highlighted fields');
+      return;
+    }
     setSavingEdit(true);
     try {
       const scoreNum = Number(editingScore) || 0;
@@ -342,29 +332,6 @@ const PerfAssessmentDashboard = () => {
       toast.error(error.response?.data?.message || "Failed to update exam result");
     } finally {
       setSavingEdit(false);
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      fetchResults();
-    }
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setCurrentResult(null);
-  };
-
-  const handleDeleteResult = async () => {
-    if (!currentResult) return;
-
-    try {
-      await api.delete(`/quiz-results/${currentResult._id}`);
-      setResults(results.filter(result => result._id !== currentResult._id));
-      handleMenuClose();
-    } catch (err) {
-      setError('Failed to delete result');
     }
   };
 
@@ -723,7 +690,6 @@ const PerfAssessmentDashboard = () => {
 
       let markdown = `| Metric | Value |\n`;
       markdown += `| :--- | :--- |\n`;
-      const totalQCount = selectedResult.userAnswers?.length || selectedResult.totalQuestions;
       markdown += `| **Team Name** | ${selectedResult.teamName} |\n`;
       markdown += `| **Date Taken** | ${new Date(selectedResult.submittedAt).toLocaleString()} |\n`;
       markdown += `| **Score** | ${selectedResult.percentage}/100 |\n`;
@@ -787,1446 +753,336 @@ const PerfAssessmentDashboard = () => {
     }
   };
 
+  const scoreTone = (p) => ({ success: 'success', warning: 'warning', error: 'danger' })[getPerformanceColor(p)];
+  const fmtDateTime = (d) => (d ? new Date(d).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
+  const isScored = (a) => a.type === 'options' || a.isScored || (a.type === 'essay' && a.score > 0);
+  const answerCount = (r) => r.userAnswers?.length || r.totalQuestions || 0;
+  const selectedRows = results.filter((r) => selection.includes(r._id));
+
+  const resultColumns = [
+    { field: 'submittedAt', headerName: 'Date', type: 'dateTime', width: 190, valueGetter: (v) => (v ? new Date(v) : null), renderCell: ({ value }) => fmtDateTime(value) },
+    { field: 'teamName', headerName: 'Team', flex: 1, minWidth: 180 },
+    { field: 'percentage', headerName: 'Score', type: 'number', width: 110, align: 'left', headerAlign: 'left', renderCell: ({ value }) => <Badge tone={scoreTone(value)}>{value}/100</Badge> },
+    { field: 'correctAnswers', headerName: 'Points', type: 'number', width: 110, align: 'left', headerAlign: 'left', renderCell: ({ row }) => `${row.correctAnswers ?? '—'} / ${answerCount(row) * 2}` },
+    { field: 'scored', headerName: 'Scored', width: 110, sortable: false, valueGetter: (_v, row) => `${(row.userAnswers || []).filter(isScored).length}/${answerCount(row)}` },
+    {
+      field: 'actions', headerName: '', width: 56, sortable: false, filterable: false, align: 'right',
+      renderCell: ({ row }) => (
+        <IconButton size="small" aria-label={`Actions for ${row.teamName}`} onClick={(e) => { e.stopPropagation(); setRowMenu({ anchor: e.currentTarget, row }); }}>
+          <MoreHoriz fontSize="small" />
+        </IconButton>
+      ),
+    },
+  ];
+
+  const editErrors = {
+    score: editingScore === '' || Number(editingScore) < 0 || Number(editingScore) > 100 ? 'Enter 0–100' : '',
+    correct: editingCorrect !== '' && Number(editingCorrect) < 0 ? 'Can’t be negative' : '',
+    total: editingTotal === '' || Number(editingTotal) < 1 ? 'At least 1' : '',
+  };
+  const editInvalid = Object.values(editErrors).some(Boolean);
+
+  const answerBox = { my: 1.25, p: 1.5, borderRadius: '8px', backgroundColor: 'var(--surface-subtle)', border: '1px solid var(--border)' };
+  const answerRow = (label, value, color) => (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '150px 1fr' }, gap: 1, fontSize: 13 }}>
+      <Typography sx={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{label}</Typography>
+      <Typography dir="auto" sx={{ fontSize: 13, color: color || 'var(--text)' }}>{value}</Typography>
+    </Box>
+  );
+
+  const filterCounts = selectedResult ? {
+    all: selectedResult.userAnswers.length,
+    'needs-scoring': selectedResult.userAnswers.filter((a) => a.type === 'essay' && !isScored(a)).length,
+    scored: selectedResult.userAnswers.filter(isScored).length,
+    correct: selectedResult.userAnswers.filter((a) => a.type === 'options' && a.isCorrect).length,
+    incorrect: selectedResult.userAnswers.filter((a) => a.type === 'options' && !a.isCorrect).length,
+  } : {};
+  const analysis = selectedResult ? analyzeCategoryPerformance(selectedResult.userAnswers) : { strengths: [], improvements: [] };
+  const categoryChart = selectedResult ? getCategoryChartData() : null;
+  const questionChart = selectedResult ? getChartData() : null;
+
   return (
-    <Box sx={{ color: colors.textPrimary }}>
+    <Box>
       <PageHeader
         title="Assessment Dashboard"
         description="Technical quiz results per field team: scores, answers and essay scoring."
+        actions={!selectedResult && results.length > 0 && (
+          <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={exportToExcel} disabled={exporting}>
+            {exporting ? 'Exporting…' : 'Export results'}
+          </Button>
+        )}
       />
 
-      <Paper sx={{
-        p: 3,
-        mb: 3,
-        backgroundColor: colors.surface,
-        border: `1px solid ${colors.border}`,
-        borderRadius: '8px',
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: isMobile ? 'column' : 'row', height: isMobile ? undefined : '36px' }}>
-          <Autocomplete
-            freeSolo
-            options={allTeams}
-            getOptionLabel={(option) => option.teamName || option.teamId || ''}
-            value={allTeams.find(team => team.teamId === teamId) || null}
-            onChange={(event, newValue) => {
-              if (newValue) {
-                setTeamId(newValue.teamId);
-              } else {
-                setTeamId('');
-                setResults([]);
-                setSelectedResult(null);
-              }
-            }}
-            onInputChange={(event, newInputValue) => {
-              if (!newInputValue) {
-                setTeamId('');
-                setResults([]);
-                setSelectedResult(null);
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Team"
-                variant="outlined"
-                onKeyPress={handleKeyPress}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: colors.border,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: colors.primary,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: colors.primary,
-                    },
-                    color: colors.textPrimary,
-                    height: '36px',
-                    fontSize: '0.8rem',
-                  },
-                  '& .MuiInputBase-input': {
-                    padding: '8px 12px',
-                    height: 'auto',
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: colors.textSecondary,
-                    fontSize: '0.8rem',
-                    top: '-7px',
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: colors.primary,
-                    top: '1px',
-                  },
-                  '& input': {
-                    caretcolor: tok('--text'),
-                  },
-                  '& input:-webkit-autofill': {
-                    WebkitBoxShadow: `0 0 0 1000px ${colors.surface} inset`,
-                    WebkitTextFillColor: colors.textPrimary,
-                    transition: 'background-color 5000s ease-in-out 0s',
-                    caretcolor: tok('--text'),
-                  },
-                }}
-              />
-            )}
-            sx={{
-              width: '100%',
-              '& .MuiAutocomplete-popupIndicator': {
-                color: colors.textSecondary,
-                '&:hover': {
-                  backgroundColor: colors.primaryHover,
-                }
-              },
-              '& .MuiAutocomplete-clearIndicator': {
-                color: colors.textSecondary,
-                '&:hover': {
-                  backgroundColor: colors.primaryHover,
-                }
-              },
-            }}
-            componentsProps={{
-              paper: {
-                sx: {
-                  backgroundColor: colors.surfaceElevated,
-                  color: colors.textPrimary,
-                  border: `1px solid ${colors.border}`,
-                  '& .MuiAutocomplete-option': {
-                    '&[aria-selected="true"]': {
-                      backgroundColor: `${colors.primary}22`,
-                    },
-                    '&[aria-selected="true"].Mui-focused': {
-                      backgroundColor: `${colors.primary}33`,
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: colors.primaryHover,
-                    },
-                  },
-                },
-              },
-              popper: {
-                sx: {
-                  '& .MuiAutocomplete-listbox': {
-                    backgroundColor: colors.surfaceElevated,
-                    '&::-webkit-scrollbar': {
-                      width: '8px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      background: colors.surface,
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      background: colors.border,
-                      borderRadius: '4px',
-                    },
-                  },
-                },
-              },
-            }}
-          />
-
-          <Stack sx={{ width: isMobile ? '100%' : 'auto', flexDirection: 'row', gap: 2, height: '36px' }}>
-            <Button
-              variant="contained"
-              startIcon={<Search />}
-              onClick={fetchResults}
-              disabled={loading}
-              sx={{
-                backgroundColor: colors.primary,
-                '&:hover': {
-                  backgroundColor: '#1d4ed8',
-                },
-                '&:disabled': {
-                  backgroundColor: '#555',
-                  color: tok('--text-muted')
-                },
-                minWidth: isMobile ? undefined : '120px',
-                width: isMobile ? '100%' : undefined
-              }}
-            >
-              {loading ? 'Searching...' : 'Search'}
-            </Button>
-
-            {results.length > 0 && (
-              <Button
-                variant="outlined"
-                startIcon={<Download />}
-                onClick={exportToExcel}
-                disabled={exporting}
-                sx={{
-                  color: colors.primary,
-                  borderColor: colors.primary,
-                  '&:hover': {
-                    backgroundColor: colors.primaryHover,
-                    borderColor: colors.primary,
-                  },
-                  '&:disabled': {
-                    borderColor: tok('--border'),
-                    color: tok('--text-muted')
-                  },
-                  minWidth: isMobile ? undefined : '180px',
-                  width: isMobile ? '100%' : undefined
-                }}
-              >
-                {exporting ? 'Exporting...' : 'Export Excel'}
-              </Button>
-            )}
-          </Stack>
-        </Box>
-      </Paper>
-
-      {/* Global Stats Overview */}
-      {/* Global Stats Overview */}
-      {globalStats && (
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{
-            color: colors.primary,
-            fontWeight: 'bold',
-            mb: 2
-          }}>
-            Quiz Results Global Statistics
-          </Typography>
-          <Box sx={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: 2,
-            mb: 4
-          }}>
-            {/* Total Teams */}
-            <Paper sx={{
-              p: 2.5,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
-                Total Teams
-              </Typography>
-              <Typography variant="h5" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
-                {globalStats.totalTeams}
-              </Typography>
-            </Paper>
-
-            {/* Teams with Results */}
-            <Paper sx={{
-              p: 2.5,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
-                Teams with Results
-              </Typography>
-              <Typography variant="h5" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                {globalStats.teamsWithResults}
-              </Typography>
-            </Paper>
-
-            {/* Total Results */}
-            <Paper sx={{
-              p: 2.5,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
-                Total Results
-              </Typography>
-              <Typography variant="h5" sx={{ color: colors.primary, fontWeight: 'bold' }}>
-                {globalStats.totalResults}
-              </Typography>
-            </Paper>
-
-            {/* Average Score */}
-            <Paper sx={{
-              p: 2.5,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="caption" sx={{ color: colors.textSecondary, display: 'block', mb: 1 }}>
-                Global Average Score
-              </Typography>
-              <Typography variant="h5" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
-                {globalStats.averageScore}%
-              </Typography>
-            </Paper>
-          </Box>
-
-          {/* Top and Bottom Teams */}
-          <Box sx={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-            gap: 2,
-            mb: 4
-          }}>
-            {/* Top Teams */}
-            <Paper sx={{
-              p: 3,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="subtitle2" sx={{
-                color: '#10b981',
-                fontWeight: 'bold',
-                mb: 2
-              }}>
-                Top Performing Teams
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {globalStats.topTeams.map((team, idx) => (
-                  <Box key={idx} sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    p: 1.5,
-                    backgroundColor: colors.surfaceElevated,
-                    borderRadius: '6px',
-                    borderLeft: `3px solid #10b981`
-                  }}>
-                    <Typography variant="body2" sx={{ color: colors.textPrimary }}>
-                      {idx + 1}. {team.teamName}
-                    </Typography>
-                    <Chip
-                      label={`${team.averageScore}%`}
-                      size="small"
-                      sx={{ backgroundColor: '#10b98130', color: '#10b981', fontWeight: 'bold' }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-
-            {/* Score Distribution */}
-            <Paper sx={{
-              p: 3,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px',
-            }}>
-              <Typography variant="subtitle2" sx={{
-                color: colors.primary,
-                fontWeight: 'bold',
-                mb: 2
-              }}>
-                Performance Distribution
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {Object.entries(globalStats.scoreDistribution).map(([category, count]) => (
-                  <Box key={category} sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}>
-                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                      {category}
-                    </Typography>
-                    <Chip
-                      label={count}
-                      size="small"
-                      sx={{ backgroundColor: colors.primaryHover, color: colors.primary, fontWeight: 'bold' }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          </Box>
-        </Box>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{
-          mb: 3,
-          backgroundColor: '#2d0000',
-          color: '#ff6e6e',
-          border: '1px solid #ff3d3d',
-          borderRadius: '8px'
-        }}>
-          {error}
-        </Alert>
-      )}
-
-      {loading && (
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          p: 4,
-          backgroundColor: colors.surface,
-          borderRadius: '8px',
-          border: `1px solid ${colors.border}`
-        }}>
-          <CircularProgress sx={{ color: colors.primary }} />
-        </Box>
-      )}
-
-      {!loading && results.length > 0 && !selectedResult && (
+      {!selectedResult && (
         <>
-          <TableContainer component={Paper} sx={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            borderTopLeftRadius: '8px',
-            borderTopRightRadius: '8px',
-            borderBottomLeftRadius: '0px',
-            borderBottomRightRadius: '0px',
-            "& .MuiTableHead-root": {
-              backgroundColor: colors.surfaceElevated,
-              "& .MuiTableCell-root": {
-                color: colors.textSecondary,
-                fontWeight: "bold",
-                borderBottom: `1px solid ${colors.border}`,
-              }
-            },
-            "& .MuiTableBody-root": {
-              "& .MuiTableCell-root": {
-                borderBottom: `1px solid ${colors.border}`,
-                color: colors.textPrimary,
-              },
-              "& .MuiTableRow-root": {
-                backgroundColor: colors.surface,
-                "&:hover": {
-                  backgroundColor: colors.surfaceElevated,
-                },
-              }
-            },
-          }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Team Name</TableCell>
-                  <TableCell>Score</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {results
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((result) => (
-                    <TableRow key={result._id} hover>
-                      <TableCell>
-                        {new Date(result.submittedAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "numeric"
-                        })}
-                      </TableCell>
-                      <TableCell>{result.teamName}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${result.percentage}/100`}
-                          color={getPerformanceColor(result.percentage)}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => setSelectedResult(result)}
-                            sx={{
-                              color: colors.primary,
-                              borderColor: colors.primary,
-                              '&:hover': {
-                                backgroundColor: colors.primaryHover,
-                                borderColor: colors.primary,
-                              }
-                            }}
-                          >
-                            View Details
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<Edit />}
-                            onClick={() => handleOpenEdit(result)}
-                            sx={{
-                              color: '#60a5fa',
-                              borderColor: '#3b82f6',
-                              '&:hover': {
-                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                                borderColor: '#60a5fa',
-                              }
-                            }}
-                          >
-                            Edit Result
-                          </Button>
-                          {/* Add Export Detail Button */}
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => exportDetailedResults(result)}
-                            sx={{
-                              color: colors.success,
-                              borderColor: colors.success,
-                              '&:hover': {
-                                backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                                borderColor: colors.success,
-                              }
-                            }}
-                          >
-                            Export Details
-                          </Button>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
+          {/* Team picker */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+            <Autocomplete
+              options={allTeams}
+              getOptionLabel={(option) => option.teamName || option.teamId || ''}
+              value={allTeams.find((team) => team.teamId === teamId) || null}
+              onChange={(_e, v) => {
+                setSelection([]);
+                if (v) {
+                  setTeamId(v.teamId);
+                  fetchResults(v.teamId);
+                } else {
+                  setTeamId('');
+                  setResults([]);
+                  setError(null);
+                }
+              }}
+              renderInput={(params) => <TextField {...params} placeholder="Choose a field team…" slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': 'Field team' } }} />}
+              sx={{ width: { xs: '100%', sm: 340 } }}
+            />
+            {teamId && (
+              <Button variant="outlined" startIcon={<Refresh sx={{ fontSize: 16 }} />} onClick={() => fetchResults()} disabled={loading}>Refresh</Button>
+            )}
+            <Box sx={{ flex: 1 }} />
+            {teamId && !loading && <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{results.length} result{results.length === 1 ? '' : 's'}</Typography>}
+          </Box>
+
+          {globalStats && (
+            <>
+              <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' }, mb: 2 }}>
+                <StatCard label="Field teams" value={globalStats.totalTeams} />
+                <StatCard label="Teams with results" value={globalStats.teamsWithResults} />
+                <StatCard label="Quiz results" value={globalStats.totalResults} />
+                <StatCard label="Average score" value={`${globalStats.averageScore}%`} />
+              </Box>
+              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, mb: 2 }}>
+                <SectionCard title="Top teams" description="Highest average quiz score">
+                  {globalStats.topTeams.map((team, idx) => (
+                    <Box key={team.teamName || idx} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.75, borderBottom: '1px solid var(--border)', '&:last-of-type': { borderBottom: 0 } }}>
+                      <Typography sx={{ width: 20, fontSize: 12.5, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</Typography>
+                      <Typography noWrap dir="auto" sx={{ flex: 1, fontSize: 13 }}>{team.teamName}</Typography>
+                      <Badge tone={scoreTone(team.averageScore)}>{team.averageScore}%</Badge>
+                    </Box>
                   ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </SectionCard>
+                <SectionCard title="Score distribution" description="Teams by average score">
+                  {Object.entries(globalStats.scoreDistribution).map(([category, count]) => (
+                    <Box key={category} sx={{ display: 'flex', alignItems: 'center', py: 0.75, borderBottom: '1px solid var(--border)', '&:last-of-type': { borderBottom: 0 } }}>
+                      <Typography sx={{ flex: 1, fontSize: 13, color: 'var(--text-secondary)' }}>{category}</Typography>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{count}</Typography>
+                    </Box>
+                  ))}
+                </SectionCard>
+              </Box>
+            </>
+          )}
 
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
-            component="div"
-            count={results.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={(e, newPage) => setPage(newPage)}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            sx={{
-              color: colors.textPrimary,
-              '& .MuiTablePagination-selectIcon': {
-                color: colors.textPrimary
-              },
-              '& .MuiSvgIcon-root': {
-                color: colors.textPrimary
-              },
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderTop: 'none',
-              borderBottomLeftRadius: '8px',
-              borderBottomRightRadius: '8px'
-            }}
-          />
+          {error && <ErrorState title="Results didn’t load" message={error} onRetry={teamId ? () => fetchResults() : undefined} sx={{ mb: 2 }} />}
+
+          {selectedRows.length > 0 && (
+            <BulkBar
+              count={selectedRows.length}
+              onExport={() => exportRows(selectedRows, RESULT_COLUMNS, { filename: 'quiz-results-selected' })}
+              onDelete={isAdmin ? () => setDeleting(selectedRows) : undefined}
+              onClear={() => setSelection([])}
+            />
+          )}
+
+          {loading ? (
+            <PageLoader minHeight={240} />
+          ) : teamId ? (
+            <DataGrid
+              rows={results}
+              columns={resultColumns}
+              getRowId={(r) => r._id}
+              onRowClick={({ row }) => setSelectedResult(row)}
+              checkboxSelection
+              disableRowSelectionOnClick
+              rowSelectionModel={selection}
+              onRowSelectionModelChange={setSelection}
+              autoHeight
+              rowHeight={46}
+              columnHeaderHeight={40}
+              pageSizeOptions={[10, 25, 50]}
+              initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'submittedAt', sort: 'desc' }] } }}
+              slots={{ noRowsOverlay: () => <EmptyState title="No quiz results for this team" description="Results appear here after the team takes the quiz." minHeight={200} /> }}
+              sx={{ ...gridSx, minHeight: 260 }}
+            />
+          ) : (
+            <SectionCard>
+              <EmptyState title="Choose a field team" description="Pick a team above to see its quiz results, review answers and score essays." minHeight={200} />
+            </SectionCard>
+          )}
         </>
-      )
-      }
+      )}
 
-      {
-        selectedResult && (
-          <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Button
-                startIcon={<ArrowBack />}
-                onClick={() => setSelectedResult(null)}
-                sx={{
-                  color: colors.primary,
-                  '&:hover': {
-                    backgroundColor: colors.primaryHover
-                  }
-                }}
-              >
-                Back to Results List
-              </Button>
+      {selectedResult && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Button variant="text" startIcon={<ArrowBack sx={{ fontSize: 16 }} />} onClick={() => setSelectedResult(null)} sx={{ color: 'var(--text-secondary)' }}>All results</Button>
+            <Box sx={{ flex: 1 }} />
+            <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={() => exportDetailedResults(selectedResult)}>Export answers</Button>
+            <Button variant="outlined" startIcon={<PictureAsPdfOutlined sx={{ fontSize: 16 }} />} onClick={exportToPDF}>PDF report</Button>
+            <Button variant="contained" startIcon={<EditOutlined sx={{ fontSize: 16 }} />} onClick={() => handleOpenEdit(selectedResult)}>Edit result</Button>
+          </Box>
 
-              {(location.state?.fromPortal || searchParams.get('teamId')) && (
-                <Button
-                  variant="outlined"
-                  startIcon={<ArrowBack />}
-                  onClick={() => navigate(teamId ? `/fieldTeams-portal/${teamId}` : '/fieldTeams-portal')}
-                  sx={{
-                    color: '#60a5fa',
-                    borderColor: 'rgba(59, 130, 246, 0.4)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                      borderColor: '#60a5fa',
-                    }
-                  }}
-                >
-                  Back to Field Team Portal
-                </Button>
-              )}
-
-              <Button
-                variant="contained"
-                startIcon={<Edit />}
-                onClick={() => handleOpenEdit(selectedResult)}
-                sx={{
-                  backgroundColor: '#3b82f6',
-                  '&:hover': {
-                    backgroundColor: '#2563eb'
-                  }
-                }}
-              >
-                Edit Exam Result
-              </Button>
-
-              {/* Add Export Button for Detailed View */}
-              <Button
-                variant="outlined"
-                startIcon={<Download />}
-                onClick={() => exportDetailedResults(selectedResult)}
-                sx={{
-                  color: colors.success,
-                  borderColor: colors.success,
-                  '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                    borderColor: colors.success,
-                  }
-                }}
-              >
-                Export Detailed Results
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<MdPictureAsPdf />}
-                onClick={exportToPDF}
-                sx={{
-                  backgroundColor: '#dc3545',
-                  '&:hover': {
-                    backgroundColor: '#c82333',
-                  }
-                }}
-              >
-                Export PDF Report
-              </Button>
+          <SectionCard title={selectedResult.teamName} description={`Taken ${fmtDateTime(selectedResult.submittedAt)}`} actions={<Badge tone={scoreTone(selectedResult.percentage)}>{selectedResult.percentage}/100</Badge>}>
+            <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' } }}>
+              <StatCard label="Score" value={`${selectedResult.percentage}%`} />
+              <StatCard label="Points" value={`${selectedResult.correctAnswers ?? '—'} / ${answerCount(selectedResult) * 2}`} />
+              <StatCard label="Questions scored" value={`${filterCounts.scored}/${filterCounts.all}`} hint={filterCounts['needs-scoring'] ? `${filterCounts['needs-scoring']} essay(s) to score` : 'All scored'} />
+              <StatCard label="Categories" value={analysis.strengths.length + analysis.improvements.length} hint={`${analysis.strengths.length} strong · ${analysis.improvements.length} to improve`} />
             </Box>
+            {selectedResult.remarks && <Typography sx={{ mt: 1.5, fontSize: 13, color: 'var(--text-secondary)' }}><strong style={{ color: 'var(--text)' }}>Remarks:</strong> {selectedResult.remarks}</Typography>}
+          </SectionCard>
 
-            <div id="assessment-overview">
-              <Card sx={{
-                mb: 3,
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px'
-              }}>
-                <CardContent>
-                  <Typography variant="h5" gutterBottom sx={{
-                    color: colors.primary,
-                    mb: 3
-                  }}>
-                    Assessment Summary
-                  </Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
-                    gap: 3,
-                    '& > div': {
-                      minWidth: '150px'
-                    }
-                  }}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Team Name</Typography>
-                      <Typography sx={{ color: tok('--text') }}>{selectedResult.teamName}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Date Taken</Typography>
-                      <Typography sx={{ color: tok('--text') }}>
-                        {new Date(selectedResult.submittedAt).toLocaleString()}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Score</Typography>
-                      <Chip
-                        label={`${selectedResult.percentage}/100 (${selectedResult.correctAnswers}/${(selectedResult.userAnswers?.length || selectedResult.totalQuestions) * 2})`}
-                        color={getPerformanceColor(selectedResult.percentage)}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Percentage</Typography>
-                      <Typography sx={{ color: tok('--text') }}>{selectedResult.percentage}%</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Total Score</Typography>
-                      <Typography sx={{ color: tok('--text') }}>
-                        {selectedResult.percentage}/100
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ color: colors.textSecondary }}>Questions Scored</Typography>
-                      <Typography sx={{ color: tok('--text') }}>
-                        {selectedResult.userAnswers.filter(a => a.type === 'options' || a.isScored || a.score > 0).length}/{selectedResult.userAnswers.length}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
+          <Box id="assessment-overview" sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' } }}>
+            <SectionCard title="Score by question" description="2 points per question" sx={{ minWidth: 0 }}>
+              {questionChart && (
+                <Box sx={{ height: isMobile ? 250 : 300, position: 'relative' }}>
+                  <Bar data={questionChart} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: false }, legend: { ...chartOptions.plugins.legend, position: 'bottom' } } }} />
+                </Box>
+              )}
+            </SectionCard>
+            <SectionCard title="Strengths and gaps" description="Categories at or above 70% are strengths">
+              <Typography sx={{ fontSize: 12.5, color: 'var(--text-secondary)', mb: 0.75 }}>Strongest areas ({analysis.strengths.length})</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 2 }}>
+                {analysis.strengths.length ? analysis.strengths.map((s) => (
+                  <Tooltip key={s.category} title={`${s.score}/${s.total} points (${s.percentage}%)`}><span><Badge tone="success">{s.category} · {s.percentage}%</Badge></span></Tooltip>
+                )) : <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)' }}>None yet</Typography>}
+              </Box>
+              <Typography sx={{ fontSize: 12.5, color: 'var(--text-secondary)', mb: 0.75 }}>Needs improvement ({analysis.improvements.length})</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                {analysis.improvements.length ? analysis.improvements.map((s) => (
+                  <Tooltip key={s.category} title={`${s.score}/${s.total} points (${s.percentage}%)`}><span><Badge tone="danger">{s.category} · {s.percentage}%</Badge></span></Tooltip>
+                )) : <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)' }}>All categories meet the standard</Typography>}
+              </Box>
+            </SectionCard>
+          </Box>
 
-              <Box sx={{
-                display: 'flex',
-                gap: 3,
-                flexDirection: { xs: 'column', md: 'row' },
-                mb: 3
-              }}>
-                <Paper sx={{
-                  p: 2,
-                  flex: 1,
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: '8px',
-                  overflow: 'hidden'
-                }}>
-                  <Typography variant="h6" gutterBottom sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    color: colors.primary,
-                    mb: 2,
-                    fontSize: isMobile ? '1.1rem' : '1.25rem'
-                  }}>
-                    <BarChart fontSize={isMobile ? 'small' : 'medium'} />
-                    {isMobile ? 'Performance' : 'Performance Overview'}
-                  </Typography>
-                  {getChartData() && (
-                    <Box sx={{
-                      height: isMobile ? '250px' : '300px',
-                      position: 'relative',
-                      width: '100%',
-                      minWidth: isMobile ? '100%' : undefined
-                    }}>
-                      <Bar
-                        data={getChartData()}
-                        options={{
-                          ...chartOptions,
-                          plugins: {
-                            ...chartOptions.plugins,
-                            title: {
-                              ...chartOptions.plugins.title,
-                              display: !isMobile,
-                              text: 'Question-by-Question Performance'
-                            },
-                            legend: {
-                              ...chartOptions.plugins.legend,
-                              position: isMobile ? 'bottom' : 'top'
-                            }
+          <SectionCard title="Performance by category" description={`${selectedResult.totalQuestions || answerCount(selectedResult)} questions`}>
+            {categoryChart && (
+              <Box sx={{ height: isMobile ? 260 : Math.max(220, categoryChart.labels.length * 36), position: 'relative' }}>
+                <Bar
+                  data={categoryChart}
+                  options={{
+                    ...horizontalChartOptions,
+                    plugins: {
+                      ...horizontalChartOptions.plugins,
+                      title: { display: false },
+                      legend: { ...horizontalChartOptions.plugins.legend, position: 'bottom' },
+                      tooltip: {
+                        callbacks: {
+                          afterLabel: (context) => {
+                            const score = context.chart.data.datasets[0].data[context.dataIndex];
+                            const missed = context.chart.data.datasets[1].data[context.dataIndex];
+                            const total = score + missed;
+                            return `Percentage: ${total > 0 ? Math.round((score / total) * 100) : 0}%`;
                           },
-                          scales: {
-                            ...chartOptions.scales,
-                            x: {
-                              ...chartOptions.scales.x,
-                              ticks: {
-                                ...chartOptions.scales.x.ticks,
-                                font: {
-                                  size: isMobile ? 10 : 12
-                                }
-                              }
-                            }
-                          }
-                        }}
-                      />
+                        },
+                      },
+                    },
+                    scales: { ...horizontalChartOptions.scales, x: { ...horizontalChartOptions.scales.x, max: Math.max(...categoryChart.datasets.flatMap((d) => d.data)) + 1 } },
+                  }}
+                />
+              </Box>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Answers" description="Review each answer and score essay questions (0–2).">
+            <Tabs value={questionFilter} onChange={(_e, v) => setQuestionFilter(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 1.5 }}>
+              {[['all', 'All'], ['needs-scoring', 'Needs scoring'], ['scored', 'Scored'], ['correct', 'Correct'], ['incorrect', 'Incorrect']].map(([v, l]) => (
+                <Tab key={v} value={v} label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>{l}<Box component="span" sx={{ px: 0.75, height: 18, minWidth: 18, borderRadius: '5px', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', backgroundColor: 'var(--surface-active)' }}>{filterCounts[v]}</Box></Box>} />
+              ))}
+            </Tabs>
+            {selectedResult.userAnswers
+              .map((answer, originalIndex) => ({ answer, originalIndex }))
+              .filter(({ answer }) => {
+                if (questionFilter === 'needs-scoring') return answer.type === 'essay' && !isScored(answer);
+                if (questionFilter === 'scored') return isScored(answer);
+                if (questionFilter === 'correct') return answer.type === 'options' && answer.isCorrect;
+                if (questionFilter === 'incorrect') return answer.type === 'options' && !answer.isCorrect;
+                return true;
+              })
+              .map(({ answer, originalIndex }) => (
+                <Box key={originalIndex} sx={{ py: 2, borderBottom: '1px solid var(--border)', '&:last-of-type': { borderBottom: 0, pb: 0 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75, flexWrap: 'wrap' }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Question {originalIndex + 1}</Typography>
+                    <Badge outline>{answer.category}</Badge>
+                    {answer.type === 'essay'
+                      ? <Badge tone={isScored(answer) ? 'success' : 'warning'} dot>{isScored(answer) ? `Scored ${answer.score || 0}/2` : 'Needs scoring'}</Badge>
+                      : <Badge tone={answer.isCorrect ? 'success' : 'danger'} dot>{answer.isCorrect ? 'Correct' : 'Incorrect'}</Badge>}
+                  </Box>
+                  <Typography dir="auto" sx={{ fontSize: 13, color: 'var(--text-secondary)' }}>{answer.question}</Typography>
+                  {answer.type === 'essay' ? (
+                    <>
+                      <Box sx={answerBox}>{answerRow('Essay answer', answer.essayAnswer || 'No answer provided')}</Box>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
+                        <TextField
+                          label="Score (0–2)"
+                          type="number"
+                          value={essayScores[originalIndex] !== undefined ? essayScores[originalIndex] : answer.score?.toString() || '0'}
+                          onChange={(e) => setEssayScores({ ...essayScores, [originalIndex]: e.target.value })}
+                          error={essayScores[originalIndex] !== undefined && (Number(essayScores[originalIndex]) < 0 || Number(essayScores[originalIndex]) > 2)}
+                          slotProps={{ htmlInput: { step: '0.5', min: 0, max: 2 } }}
+                          sx={{ width: 120 }}
+                        />
+                        <Button variant="contained" startIcon={<SaveOutlined sx={{ fontSize: 16 }} />} onClick={() => handleUpdateEssayScore(selectedResult._id, originalIndex)}>Save score</Button>
+                        <Button variant="outlined" onClick={() => handleUpdateEssayScore(selectedResult._id, originalIndex, 0)}>Give zero</Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <Box sx={answerBox}>
+                      {answerRow('Options', <Box component="ul" sx={{ m: 0, pl: 2.5 }}>{(answer.options || []).map((o, i) => <li key={i} dir="auto">{o}</li>)}</Box>)}
+                      <Box sx={{ mt: 1 }}>{answerRow('Selected', answer.selectedAnswer || 'No answer selected', answer.selectedAnswer && answer.isCorrect ? 'var(--success)' : 'var(--danger)')}</Box>
+                      <Box sx={{ mt: 1 }}>{answerRow('Correct answer', answer.correctAnswer, 'var(--success)')}</Box>
                     </Box>
                   )}
-                </Paper>
+                </Box>
+              ))}
+          </SectionCard>
+        </Box>
+      )}
 
-                <Paper sx={{
-                  p: 2,
-                  flex: 1,
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: '8px'
-                }}>
-                  <Typography variant="h6" gutterBottom sx={{
-                    color: colors.primary,
-                    mb: 2,
-                    fontSize: isMobile ? '1.1rem' : '1.25rem'
-                  }}>
-                    {isMobile ? 'Statistics' : 'Key Statistics'}
-                  </Typography>
-
-                  {selectedResult && (() => {
-                    const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
-
-                    return (
-                      <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2
-                      }}>
-                        <Box>
-                          <Typography variant="subtitle2" sx={{
-                            color: colors.textSecondary,
-                            mb: 1,
-                            fontSize: isMobile ? '0.8rem' : '0.875rem'
-                          }}>
-                            Strongest Areas ({strengths.length})
-                          </Typography>
-                          {strengths.length > 0 ? (
-                            <Box sx={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: 1,
-                              '& .MuiChip-root': {
-                                fontSize: isMobile ? '0.7rem' : '0.8125rem'
-                              }
-                            }}>
-                              {strengths.map((stat, index) => (
-                                <Tooltip
-                                  key={index}
-                                  title={`${stat.score}/${stat.total} score (${stat.percentage}%)`}
-                                  arrow
-                                >
-                                  <Chip
-                                    label={isMobile ? stat.category.split(' ')[0] : stat.category}
-                                    color="success"
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{
-                                      borderColor: colors.success,
-                                      color: colors.textPrimary
-                                    }}
-                                  />
-                                </Tooltip>
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" sx={{
-                              color: colors.textSecondary,
-                              fontSize: isMobile ? '0.8rem' : '0.875rem'
-                            }}>
-                              No strong categories
-                            </Typography>
-                          )}
-                        </Box>
-
-                        <Box>
-                          <Typography variant="subtitle2" sx={{
-                            color: colors.textSecondary,
-                            mb: 1,
-                            fontSize: isMobile ? '0.8rem' : '0.875rem'
-                          }}>
-                            Areas Needing Improvement ({improvements.length})
-                          </Typography>
-                          {improvements.length > 0 ? (
-                            <Box sx={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: 1,
-                              '& .MuiChip-root': {
-                                fontSize: isMobile ? '0.7rem' : '0.8125rem'
-                              }
-                            }}>
-                              {improvements.map((stat, index) => (
-                                <Tooltip
-                                  key={index}
-                                  title={`${stat.score}/${stat.total} score (${stat.percentage}%)`}
-                                  arrow
-                                >
-                                  <Chip
-                                    label={isMobile ? stat.category.split(' ')[0] : stat.category}
-                                    color="error"
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{
-                                      borderColor: colors.error,
-                                      color: colors.textPrimary
-                                    }}
-                                  />
-                                </Tooltip>
-                              ))}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" sx={{
-                              color: colors.textSecondary,
-                              fontSize: isMobile ? '0.8rem' : '0.875rem'
-                            }}>
-                              All categories meet standards
-                            </Typography>
-                          )}
-                        </Box>
-
-                        <Box>
-                          <Typography variant="subtitle2" sx={{
-                            color: colors.textSecondary,
-                            mb: 0.5,
-                            fontSize: isMobile ? '0.8rem' : '0.875rem'
-                          }}>
-                            Overall Accuracy
-                          </Typography>
-                          <Typography sx={{
-                            color: tok('--text'),
-                            fontSize: isMobile ? '0.9rem' : '1rem'
-                          }}>
-                            {selectedResult.percentage}%
-                            <Typography component="span" sx={{
-                              color: colors.textSecondary,
-                              ml: 1,
-                              fontSize: isMobile ? '0.8rem' : '0.875rem'
-                            }}>
-                              ({selectedResult.percentage}/100)
-                            </Typography>
-                          </Typography>
-                        </Box>
-                      </Box>
-                    );
-                  })()}
-                </Paper>
-              </Box>
-
-              <Paper sx={{
-                p: 2,
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px',
-                mb: 3,
-                overflow: 'hidden'
-              }}>
-                <Typography variant="h6" gutterBottom sx={{
-                  color: colors.primary,
-                  mb: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  fontSize: isMobile ? '1.1rem' : '1.25rem'
-                }}>
-                  <BarChart fontSize={isMobile ? 'small' : 'medium'} />
-                  {isMobile ? 'Categories' : 'Category Performance Analysis'}
-                </Typography>
-
-                {selectedResult && (() => {
-                  const { strengths, improvements } = analyzeCategoryPerformance(selectedResult.userAnswers);
-                  const chartData = getCategoryChartData();
-
-                  return (
-                    <>
-                      <Box sx={{
-                        display: 'flex',
-                        gap: 3,
-                        mb: 3,
-                        flexWrap: 'wrap',
-                        justifyContent: isMobile ? 'space-between' : 'flex-start'
-                      }}>
-                        <Box>
-                          <Typography variant="subtitle2" sx={{
-                            color: colors.textSecondary,
-                            fontSize: isMobile ? '0.8rem' : '0.875rem'
-                          }}>
-                            Strongest Areas
-                          </Typography>
-                          <Typography variant="h6" sx={{
-                            color: colors.success,
-                            fontSize: isMobile ? '1rem' : '1.25rem'
-                          }}>
-                            {strengths.length}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="subtitle2" sx={{
-                            color: colors.textSecondary,
-                            fontSize: isMobile ? '0.8rem' : '0.875rem'
-                          }}>
-                            Weakest Areas
-                          </Typography>
-                          <Typography variant="h6" sx={{
-                            color: colors.error,
-                            fontSize: isMobile ? '1rem' : '1.25rem'
-                          }}>
-                            {improvements.length}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="subtitle2" sx={{
-                            color: colors.textSecondary,
-                            fontSize: isMobile ? '0.8rem' : '0.875rem'
-                          }}>
-                            Total Areas Covered
-                          </Typography>
-                          <Typography variant="h6" sx={{
-                            color: colors.textPrimary,
-                            fontSize: isMobile ? '1rem' : '1.25rem'
-                          }}>
-                            {strengths.length + improvements.length}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      {chartData && (
-                        <Box sx={{
-                          height: isMobile ? '250px' : '300px',
-                          position: 'relative',
-                          width: '100%'
-                        }}>
-                          <Bar
-                            data={chartData}
-                            options={{
-                              ...horizontalChartOptions,
-                              plugins: {
-                                ...horizontalChartOptions.plugins,
-                                tooltip: {
-                                  callbacks: {
-                                    afterLabel: function (context) {
-                                      const dataIndex = context.dataIndex;
-                                      const score = context.chart.data.datasets[0].data[dataIndex];
-                                      const missed = context.chart.data.datasets[1].data[dataIndex];
-                                      const total = score + missed;
-                                      const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
-                                      return `Percentage: ${percentage}%`;
-                                    }
-                                  }
-                                },
-                                title: {
-                                  ...horizontalChartOptions.plugins.title,
-                                  text: `Performance by Category (${selectedResult.totalQuestions} Questions)`,
-                                  display: !isMobile
-                                },
-                                legend: {
-                                  ...horizontalChartOptions.plugins.legend,
-                                  position: isMobile ? 'bottom' : 'top'
-                                }
-                              },
-                              scales: {
-                                ...horizontalChartOptions.scales,
-                                x: {
-                                  ...horizontalChartOptions.scales.x,
-                                  max: Math.max(...chartData.datasets.flatMap(d => d.data)) + 1
-                                }
-                              }
-                            }}
-                          />
-
-                          {!isMobile && (
-                            <Box sx={{
-                              position: 'absolute',
-                              top: 20,
-                              right: 20,
-                              backgroundColor: 'rgba(30, 30, 30, 0.8)',
-                              p: 1,
-                              borderRadius: 1,
-                              border: `1px solid ${colors.border}`
-                            }}>
-                              <Typography variant="caption" sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                color: colors.textSecondary,
-                                fontSize: '0.75rem'
-                              }}>
-                                <Box sx={{
-                                  width: 10,
-                                  height: 10,
-                                  backgroundColor: colors.primary,
-                                  mr: 1
-                                }} />
-                                Threshold: 70% score
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      )}
-                    </>
-                  );
-                })()}
-              </Paper>
-            </div>
-
-            <Paper sx={{
-              p: 3,
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '8px'
-            }}>
-              <Box sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 2,
-                flexWrap: 'wrap',
-                gap: 2
-              }}>
-                <Typography variant="h6" sx={{ color: colors.primary }}>
-                  Detailed Question Analysis
-                </Typography>
-
-                <Tabs
-                  value={questionFilter}
-                  onChange={(e, newVal) => setQuestionFilter(newVal)}
-                  variant="scrollable"
-                  scrollButtons="auto"
-                  sx={{
-                    '& .MuiTabs-indicator': { backgroundColor: colors.primary },
-                    '& .MuiTab-root': {
-                      color: colors.textSecondary,
-                      '&.Mui-selected': { color: colors.primary }
-                    }
-                  }}
-                >
-                  <Tab label={`All (${selectedResult.userAnswers.length})`} value="all" />
-                  <Tab label={`Needs Scoring (${selectedResult.userAnswers.filter(a => a.type === 'essay' && !(a.isScored || a.score > 0)).length})`} value="needs-scoring" />
-                  <Tab label={`Scored (${selectedResult.userAnswers.filter(a => a.type === 'options' || a.isScored || a.score > 0).length})`} value="scored" />
-                  <Tab label={`Correct (${selectedResult.userAnswers.filter(a => a.type === 'options' && a.isCorrect).length})`} value="correct" />
-                  <Tab label={`Incorrect (${selectedResult.userAnswers.filter(a => a.type === 'options' && !a.isCorrect).length})`} value="incorrect" />
-                </Tabs>
-              </Box>
-
-              {selectedResult.userAnswers
-                .filter(answer => {
-                  const isActuallyScored = answer.type === 'options' || answer.isScored || (answer.type === 'essay' && answer.score > 0);
-                  if (questionFilter === 'all') return true;
-                  if (questionFilter === 'needs-scoring') return answer.type === 'essay' && !isActuallyScored;
-                  if (questionFilter === 'scored') return isActuallyScored;
-                  if (questionFilter === 'correct') return answer.type === 'options' && answer.isCorrect;
-                  if (questionFilter === 'incorrect') return answer.type === 'options' && !answer.isCorrect;
-                  return true;
-                })
-                .map((answer, index) => {
-                  // Find original index for question numbering
-                  const originalIndex = selectedResult.userAnswers.findIndex(a => a === answer);
-
-                  return (
-                    <Box key={originalIndex} sx={{ mb: 3 }}>
-                      <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
-                        flexWrap: 'wrap'
-                      }}>
-                        <Typography variant="subtitle1" sx={{
-                          color: colors.textPrimary,
-                          fontWeight: '500'
-                        }}>
-                          Question {originalIndex + 1}:
-                        </Typography>
-                        <Chip
-                          label={answer.type === 'essay' ? ((answer.isScored || answer.score > 0) ? 'Scored' : 'Unscored') : 'Scored'}
-                          color={answer.type === 'essay' ? ((answer.isScored || answer.score > 0) ? 'success' : 'warning') : 'success'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </Box>
-                      <Typography sx={{ color: colors.textSecondary, direction: 'rtl', textAlign: 'right' }}>
-                        {answer.question}
-                      </Typography>
-                      <Box>
-                        {answer.type === 'essay' ? (
-                          <>
-                            <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                              <Typography variant="body2" sx={{
-                                color: colors.textPrimary,
-                                mb: 1,
-                                display: 'flex'
-                              }}>
-                                <strong style={{ color: colors.textSecondary, width: '200px' }}>Essay Answer:</strong>
-                                <span style={{ direction: 'rtl', textAlign: 'right', width: '100%' }}>
-                                  {answer.essayAnswer || "No answer provided"}
-                                </span>
-                              </Typography>
-                            </Box>
-                            <Box sx={{ my: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <TextField
-                                label="Score (0-2)"
-                                value={essayScores[originalIndex] !== undefined ? essayScores[originalIndex] : answer.score?.toString() || '0'}
-                                onChange={(e) => setEssayScores({
-                                  ...essayScores,
-                                  [originalIndex]: e.target.value
-                                })}
-                                inputProps={{ step: '0.01', min: '0', max: '2' }}
-                                sx={{
-                                  width: '100px',
-                                  '& .MuiOutlinedInput-root': {
-                                    '& fieldset': { borderColor: colors.border },
-                                    '&:hover fieldset': { borderColor: colors.primary },
-                                    '&.Mui-focused fieldset': { borderColor: colors.primary },
-                                    color: colors.textPrimary
-                                  },
-                                  '& .MuiInputLabel-root': { color: colors.textSecondary },
-                                  '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
-                                }}
-                              />
-                              <Button
-                                variant="contained"
-                                startIcon={<Save />}
-                                onClick={() => handleUpdateEssayScore(selectedResult._id, originalIndex)}
-                                sx={{
-                                  backgroundColor: colors.primary,
-                                  '&:hover': { backgroundColor: '#1d4ed8' }
-                                }}
-                              >
-                                Save Score
-                              </Button>
-                              <Button
-                                variant="outlined"
-                                onClick={() => handleUpdateEssayScore(selectedResult._id, originalIndex, 0)}
-                                sx={{
-                                  color: colors.error,
-                                  borderColor: colors.error,
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                                    borderColor: colors.error
-                                  }
-                                }}
-                              >
-                                Give Zero
-                              </Button>
-                            </Box>
-                          </>
-                        ) : (
-                          <>
-                            <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                              <Typography variant="body2" sx={{
-                                color: colors.textPrimary,
-                                mb: 1
-                              }}>
-                                <strong style={{ color: colors.textSecondary }}>Options:</strong>
-                              </Typography>
-                              <ul style={{
-                                marginTop: 0,
-                                marginBottom: '8px',
-                                paddingLeft: '20px',
-                                direction: 'rtl',
-                                textAlign: 'right',
-                                listStyleType: 'disc',
-                                listStylePosition: 'inside',
-                              }}>
-                                {answer.options.map((option, optionIndex) => (
-                                  <li key={optionIndex} style={{
-                                    color: colors.textPrimary,
-                                    marginBottom: '4px',
-                                  }}>
-                                    {option}
-                                  </li>
-                                ))}
-                              </ul>
-                            </Box>
-
-                            <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                              <Typography variant="body2" sx={{
-                                color: colors.textPrimary,
-                                mb: 1,
-                                display: 'flex',
-                              }}>
-                                <strong style={{ color: colors.textSecondary, width: '200px' }}>Selected Answer:</strong>
-                                <span style={{
-                                  color: answer.selectedAnswer ?
-                                    (answer.isCorrect ? colors.success : colors.error) :
-                                    colors.error,
-                                  width: '100%',
-                                  direction: 'rtl', textAlign: 'right'
-                                }}>
-                                  {answer.selectedAnswer || "No answer selected"}
-                                </span>
-                              </Typography>
-                            </Box>
-
-                            <Box sx={{ my: 2, backgroundColor: '#2f2f2f', p: 2, borderRadius: '8px' }}>
-                              <Typography variant="body2" sx={{
-                                color: colors.textPrimary,
-                                mb: 1,
-                                display: 'flex'
-                              }}>
-                                <strong style={{ color: colors.textSecondary, width: '200px' }}>Correct Answer:</strong>
-                                <span style={{ color: colors.success, direction: 'rtl', textAlign: 'right', width: '100%' }}>
-                                  {answer.correctAnswer}
-                                </span>
-                              </Typography>
-                            </Box>
-                          </>
-                        )}
-                        <Typography variant="body2" sx={{
-                          color: colors.textPrimary
-                        }}>
-                          <strong style={{ color: colors.textSecondary }}>Category:</strong> {answer.category}
-                        </Typography>
-                        {answer.type === 'essay' && (
-                          <Typography variant="body2" sx={{
-                            color: colors.textPrimary,
-                            mt: 1
-                          }}>
-                            <strong style={{ color: colors.textSecondary }}>Score:</strong> {answer.score || 0}
-                          </Typography>
-                        )}
-                      </Box>
-                      {index < selectedResult.userAnswers.length - 1 && (
-                        <Divider sx={{
-                          mt: 2,
-                          backgroundColor: colors.border
-                        }} />
-                      )}
-                    </Box>
-                  );
-                })}
-            </Paper>
-          </Box>
-        )
-      }
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        sx={{
-          "& .MuiPaper-root": {
-            backgroundColor: colors.surface,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`,
-            minWidth: '200px'
-          }
-        }}
-      >
-        <MenuItem onClick={() => {
-          if (currentResult) setSelectedResult(currentResult);
-          handleMenuClose();
-        }}>
-          <ListItemIcon>
-            <BarChart fontSize="small" style={{ color: colors.primary }} />
-          </ListItemIcon>
-          <ListItemText>View Details</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteResult}>
-          <ListItemIcon>
-            <Refresh fontSize="small" style={{ color: colors.error }} />
-          </ListItemIcon>
-          <ListItemText>Delete Result</ListItemText>
-        </MenuItem>
+      <Menu anchorEl={rowMenu?.anchor} open={Boolean(rowMenu)} onClose={() => setRowMenu(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <MenuItem onClick={() => { setSelectedResult(rowMenu.row); setRowMenu(null); }}><ListItemIcon><VisibilityOutlined fontSize="small" /></ListItemIcon>View answers</MenuItem>
+        <MenuItem onClick={() => { handleOpenEdit(rowMenu.row); setRowMenu(null); }}><ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon>Edit result</MenuItem>
+        <MenuItem onClick={() => { exportDetailedResults(rowMenu.row); setRowMenu(null); }}><ListItemIcon><FileDownloadOutlined fontSize="small" /></ListItemIcon>Export answers</MenuItem>
+        {isAdmin && <Divider />}
+        {isAdmin && (
+          <MenuItem onClick={() => { setDeleting([rowMenu.row]); setRowMenu(null); }} sx={{ color: 'var(--danger)' }}>
+            <ListItemIcon><DeleteOutline fontSize="small" sx={{ color: 'var(--danger)' }} /></ListItemIcon>Delete permanently…
+          </MenuItem>
+        )}
       </Menu>
 
-      {/* Edit Exam Result Dialog */}
-      <Dialog
+      <AppDialog
         open={editDialogOpen}
-        onClose={() => !savingEdit && setEditDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: '#1e1e24',
-            color: tok('--text'),
-            borderRadius: '16px',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            p: 1
-          }
-        }}
+        onClose={() => setEditDialogOpen(false)}
+        title="Edit quiz result"
+        description={currentResult ? `Score, points and remarks for ${currentResult.candidateName || currentResult.teamName}.` : ''}
+        onSubmit={handleSaveEdit}
+        primary={{ label: 'Save changes', loadingLabel: 'Saving…', loading: savingEdit, disabled: editInvalid }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, color: '#60a5fa', fontWeight: 800 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Edit sx={{ color: '#60a5fa', fontSize: '1.6rem' }} />
-            <span>Edit Online Exam Assessment</span>
-          </Box>
-          <IconButton onClick={() => setEditDialogOpen(false)} disabled={savingEdit} sx={{ color: tok('--text-secondary') }}>
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ mt: 1 }}>
-          <Typography variant="body2" sx={{ color: tok('--text-secondary'), mb: 2.5 }}>
-            Modify theoretical examination scores, accuracy stats, and assessor remarks for{" "}
-            <strong style={{ color: tok('--text') }}>{currentResult?.candidateName || currentResult?.teamName}</strong>.
-          </Typography>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' } }}>
+          <TextField required label="Score (%)" type="number" value={editingScore} onChange={(e) => setEditingScore(e.target.value)} error={Boolean(editErrors.score)} helperText={editErrors.score || ' '} slotProps={{ htmlInput: { min: 0, max: 100 } }} />
+          <TextField label="Points" type="number" value={editingCorrect} onChange={(e) => setEditingCorrect(e.target.value)} error={Boolean(editErrors.correct)} helperText={editErrors.correct || ' '} slotProps={{ htmlInput: { min: 0 } }} />
+          <TextField required label="Questions" type="number" value={editingTotal} onChange={(e) => setEditingTotal(e.target.value)} error={Boolean(editErrors.total)} helperText={editErrors.total || ' '} slotProps={{ htmlInput: { min: 1 } }} />
+        </Box>
+        <TextField fullWidth label="Assessor remarks" multiline minRows={3} value={editingRemarks} onChange={(e) => setEditingRemarks(e.target.value)} />
+      </AppDialog>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Score Percentage (%)"
-                type="number"
-                value={editingScore}
-                onChange={(e) => setEditingScore(e.target.value)}
-                InputProps={{ inputProps: { min: 0, max: 100 } }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: tok('--text'),
-                    bgcolor: tok('--overlay-subtle'),
-                    '& fieldset': { borderColor: tok('--border') },
-                    '&:hover fieldset': { borderColor: '#60a5fa' },
-                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
-                  },
-                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Correct Points / Score"
-                type="number"
-                value={editingCorrect}
-                onChange={(e) => setEditingCorrect(e.target.value)}
-                InputProps={{ inputProps: { min: 0 } }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: tok('--text'),
-                    bgcolor: tok('--overlay-subtle'),
-                    '& fieldset': { borderColor: tok('--border') },
-                    '&:hover fieldset': { borderColor: '#60a5fa' },
-                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
-                  },
-                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Total Questions"
-                type="number"
-                value={editingTotal}
-                onChange={(e) => setEditingTotal(e.target.value)}
-                InputProps={{ inputProps: { min: 1 } }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: tok('--text'),
-                    bgcolor: tok('--overlay-subtle'),
-                    '& fieldset': { borderColor: tok('--border') },
-                    '&:hover fieldset': { borderColor: '#60a5fa' },
-                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
-                  },
-                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Assessor Remarks & Evaluation Notes"
-                multiline
-                rows={3}
-                value={editingRemarks}
-                onChange={(e) => setEditingRemarks(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: tok('--text'),
-                    bgcolor: tok('--overlay-subtle'),
-                    '& fieldset': { borderColor: tok('--border') },
-                    '&:hover fieldset': { borderColor: '#60a5fa' },
-                    '&.Mui-focused fieldset': { borderColor: '#60a5fa' },
-                  },
-                  '& .MuiInputLabel-root': { color: tok('--text-secondary') },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#60a5fa' }
-                }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <Button
-            variant="outlined"
-            onClick={() => setEditDialogOpen(false)}
-            disabled={savingEdit}
-            sx={{
-              borderColor: tok('--border'),
-              color: tok('--text-secondary'),
-              borderRadius: '8px',
-              textTransform: 'none',
-              fontWeight: 600
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveEdit}
-            disabled={savingEdit}
-            startIcon={savingEdit ? <CircularProgress size={18} color="inherit" /> : <Edit />}
-            sx={{
-              bgcolor: '#3b82f6',
-              '&:hover': { bgcolor: '#2563eb' },
-              borderRadius: '8px',
-              textTransform: 'none',
-              fontWeight: 700,
-              px: 2.5
-            }}
-          >
-            {savingEdit ? "Saving..." : "Save Exam Changes"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box >
+      <SafeDeleteDialog
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        records={deleting || []}
+        noun={{ one: 'quiz result', many: 'quiz results' }}
+        nameOf={(r) => `${r.teamName} · ${fmtDateTime(r.submittedAt)} · ${r.percentage}%`}
+        exportColumns={RESULT_COLUMNS}
+        exportFilename="quiz-results"
+        onDelete={(list) => bulkDelete(DELETE_PATHS.quizResults, list.map((r) => r._id))}
+        onDeleted={({ deleted }) => {
+          setResults((prev) => prev.filter((r) => !deleted.includes(r._id)));
+          setSelection((s) => s.filter((id) => !deleted.includes(id)));
+          if (deleted.includes(selectedResult?._id)) setSelectedResult(null);
+        }}
+      />
+    </Box>
   );
 };
 
