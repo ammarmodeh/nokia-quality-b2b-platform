@@ -8,6 +8,7 @@ import { validateTaxonomy } from "../utils/taxonomy.js";
 import { builtInTemplate } from "../utils/builtInTemplates.js";
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import { bulkDeleteHandler } from "../utils/bulkDelete.js";
+import { makeResolver, normCode } from "../utils/teamCodes.js";
 
 const isAdmin = (req) => req.user?.role === "Admin";
 const oid = (v) => mongoose.Types.ObjectId.isValid(String(v));
@@ -296,9 +297,42 @@ export const restoreField = async (req, res) => {
   res.json(t);
 };
 
+const mappedOf = (t) => Object.fromEntries(t.fields.filter((f) => f.coreMapping && !f.archived).map((f) => [f.coreMapping, f]));
+/** The team comes from the team code (not from an explicit Field team field). */
+const teamFromCode = (t) => {
+  const by = mappedOf(t);
+  return Boolean(by.teamCode) && !(by.fieldTeam && by.fieldTeam.type === "fieldTeam");
+};
+const sameDay = (a, b) => a && b && new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10);
+
+/**
+ * Team snapshot for a row whose table maps a team code: the team that held the code on the
+ * row's date (date mapping, else schedule mapping, else when the row was created). Kept as
+ * is while the code and date don't change, so reassigning a code never moves old rows.
+ * `force` re-resolves anyway (the admin "Re-check teams" action).
+ */
+const teamSnapshot = async (t, data, prev, resolver, { force = false } = {}) => {
+  if (!teamFromCode(t)) return {};
+  const by = mappedOf(t);
+  const code = normCode(data[by.teamCode.key]);
+  const on = new Date((by.date && data[by.date.key]) || (by.schedule && data[by.schedule.key]) || prev?.createdAt || Date.now());
+  if (!code) return { fieldTeamId: null, teamResolution: null };
+  const was = prev?.teamResolution;
+  if (!force && was && was.code === code && sameDay(was.on, on) && was.source !== "none") return {};
+  const hit = await resolver(code, on);
+  return { fieldTeamId: hit?.fieldTeamId || null, teamResolution: { code, on, source: hit ? hit.source : "none", at: new Date() } };
+};
+
 const refreshSystemColumns = async (t) => {
-  const rows = await CustomRow.find({ tableId: t._id }).select("data").lean();
-  const ops = rows.map((r) => ({ updateOne: { filter: { _id: r._id }, update: { $set: { status: null, assignees: [], fieldTeamId: null, dueDate: null, ...systemColumns(t, r.data || {}) } } } }));
+  const rows = await CustomRow.find({ tableId: t._id }).select("data teamResolution createdAt fieldTeamId").lean();
+  const fromCode = teamFromCode(t);
+  const resolver = makeResolver();
+  const ops = [];
+  for (const r of rows) {
+    // a team found from the code is a snapshot: only (re)resolve rows that don't have one for this code
+    const team = fromCode ? await teamSnapshot(t, r.data || {}, r, resolver) : { fieldTeamId: null };
+    ops.push({ updateOne: { filter: { _id: r._id }, update: { $set: { status: null, assignees: [], dueDate: null, slid: null, teamCode: null, ...systemColumns(t, r.data || {}), ...team } } } });
+  }
   for (let i = 0; i < ops.length; i += 1000) await CustomRow.bulkWrite(ops.slice(i, i + 1000));
 };
 
@@ -323,12 +357,15 @@ const rowQuery = (t, query) => {
   let filters = [];
   try { filters = query.filters ? JSON.parse(query.filters) : []; } catch { filters = []; }
   const fields = Object.fromEntries(t.fields.map((f) => [f.key, f]));
-  const and = [];
-  for (const f of filters) {
-    const fn = FILTER_OPS[f.op];
-    if (!fn || !fields[f.field]) continue;
-    const path = fields[f.field].type === "taxonomy" ? `data.${f.field}.category` : `data.${f.field}`;
-    and.push({ [path]: fn(f.value) });
+  const toMongo = (list) => list
+    .filter((f) => FILTER_OPS[f.op] && fields[f.field])
+    .map((f) => ({ [fields[f.field].type === "taxonomy" ? `data.${f.field}.category` : `data.${f.field}`]: FILTER_OPS[f.op](f.value) }));
+  const and = toMongo(filters);
+  // ?group=<key>: the group's rows (members, plus rows matching its rule)
+  if (query.group) {
+    const g = (t.groups || []).find((x) => x.key === query.group);
+    const rule = g?.filters?.length ? toMongo(g.filters) : [];
+    and.push(rule.length ? { $or: [{ groups: query.group }, { $and: rule }] } : { groups: query.group });
   }
   if (query.q) {
     const rx = { $regex: String(query.q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
@@ -365,7 +402,7 @@ const checkUnique = async (t, data, rowId) => {
 };
 
 /** Create a row. opts: { coerced, batchId } */
-const insertRow = async (t, patch, user, { coerced = false, batchId } = {}) => {
+const insertRow = async (t, patch, user, { coerced = false, batchId, resolver = makeResolver(), groups } = {}) => {
   let data = patch;
   if (!coerced) {
     const r = coerceData(t, patch, { partial: false });
@@ -375,13 +412,14 @@ const insertRow = async (t, patch, user, { coerced = false, batchId } = {}) => {
   const dup = await checkUnique(t, data);
   if (dup) throw new Error(dup);
   const { nextAutoNumber } = await CustomTable.findByIdAndUpdate(t._id, { $inc: { nextAutoNumber: 1 } }, { new: false, projection: { nextAutoNumber: 1 } });
-  const row = await CustomRow.create({ tableId: t._id, data, autoNumber: nextAutoNumber, createdBy: user?._id, updatedBy: user?._id, importBatchId: batchId, ...systemColumns(t, data) });
+  const team = await teamSnapshot(t, data, null, resolver);
+  const row = await CustomRow.create({ tableId: t._id, data, autoNumber: nextAutoNumber, createdBy: user?._id, updatedBy: user?._id, importBatchId: batchId, ...systemColumns(t, data), ...team, ...(groups?.length ? { groups } : {}) });
   await RowActivity.create({ tableId: t._id, rowId: row._id, batchId, action: "create", user: user?._id, changes: Object.entries(data).map(([field, v]) => ({ field, old: null, new: v })) });
   return row;
 };
 
 /** Update a row with an already-coerced patch, recording field-level changes. */
-const patchRow = async (t, row, data, user, { batchId } = {}) => {
+const patchRow = async (t, row, data, user, { batchId, resolver = makeResolver() } = {}) => {
   const changes = [];
   const next = { ...(row.data || {}) };
   for (const [k, v] of Object.entries(data)) {
@@ -392,7 +430,8 @@ const patchRow = async (t, row, data, user, { batchId } = {}) => {
   if (!changes.length) return { row, changed: false };
   const dup = await checkUnique(t, next, row._id);
   if (dup) throw new Error(dup);
-  const updated = await CustomRow.findByIdAndUpdate(row._id, { $set: { data: next, updatedBy: user?._id, ...systemColumns(t, next) } }, { new: true }).lean();
+  const team = await teamSnapshot(t, next, row, resolver);
+  const updated = await CustomRow.findByIdAndUpdate(row._id, { $set: { data: next, updatedBy: user?._id, ...systemColumns(t, next), ...team } }, { new: true }).lean();
   await RowActivity.create({ tableId: t._id, rowId: row._id, batchId, action: "update", user: user?._id, changes });
   return { row: updated, changed: true };
 };
@@ -401,7 +440,9 @@ export const createRow = async (req, res) => {
   const t = await loadTable(req, res);
   if (!t) return;
   try {
-    const row = await insertRow(t, req.body.data || {}, req.user);
+    // a row added inside a group tab joins that group
+    const groups = Array.isArray(req.body.groups) ? req.body.groups.filter((k) => (t.groups || []).some((g) => g.key === k)) : undefined;
+    const row = await insertRow(t, req.body.data || {}, req.user, { groups });
     res.status(201).json(row);
   } catch (e) {
     fail(res, 400, e.message, { errors: e.errors });
@@ -433,6 +474,7 @@ export const bulkRows = async (req, res) => {
   if (!t) return;
   const items = (req.body.items || []).slice(0, 2000);
   const results = [];
+  const resolver = makeResolver();
   for (const [i, it] of items.entries()) {
     try {
       if (it.rowId) {
@@ -440,10 +482,10 @@ export const bulkRows = async (req, res) => {
         if (!row) throw new Error("Row not found");
         const { data, errors } = coerceData(t, it.data);
         if (errors.length) throw new Error(errors.map((e) => `${e.label}: ${e.message}`).join("; "));
-        const out = await patchRow(t, row, data, req.user);
+        const out = await patchRow(t, row, data, req.user, { resolver });
         results.push({ i, ok: true, row: out.row });
       } else {
-        const row = await insertRow(t, it.data, req.user);
+        const row = await insertRow(t, it.data, req.user, { resolver });
         results.push({ i, ok: true, row });
       }
     } catch (e) {
@@ -485,6 +527,141 @@ export const rowActivity = async (req, res) => {
   if (!t) return;
   const items = await RowActivity.find({ tableId: t._id, rowId: req.params.rowId }).sort({ createdAt: -1 }).limit(200).populate("user", "name email").lean();
   res.json(items);
+};
+
+/**
+ * POST /:id/rows/recheck-teams { ids? } (admins) — find the team again from each row's code
+ * and date, for rows entered with a wrong code or before the code's history was corrected.
+ */
+export const recheckTeams = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  if (!teamFromCode(t)) return fail(res, 400, "Map a field to “Team code” first (Fields → edit the field → Feeds)");
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(oid) : null;
+  const rows = await CustomRow.find({ tableId: t._id, deleted: false, ...(ids ? { _id: { $in: ids } } : {}) }).select("data teamResolution createdAt fieldTeamId").lean();
+  const resolver = makeResolver();
+  let changed = 0;
+  let unmatched = 0;
+  const ops = [];
+  for (const r of rows) {
+    const team = await teamSnapshot(t, r.data || {}, r, resolver, { force: true });
+    if (team.teamResolution?.source === "none") unmatched++;
+    if (String(team.fieldTeamId || "") !== String(r.fieldTeamId || "")) changed++;
+    ops.push({ updateOne: { filter: { _id: r._id }, update: { $set: team } } });
+  }
+  for (let i = 0; i < ops.length; i += 1000) await CustomRow.bulkWrite(ops.slice(i, i + 1000));
+  res.json({ checked: rows.length, changed, unmatched });
+};
+
+// ---------------------------------------------------------------- row groups
+const GROUP_COLORS = ["violet", "blue", "green", "amber", "pink", "teal", "red", "gray"];
+const cleanFilters = (t, list) => (Array.isArray(list) ? list : [])
+  .filter((f) => f && FILTER_OPS[f.op] && t.fields.some((x) => x.key === f.field))
+  .map((f) => ({ field: f.field, op: f.op, value: f.value }));
+const canEditGroup = (req, g) => isAdmin(req) || String(g.createdBy || "") === String(req.user._id);
+
+/** POST /:id/groups { name, color, description, filters, rowIds } */
+export const createGroup = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  const name = String(req.body.name || "").trim();
+  if (!name) return fail(res, 400, "Name the group");
+  if ((t.groups || []).some((g) => g.name.toLowerCase() === name.toLowerCase())) return fail(res, 409, `A group called “${name}” already exists in this table`);
+  const key = `g_${new mongoose.Types.ObjectId().toString().slice(-8)}`;
+  const g = {
+    key,
+    name,
+    color: GROUP_COLORS.includes(req.body.color) ? req.body.color : GROUP_COLORS[(t.groups || []).length % GROUP_COLORS.length],
+    description: String(req.body.description || ""),
+    filters: cleanFilters(t, req.body.filters),
+    order: (t.groups || []).length,
+    createdBy: req.user._id,
+    createdAt: new Date(),
+  };
+  await CustomTable.updateOne({ _id: t._id }, { $push: { groups: g } });
+  const ids = (req.body.rowIds || []).filter(oid);
+  if (ids.length) await CustomRow.updateMany({ _id: { $in: ids }, tableId: t._id }, { $addToSet: { groups: key } });
+  res.status(201).json({ table: await CustomTable.findById(t._id).lean(), key });
+};
+
+/** PATCH /:id/groups/:key { name, color, description, filters, order } */
+export const updateGroup = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  const g = (t.groups || []).find((x) => x.key === req.params.key);
+  if (!g) return fail(res, 404, "Group not found");
+  if (!canEditGroup(req, g)) return fail(res, 403, "Only the person who made this group, or an admin, can change it");
+  if (req.body.name !== undefined) {
+    const name = String(req.body.name).trim();
+    if (!name) return fail(res, 400, "Name the group");
+    if (t.groups.some((x) => x.key !== g.key && x.name.toLowerCase() === name.toLowerCase())) return fail(res, 409, `A group called “${name}” already exists in this table`);
+    g.name = name;
+  }
+  if (req.body.color !== undefined && GROUP_COLORS.includes(req.body.color)) g.color = req.body.color;
+  if (req.body.description !== undefined) g.description = String(req.body.description);
+  if (req.body.filters !== undefined) g.filters = cleanFilters(t, req.body.filters);
+  if (req.body.order !== undefined) g.order = Number(req.body.order) || 0;
+  t.markModified("groups");
+  await t.save();
+  res.json(t);
+};
+
+/** DELETE /:id/groups/:key — removes the group only; its rows stay in the table. */
+export const deleteGroup = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  const g = (t.groups || []).find((x) => x.key === req.params.key);
+  if (!g) return fail(res, 404, "Group not found");
+  if (!canEditGroup(req, g)) return fail(res, 403, "Only the person who made this group, or an admin, can delete it");
+  await CustomRow.updateMany({ tableId: t._id, groups: g.key }, { $pull: { groups: g.key } });
+  t.groups = t.groups.filter((x) => x.key !== g.key);
+  await t.save();
+  res.json(t);
+};
+
+/** POST /:id/groups/:key/rows { add: [rowId], remove: [rowId] } */
+export const groupRows = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  const g = (t.groups || []).find((x) => x.key === req.params.key);
+  if (!g) return fail(res, 404, "Group not found");
+  const add = (req.body.add || []).filter(oid);
+  const remove = (req.body.remove || []).filter(oid);
+  const [a, r] = await Promise.all([
+    add.length ? CustomRow.updateMany({ _id: { $in: add }, tableId: t._id }, { $addToSet: { groups: g.key } }) : { modifiedCount: 0 },
+    remove.length ? CustomRow.updateMany({ _id: { $in: remove }, tableId: t._id }, { $pull: { groups: g.key } }) : { modifiedCount: 0 },
+  ]);
+  res.json({ added: a.modifiedCount, removed: r.modifiedCount });
+};
+
+/** POST /:id/groups/:key/to-table { name } (admins) — copy the group's rows into a new, separate table. */
+export const groupToTable = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  const g = (t.groups || []).find((x) => x.key === req.params.key);
+  if (!g) return fail(res, 404, "Group not found");
+  const name = String(req.body.name || `${t.name} · ${g.name}`).trim();
+  const live = t.fields.filter((f) => !f.archived);
+  const clean = live.map((f, i) => sanitizeField({ ...(f.toObject ? f.toObject() : f), key: undefined }, i));
+  const table = await CustomTable.create({
+    name,
+    description: `Copied from “${t.name}” (group “${g.name}”)`,
+    issueCategory: t.issueCategory,
+    issueSubCategory: t.issueSubCategory,
+    owner: req.user._id,
+    visibility: t.visibility,
+    fields: clean,
+    primaryField: clean[live.findIndex((f) => f.key === t.primaryField)]?.key || clean[0].key,
+  });
+  const keyMap = Object.fromEntries(live.map((f, i) => [f.key, clean[i].key]));
+  const rows = await CustomRow.find(rowQuery(t, { group: g.key })).sort({ autoNumber: 1 }).lean();
+  const resolver = makeResolver();
+  for (const r of rows) {
+    const data = Object.fromEntries(Object.entries(r.data || {}).filter(([k]) => keyMap[k]).map(([k, v]) => [keyMap[k], v]));
+    await insertRow(table, data, req.user, { coerced: true, resolver });
+  }
+  await TableView.create({ tableId: table._id, name: "All rows", type: "grid", owner: req.user._id, shared: true });
+  res.status(201).json({ table, rows: rows.length });
 };
 
 // ---------------------------------------------------------------- views
@@ -545,6 +722,7 @@ export const importRows = async (req, res) => {
   }
   const results = [];
   const seen = new Set();
+  const resolver = makeResolver();
   for (const [i, r] of rows.entries()) {
     const rowNo = r.__row ?? i + 1;
     try {
@@ -566,10 +744,10 @@ export const importRows = async (req, res) => {
         continue;
       }
       if (existing) {
-        const out = await patchRow(t, existing, data, req.user, { batchId: batch._id });
+        const out = await patchRow(t, existing, data, req.user, { batchId: batch._id, resolver });
         results.push({ row: rowNo, action: out.changed ? "update" : "skip", status: "ok", id: existing._id });
       } else {
-        const row = await insertRow(t, data, req.user, { coerced: true, batchId: batch._id });
+        const row = await insertRow(t, data, req.user, { coerced: true, batchId: batch._id, resolver });
         results.push({ row: rowNo, action: "create", status: "ok", id: row._id });
       }
     } catch (e) {
@@ -632,7 +810,7 @@ export const rollbackBatch = async (req, res) => {
       if (changes.length) {
         await CustomRow.updateOne({ _id: a.rowId }, { $set: { ...set, updatedBy: req.user._id } });
         const fresh = await CustomRow.findById(a.rowId).lean();
-        await CustomRow.updateOne({ _id: a.rowId }, { $set: systemColumns(t, fresh.data || {}) });
+        await CustomRow.updateOne({ _id: a.rowId }, { $set: { ...systemColumns(t, fresh.data || {}), ...(await teamSnapshot(t, fresh.data || {}, fresh, makeResolver())) } });
         await RowActivity.create({ tableId: t._id, rowId: a.rowId, batchId: b._id, action: "rollback", user: req.user._id, changes });
         reverted++;
       }

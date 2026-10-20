@@ -8,8 +8,21 @@ export const TAXONOMY = [
   { category: "Internal Audit (FAT)", subs: [] },
   { category: "DVOC", subs: ["Installation", "Maintenance"] },
 ];
+export const BUILT_IN_CATEGORIES = TAXONOMY.map((t) => t.category);
 
-const byName = Object.fromEntries(TAXONOMY.map((t) => [t.category, t]));
+let byName = Object.fromEntries(TAXONOMY.map((t) => [t.category, t]));
+
+/**
+ * Trackers added from the UI (Tracker collection) join the taxonomy at runtime.
+ * TAXONOMY keeps its identity so existing imports see the additions.
+ */
+export const setCustomTrackers = (list = []) => {
+  const custom = list
+    .filter((t) => t.name && !BUILT_IN_CATEGORIES.includes(t.name))
+    .map((t) => ({ category: t.name, subs: t.subs || [], custom: true }));
+  TAXONOMY.splice(BUILT_IN_CATEGORIES.length, TAXONOMY.length, ...custom);
+  byName = Object.fromEntries(TAXONOMY.map((t) => [t.category, t]));
+};
 
 /** Returns an error message, or null when the pair is valid. */
 export const validateTaxonomy = (category, subCategory) => {

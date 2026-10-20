@@ -56,6 +56,21 @@ const customTableSchema = new Schema(
     fields: [fieldSchema],
     primaryField: { type: String },
     nextAutoNumber: { type: Number, default: 1 },
+    // named row groups ("tables inside the table"): rows carry the group key in row.groups;
+    // a group with filters is rule-based and also includes every row that matches them
+    groups: [
+      {
+        key: { type: String, required: true },
+        name: { type: String, required: true, trim: true },
+        color: { type: String, default: "violet" },
+        description: { type: String, default: "" },
+        filters: [{ field: String, op: String, value: Schema.Types.Mixed, _id: false }],
+        order: { type: Number, default: 0 },
+        createdBy: { type: ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+        _id: false,
+      },
+    ],
     settings: {
       showInCalendar: { type: Boolean, default: true },
       // date field keys that place rows on the calendar; empty = automatic (see calendarFieldsOf)
@@ -81,6 +96,17 @@ const customRowSchema = new Schema(
     fieldTeamId: { type: ObjectId, ref: "FieldTeams" },
     dueDate: { type: Date },
     linkedTaskId: { type: ObjectId, ref: "Task" },
+    // SLID and team code from the table's core mapping; the team is the code's holder on the
+    // row's date, stored when the row is saved (teamResolution says how it was found)
+    slid: { type: String },
+    teamCode: { type: String },
+    teamResolution: {
+      code: String,
+      on: Date,
+      source: { type: String }, // history | current | none
+      at: Date,
+    },
+    groups: { type: [String], default: undefined },
     importBatchId: { type: ObjectId, ref: "ImportBatch" },
     createdBy: { type: ObjectId, ref: "User" },
     updatedBy: { type: ObjectId, ref: "User" },
@@ -92,6 +118,8 @@ const customRowSchema = new Schema(
 customRowSchema.index({ tableId: 1, deleted: 1, createdAt: -1 });
 customRowSchema.index({ tableId: 1, dueDate: 1 });
 customRowSchema.index({ importBatchId: 1 });
+customRowSchema.index({ slid: 1 });
+customRowSchema.index({ fieldTeamId: 1, deleted: 1 });
 
 const tableViewSchema = new Schema(
   {

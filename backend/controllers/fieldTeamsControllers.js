@@ -1,5 +1,6 @@
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import { TrainingSession } from "../models/trainingSessionModel.js";
+import { recordCodeChange } from "../utils/teamCodes.js";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 dotenv.config();
@@ -311,6 +312,8 @@ export const addFieldTeam = async (req, res) => {
     });
 
     await newFieldTeam.save();
+    // start the code's history (keeps a previous holder's tickets with them)
+    await recordCodeChange({ team: newFieldTeam, oldCode: null, newCode: newFieldTeam.teamCode, user: req.user }).catch((e) => console.error("Team code history:", e.message));
     res.status(201).json(newFieldTeam);
   } catch (error) {
     console.error("Error adding field team:", error);
@@ -529,6 +532,7 @@ export const updateFieldTeam = async (req, res) => {
     }
 
     const updates = { ...req.body };
+    delete updates.codeEffectiveFrom;
     if (updates.experienceYears !== undefined || updates.experienceMonths !== undefined || updates.experienceDays !== undefined) {
       const expY = updates.experienceYears !== undefined ? Number(updates.experienceYears) : (team.experienceYears || 0);
       const expM = updates.experienceMonths !== undefined ? Number(updates.experienceMonths) : (team.experienceMonths || 0);
@@ -572,6 +576,12 @@ export const updateFieldTeam = async (req, res) => {
       new: true,
       runValidators: true
     });
+
+    // a new code: close the old period and open a new one from the effective date (default now)
+    if (updates.teamCode && updates.teamCode !== team.teamCode) {
+      const at = req.body.codeEffectiveFrom && !Number.isNaN(new Date(req.body.codeEffectiveFrom).getTime()) ? new Date(req.body.codeEffectiveFrom) : new Date();
+      await recordCodeChange({ team, oldCode: team.teamCode, newCode: updates.teamCode, at, user: req.user }).catch((e) => console.error("Team code history:", e.message));
+    }
 
     res.status(200).json(updatedFieldTeam);
   } catch (error) {

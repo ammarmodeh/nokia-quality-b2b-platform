@@ -32,6 +32,8 @@ import healthRoutes from "./routes/healthRoutes.js";
 import importRoutes from "./routes/importRoutes.js";
 import { customTableRouter, tableTemplateRouter, storedFileRouter } from "./routes/customTableRoutes.js";
 import { mountBulkDelete } from "./routes/bulkDeleteRoutes.js";
+import { trackerRouter, teamCodeRouter, calendarEntryRouter, teamAnalyticsRouter } from "./routes/qopsRoutes.js";
+import { ensureTrackers } from "./utils/trackers.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
 
@@ -111,6 +113,7 @@ connectDB();
 // ------------------------------------------------------------------
 // API routes
 // ------------------------------------------------------------------
+app.use("/api", ensureTrackers); // trackers added online join the taxonomy
 mountBulkDelete(app); // POST /api/<resource>/bulk-delete (admins)
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
@@ -138,6 +141,10 @@ app.use("/api/audit", fieldAuditRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/import", importRoutes);
 app.use("/api/custom-tables", customTableRouter);
+app.use("/api/trackers", trackerRouter);
+app.use("/api/team-codes", teamCodeRouter);
+app.use("/api/calendar-entries", calendarEntryRouter);
+app.use("/api/team-analytics", teamAnalyticsRouter);
 app.use("/api/table-templates", tableTemplateRouter);
 app.use("/api/stored-files", storedFileRouter);
 app.use("/api/training-sessions", trainingSessionRoutes);

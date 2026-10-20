@@ -10,7 +10,7 @@ export const FIELD_TYPES = [
   "autoNumber", "createdTime", "updatedTime", "createdBy", "updatedBy",
 ];
 export const READ_ONLY_TYPES = ["autoNumber", "createdTime", "updatedTime", "createdBy", "updatedBy"];
-export const CORE_CONCEPTS = ["status", "assignee", "fieldTeam", "date", "schedule", "category", "severity", "customerId", "location"];
+export const CORE_CONCEPTS = ["status", "assignee", "fieldTeam", "date", "schedule", "category", "severity", "customerId", "location", "slid", "teamCode"];
 // which field types can feed each core concept
 export const CORE_TYPES = {
   status: ["singleSelect", "checkbox", "text"],
@@ -23,6 +23,10 @@ export const CORE_TYPES = {
   severity: ["singleSelect", "rating", "number"],
   customerId: ["text", "phone", "number", "autoNumber"],
   location: ["text", "longText"],
+  // the service line id that ties records across trackers
+  slid: ["text", "number"],
+  // the field team's code; resolved to the team that held it on the record's date
+  teamCode: ["text", "number", "singleSelect"],
 };
 
 export const newFieldKey = () => `f_${crypto.randomBytes(4).toString("hex")}`;
@@ -163,6 +167,8 @@ export const systemColumns = (table, data) => {
   if (by.assignee) out.assignees = (data[by.assignee.key] || []).filter(isId);
   if (by.fieldTeam && by.fieldTeam.type === "fieldTeam") out.fieldTeamId = isId(data[by.fieldTeam.key]) ? data[by.fieldTeam.key] : undefined;
   if (by.date) out.dueDate = data[by.date.key] ? new Date(data[by.date.key]) : undefined;
+  if (by.slid) out.slid = isEmpty(data[by.slid.key]) ? undefined : String(data[by.slid.key]).trim().toUpperCase();
+  if (by.teamCode) out.teamCode = isEmpty(data[by.teamCode.key]) ? undefined : String(data[by.teamCode.key]).trim().toUpperCase();
   return out;
 };
 

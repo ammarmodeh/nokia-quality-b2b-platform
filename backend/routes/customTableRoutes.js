@@ -35,7 +35,14 @@ r.post("/:id/rows/bulk", wrap(c.bulkRows));
 r.post("/:id/rows/delete", wrap(c.deleteRows));
 r.post("/:id/rows/restore", wrap(c.deleteRows));
 r.post("/:id/rows/purge", wrap(c.purgeRows));
+r.post("/:id/rows/recheck-teams", adminOnly, wrap(c.recheckTeams));
 r.patch("/:id/rows/:rowId", wrap(c.updateRow));
+
+r.post("/:id/groups", wrap(c.createGroup));
+r.patch("/:id/groups/:key", wrap(c.updateGroup));
+r.delete("/:id/groups/:key", wrap(c.deleteGroup));
+r.post("/:id/groups/:key/rows", wrap(c.groupRows));
+r.post("/:id/groups/:key/to-table", adminOnly, wrap(c.groupToTable));
 r.get("/:id/rows/:rowId/activity", wrap(c.rowActivity));
 
 r.get("/:id/views", wrap(c.listViews));
