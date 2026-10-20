@@ -1,8 +1,15 @@
+import PageHeader from "../components/ui/PageHeader";
+import StatCard from "../components/ui/StatCard";
+import AppDialog from "../components/ui/AppDialog";
+import SafeDeleteDialog from "../components/ui/SafeDeleteDialog";
+import { bulkDelete, DELETE_PATHS } from "../api/bulkDelete";
+import { TASK_COLUMNS } from "./tasks/exportTasks";
+import { Link as RouterLink } from "react-router-dom";
+import { MdArrowBack } from "react-icons/md";
 import { alpha } from "../theme/colorFns";
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, InputAdornment, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Stack, Grid, Collapse, ButtonGroup, Autocomplete, Card, CardContent, Accordion, AccordionSummary, AccordionDetails, LinearProgress, Radio, RadioGroup, FormControlLabel } from '@mui/material';
-import { MoonLoader } from 'react-spinners';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Button, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Stack, Grid, Autocomplete, Accordion, AccordionSummary, AccordionDetails, LinearProgress } from '@mui/material';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
   MdSearch,
@@ -17,24 +24,19 @@ import {
   MdFilterList,
   MdCheckCircle,
   MdRadioButtonUnchecked,
-  MdHourglassEmpty,
-  MdPhoneMissed,
-  MdCalendarToday,
-  MdBlock,
   MdError,
-  MdTimeline,
   MdInsights,
   MdDateRange,
   MdAssignmentTurnedIn,
   MdHistory,
   MdExpandMore,
-  MdBarChart
+  MdBarChart,
 } from 'react-icons/md';
 
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks, subMonths, eachWeekOfInterval, eachMonthOfInterval, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, format, subWeeks, subMonths, eachWeekOfInterval, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 import { IoMdAdd } from "react-icons/io";
 import api from '../api/api';
 import EditTaskDialog from '../components/task/EditTaskDialog';
@@ -48,8 +50,7 @@ import {
 import XLSX from 'xlsx-js-style';
 import AddTask from '../components/task/AddTask';
 import AdvancedSearch from '../components/common/AdvancedSearch';
-import moment from 'moment';
-import { buildOwnerIssueRows, normalizeArrayField } from '../utils/ownerIssueGrouping';
+import { buildOwnerIssueRows } from '../utils/ownerIssueGrouping';
 
 const DEFAULT_SETTINGS_STATE = { settings: {} };
 
@@ -65,7 +66,7 @@ const AllTasksList = () => {
     if (!date) return "-";
     try {
       return getAggregatedWeekNumber(new Date(date), new Date(date).getFullYear(), settings);
-    } catch (e) {
+    } catch {
       return "-";
     }
   };
@@ -153,13 +154,13 @@ const AllTasksList = () => {
       const promises = yearsToFetch.map(year =>
         api.get(`/samples-token/${year}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-        }).catch(err => ({ data: [] }))
+        }).catch(() => ({ data: [] }))
       );
 
       const dailyPromises = yearsToFetch.map(year =>
         api.get(`/samples-token/daily-online/${year}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-        }).catch(err => ({ data: [] }))
+        }).catch(() => ({ data: [] }))
       );
 
       const [responses, dailyResponses] = await Promise.all([
@@ -255,7 +256,6 @@ const AllTasksList = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
-  const [confirmSlid, setConfirmSlid] = useState('');
   const [openAddTask, setOpenAddTask] = useState(false);
   const [updateRefetchTasks, setUpdateRefetchTasks] = useState(0);
 
@@ -612,16 +612,7 @@ const AllTasksList = () => {
 
 
 
-  const handleRowClick = (taskId) => {
-    setSelectedRowId(prevId => {
-      // If clicking the same row, toggle selection
-      if (prevId === taskId) {
-        return null;
-      }
-      // Otherwise select the new row
-      return taskId;
-    });
-  };  // Chart Data Processing
+  // Chart Data Processing
 
 
   // --- ADVANCED KPI CALCULATIONS ---
@@ -673,70 +664,6 @@ const AllTasksList = () => {
   const inProgressCount = filteredTasks.filter(t => t.status === 'In Progress').length;
   const closedCount = filteredTasks.filter(t => t.status === 'Closed').length;
 
-  const StatCard = ({ title, value, icon, color, subtitle, extra }) => (
-    <Card sx={{
-      background: 'rgba(45, 45, 45, 0.6)',
-      backdropFilter: 'blur(10px)',
-      border: `1px solid ${alpha(color, 0.3)}`,
-      borderRadius: '24px',
-      color: 'var(--text)',
-      height: '100%',
-      position: 'relative',
-      overflow: 'hidden',
-      transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-      '&:hover': {
-        transform: 'translateY(-8px)',
-        boxShadow: `0 15px 30px ${alpha(color, 0.3)}`,
-        borderColor: color,
-        '& .stat-icon': {
-          transform: 'scale(1.1) rotate(5deg)',
-          boxShadow: `0 0 20px ${alpha(color, 0.4)}`,
-        }
-      },
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: '100px',
-        height: '100px',
-        background: `radial-gradient(circle at top right, ${alpha(color, 0.1)}, transparent 70%)`,
-        zIndex: 0
-      }
-    }}>
-      <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Box className="stat-icon" sx={{
-            p: 1.5,
-            borderRadius: '16px',
-            background: alpha(color, 0.15),
-            color: color,
-            display: 'flex',
-            transition: 'all 0.3s ease',
-            border: `1px solid ${alpha(color, 0.2)}`
-          }}>
-            {icon}
-          </Box>
-          {subtitle && (
-            <Typography variant="overline" sx={{ color: alpha('#fff', 0.5), fontWeight: 900, fontSize: '0.65rem', letterSpacing: 1.5 }}>
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-        <Typography variant="h3" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: '-1.5px', color: 'var(--text)' }}>
-          {value}
-        </Typography>
-        <Typography variant="subtitle2" sx={{ color: alpha('#fff', 0.6), fontWeight: 700, mb: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {title}
-        </Typography>
-        {extra && (
-          <Box sx={{ mt: 'auto', pt: 2, borderTop: `1px solid ${alpha('#fff', 0.05)}` }}>
-            {extra}
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   // Weekly Trend Data Processing
 
@@ -775,7 +702,7 @@ const AllTasksList = () => {
         });
         setFavoriteTasks([...favoriteTasks, response.data]);
       }
-    } catch (error) {
+    } catch {
       // console.error("Error updating favorite status:", error);
       alert("Failed to update favorites. Please try again.");
     }
@@ -794,47 +721,6 @@ const AllTasksList = () => {
   };
 
   // Handle task deletion
-  const handleDeleteTask = async () => {
-    try {
-      // First, get the complete task data
-      const { data: taskData } = await api.get(`/tasks/get-task/${taskToDelete._id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
-
-      if (!taskData) {
-        throw new Error("Task not found");
-      }
-
-      // Move to trash with additional metadata
-      const trashResponse = await api.post('/trash/add-trash', {
-        ...taskData, // Spread all task fields
-        deletedBy: user._id,
-        deletedAt: new Date()
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
-
-      if (trashResponse.status === 201) {
-        // Only delete from main collection if trash operation succeeded
-        await api.delete(`/tasks/delete-task/${taskToDelete._id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
-
-        // Update UI state
-        setAllTasks(prev => prev.filter(task => task._id !== taskToDelete._id));
-        setDeleteDialogOpen(false);
-        setTaskToDelete(null);
-
-        alert("Task moved to trash successfully");
-      } else {
-        throw new Error("Failed to move task to trash");
-      }
-    } catch (err) {
-      // console.error("Error deleting task:", err);
-      setError("Failed to delete task. Please try again.");
-      console.log('error message:', err);
-    }
-  };
 
   const exportToExcel = async () => {
     // 1. Determine Reported Period (Filtered Dashboard Data)
@@ -847,7 +733,7 @@ const AllTasksList = () => {
         periodStr = `${format(dateFilter.start, 'dd/MM/yyyy')} - ${format(dateFilter.end, 'dd/MM/yyyy')}`;
         periodStart = format(dateFilter.start, 'ddMMyyyy');
         periodEnd = format(dateFilter.end, 'ddMMyyyy');
-      } catch (e) {
+      } catch {
         periodStr = "Custom Period";
       }
     } else if (filteredTasks.length > 0) {
@@ -1086,7 +972,6 @@ const AllTasksList = () => {
     const totalSamples = dashboardStats.totalSamples || filteredTasks.length;
     const auditedTasks = filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== 'N/A');
     const totalAudited = auditedTasks.length;
-    const validatedCount = filteredTasks.filter(t => t.validationStatus === 'Validated').length;
 
     // Exact count of detractors and neutrals matching dashboard logic
     const detractors = auditedTasks.filter(t => Number(t.evaluationScore) <= 6).length;
@@ -1094,9 +979,6 @@ const AllTasksList = () => {
     const promoters = Math.max(0, totalSamples - (detractors + neutrals));
     const nps = (totalSamples > 0) ? Math.round(((promoters / totalSamples) - (detractors / totalSamples)) * 100) : 0;
 
-    const validatedDetractors = auditedTasks.filter(t =>
-      Number(t.evaluationScore) <= 6 && t.validationStatus === 'Validated'
-    ).length;
 
     const totalIssues = filteredTasks.reduce((acc, t) => {
       const val = t.reason;
@@ -1498,7 +1380,7 @@ const AllTasksList = () => {
 
       // Level 2 Sub-Headers
       const lvl2 = ["Category / Item", "Total", "% Total"];
-      owners.forEach(o => {
+      owners.forEach(() => {
         lvl2.push("Count", "% Share");
       });
       lvl2.push("Detractors", "Detractor %", "Neutrals", "Neutral %");
@@ -1692,7 +1574,6 @@ const AllTasksList = () => {
     // 3.5 Special Analytics Window
     const ownerCounts = {};
     const ownerCustomerCounts = {};
-    const totalNonPromoterCustomers = filteredTasks.length;
 
     filteredTasks.forEach(t => {
       const resp = t.responsible;
@@ -2165,14 +2046,6 @@ const AllTasksList = () => {
       return [String(val).trim()].filter(Boolean);
     }
 
-    const buildExpandedFieldColumns = (task, field, baseName, maxCount) => {
-      const values = normalizeArrayField(task[field]);
-      const cols = {};
-      for (let i = 0; i < maxCount; i += 1) {
-        cols[`${baseName} ${i + 1}`] = values[i] || 'N/A';
-      }
-      return cols;
-    };
 
     const buildInterleavedFieldColumns = (task, fieldGroups, maxCount) => {
       const cols = {};
@@ -2248,7 +2121,6 @@ const AllTasksList = () => {
       })).sort((a, b) => b.Count - a.Count);
     }
 
-    const getFieldStats = (tasks, field) => getScopedFieldStats(tasks, field);
 
     const addSubsetSummary = (ws, tasks, startR, titleColorHex, headerColorHex, ownerFilter = null, accFilter = null) => {
       if (tasks.length === 0) return startR;
@@ -3519,7 +3391,7 @@ const AllTasksList = () => {
       if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
       if (typeof raw === 'string') {
         const trimmed = raw.trim();
-        const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        const dmyMatch = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
         if (dmyMatch) {
           const day = parseInt(dmyMatch[1], 10);
           const month = parseInt(dmyMatch[2], 10) - 1;
@@ -3527,7 +3399,7 @@ const AllTasksList = () => {
           const d = new Date(year, month, day);
           if (!Number.isNaN(d.getTime())) return d;
         }
-        const ymdMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+        const ymdMatch = trimmed.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
         if (ymdMatch) {
           const year = parseInt(ymdMatch[1], 10);
           const month = parseInt(ymdMatch[2], 10) - 1;
@@ -3723,7 +3595,6 @@ const AllTasksList = () => {
       const initialSamples = rawTokenSamples > 0 ? rawTokenSamples : totalTasks;
       const finalTotalSamples = Math.max(0, initialSamples - totalNonAccRemoved);
       const finalPromoters = Math.max(0, finalTotalSamples - reachDetractors - reachNeutrals);
-      const finalNps = finalTotalSamples > 0 ? Math.round(((finalPromoters - reachDetractors) / finalTotalSamples) * 100) : 0;
 
       // Aggregate Cohort Stats
       const cohort = getCohortLabel(teamDoc);
@@ -3956,7 +3827,7 @@ const AllTasksList = () => {
     }));
 
     // 2.5 Training Detractor Summary
-    const globalDetReach = Object.values(trainingAggregates).reduce((sum, d) => sum + d.Reach, 0); // This is total reach, wait
+ // This is total reach, wait
     // We need detractor reach
     const trainingDetTableData = Object.entries(trainingAggregates).map(([status, data]) => {
       // Need to find detractor reach in aggregates? 
@@ -4553,8 +4424,6 @@ const AllTasksList = () => {
     const cumulativeBreakdownRows = computeBreakdownRows(cumulativeTeamStatsMap, getCumulativeTeamToken);
 
     // Cumulative Summary Totals
-    const cumSumInitial = cumulativeBreakdownRows.reduce((sum, r) => sum + r['Initial Samples (Token)'], 0);
-    const cumSumDet = cumulativeBreakdownRows.reduce((sum, r) => sum + r['Total Detractors'], 0);
     // Add Escalation Matrix Policy Reference Table (Columns A-C)
     XLSX.utils.sheet_add_aoa(wsTeamPerfCumulative, escalationMatrixRef, { origin: "A3" });
     wsTeamPerfCumulative['A3'] = {
@@ -5781,8 +5650,6 @@ const AllTasksList = () => {
       const teamSubReasons = getReachIssuesStats(teamEntry.accIssues, 'subReason');
       const teamRootCauses = getReachIssuesStats(teamEntry.accIssues, 'rootCause');
       const teamAcc = getReachIssuesStats(teamEntry.accIssues, 'accountability');
-      const teamItns = getReachIssuesStats(teamEntry.accIssues, 'itnRelated');
-      const teamSubs = getReachIssuesStats(teamEntry.accIssues, 'relatedToSubscription');
 
       const teamTablesStartR = teamKpiStartR + teamSummaryRows.length + 3;
       const teamRcaNextR = addHierarchicalRCA(wsReachOwnershipAnalysis, teamTree, XLSX.utils.encode_cell({ r: teamTablesStartR - 1, c: 0 }), "ROOT CAUSE BREAKDOWN (ACCOUNTABLE)", "1E3A8A");
@@ -7335,7 +7202,6 @@ const AllTasksList = () => {
     const beforeDetractorPctNum = totalSampleCount > 0 ? (currentCounts.detractors / totalSampleCount) * 100 : 0;
     const beforeNeutralPctNum = totalSampleCount > 0 ? (currentCounts.neutrals / totalSampleCount) * 100 : 0;
     const baseNPS = Math.round(beforePromoterPctNum - beforeDetractorPctNum);
-    const formatPercent = (val) => totalSampleCount > 0 ? `${((val / totalSampleCount) * 100).toFixed(1)}%` : '0.0%';
 
     const simulateScenario = (detractorsToConvert, neutralsToConvert) => {
       const detConverted = Math.min(Math.max(0, detractorsToConvert || 0), currentCounts.detractors);
@@ -7416,22 +7282,9 @@ const AllTasksList = () => {
       .sort((a, b) => b.total - a.total);
 
     // All Owners by Total with identified issues
-    const impactTopOwners = getFieldCountsByScore(filteredTasks, 'responsible')
-      .filter(o => o.total > 0)
-      .sort((a, b) => b.total - a.total);
 
     const periodBreakdownRows = computeBreakdownRows(teamStatsMap, getTeamTokenForPeriod);
-    const underperformingTeamsInPeriod = periodBreakdownRows.filter(t => {
-      const promPct = parseFloat(t['Promoter %']) || 0;
-      const detPct = parseFloat(t['Detractor %']) || 0;
-      const accDet = Number(t['Final Detractors (Accountable)']) || 0;
-      const accNeu = Number(t['Final Neutrals (Accountable)']) || 0;
-      return (promPct < 80.0) || (detPct >= 2.0) || (accDet >= 1) || (accNeu >= 1);
-    });
 
-    const targetWorstTeams = underperformingTeamsInPeriod.length > 0
-      ? underperformingTeamsInPeriod
-      : periodBreakdownRows.filter(t => (Number(t['Final Detractors (Accountable)']) || 0) > 0 || (Number(t['Final Neutrals (Accountable)']) || 0) > 0);
 
     // Helper to add a styled indicator table
     const addIndicatorTable = (titleText, titleColorHex, headers, dataRows, colStylesConfig) => {
@@ -8462,7 +8315,7 @@ const AllTasksList = () => {
     let dailyInterval = [];
     try {
       dailyInterval = eachDayOfInterval({ start: intervalStartDate, end: intervalEndDate });
-    } catch (e) {
+    } catch {
       dailyInterval = [intervalStartDate];
     }
 
@@ -8496,7 +8349,7 @@ const AllTasksList = () => {
         if (!t.pisDate) return false;
         try {
           return format(new Date(t.pisDate), 'yyyy-MM-dd') === dateStr;
-        } catch (e) {
+        } catch {
           return false;
         }
       });
@@ -8822,7 +8675,7 @@ const AllTasksList = () => {
         if (!t.pisDate) return false;
         try {
           return format(new Date(t.pisDate), 'yyyy-MM') === monthPrefix;
-        } catch (e) {
+        } catch {
           return false;
         }
       });
@@ -8843,7 +8696,6 @@ const AllTasksList = () => {
           const normOwner = String(owner).trim().toUpperCase();
           const acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
           const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
-          const isAccNo = String(acc).trim().toLowerCase().startsWith('no') || String(acc).trim().toLowerCase() === 'n';
 
           if (normOwner === 'REACH') {
             mReachCount++;
@@ -10045,7 +9897,7 @@ const AllTasksList = () => {
         if (!t.pisDate) return false;
         try {
           return format(new Date(t.pisDate), 'yyyy-MM') === monthPrefix;
-        } catch (e) {
+        } catch {
           return false;
         }
       });
@@ -10088,7 +9940,6 @@ const AllTasksList = () => {
           const normOwner = String(owner).trim().toUpperCase();
           const acc = accs[i] || (accs.length > 0 ? accs[0] : 'Unknown');
           const isAccYes = String(acc).trim().toLowerCase().startsWith('yes') || String(acc).trim().toLowerCase() === 'y';
-          const isAccNo = String(acc).trim().toLowerCase().startsWith('no') || String(acc).trim().toLowerCase() === 'n';
 
           if (normOwner === 'REACH') {
             mOwnerStats['REACH_TOTAL'].issues++;
@@ -10471,56 +10322,12 @@ const AllTasksList = () => {
     }
   };
 
-  const renderResolutionIcon = (status) => {
-    switch (status) {
-      case "No Answer":
-        return (
-          <Tooltip title="No Answer">
-            <IconButton size="small" sx={{ color: '#ff9800', p: 0.5, cursor: 'default' }}>
-              <MdPhoneMissed size={20} />
-            </IconButton>
-          </Tooltip>
-        );
-      case "Answered and resolved":
-        return (
-          <Tooltip title="Answered and resolved">
-            <IconButton size="small" sx={{ color: '#4caf50', p: 0.5, cursor: 'default' }}>
-              <MdCheckCircle size={20} />
-            </IconButton>
-          </Tooltip>
-        );
-      case "Appointment scheduled":
-        return (
-          <Tooltip title="Appointment scheduled">
-            <IconButton size="small" sx={{ color: '#2196f3', p: 0.5, cursor: 'default' }}>
-              <MdCalendarToday size={20} />
-            </IconButton>
-          </Tooltip>
-        );
-      case "No action taken":
-        return (
-          <Tooltip title="No action taken">
-            <IconButton size="small" sx={{ color: '#f44336', p: 0.5, cursor: 'default' }}>
-              <MdBlock size={20} />
-            </IconButton>
-          </Tooltip>
-        );
-      default:
-        return (
-          <Tooltip title="Pending">
-            <IconButton size="small" sx={{ color: 'var(--accent-text)', p: 0.5, cursor: 'default' }}>
-              <MdHourglassEmpty size={20} />
-            </IconButton>
-          </Tooltip>
-        );
-    }
-  };
 
   // --- Statistics Dashboard Logic ---
 
   // Calculate Stats dynamically based on filteredTasks
   // Calculate Stats dynamically based on dashboardStats memo
-  const { totalSamples, total: actualAudits, promoterRate, detractorRate, neutralRate, nps } = dashboardStats;
+  const { totalSamples, promoterRate, detractorRate, neutralRate, nps } = dashboardStats;
 
   // Helper to get top K items
   const getTopK = (field, k = 5) => {
@@ -10580,22 +10387,14 @@ const AllTasksList = () => {
   const detractorsCount = useMemo(() => filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 1 && Number(t.evaluationScore) <= 6).length, [filteredTasks]);
   const neutralsCount = useMemo(() => filteredTasks.filter(t => t.evaluationScore !== null && t.evaluationScore !== undefined && Number(t.evaluationScore) >= 7 && Number(t.evaluationScore) <= 8).length, [filteredTasks]);
 
+  // KPI tile in the shared StatCard style; `color` marks the label icon only
   const StatBar = ({ label, value, color, icon, subLabel }) => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(color, 0.1), borderRadius: 2, minWidth: 100, flex: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, color: color }}>
-        {icon}
-        <Typography variant="body2" fontWeight="bold">{label}</Typography>
-      </Box>
-      <Typography variant="h4" fontWeight="900" sx={{ color: 'var(--text)' }}>
-        {value}
-      </Typography>
-      {subLabel && <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), mt: 0.5 }}>{subLabel}</Typography>}
-    </Box>
+    <StatCard sx={{ flex: 1, minWidth: 140 }} label={label} value={value} hint={subLabel} icon={icon ? <Box component="span" sx={{ display: 'inline-flex', color, fontSize: 15 }}>{icon}</Box> : undefined} />
   );
 
   const MiniTable = ({ title, data, color, category }) => (
     <Box sx={{ bgcolor: 'var(--overlay-subtle)', borderRadius: 2, p: 2, height: '100%' }}>
-      <Typography variant="subtitle2" sx={{ color: color, fontWeight: 'bold', mb: 2, borderBottom: `1px solid ${alpha(color, 0.2)}`, pb: 1 }}>
+      <Typography variant="subtitle2" sx={{ color: color, fontWeight: '600', mb: 2, borderBottom: `1px solid ${alpha(color, 0.2)}`, pb: 1 }}>
         {title}
       </Typography>
       <Stack spacing={1.5}>
@@ -10656,23 +10455,15 @@ const AllTasksList = () => {
   }
 
   return (
-    <Box sx={{
-      // maxWidth: '1200px',
-      mx: 'auto',
-      p: 2,
-      px: isMobile ? 0 : undefined
-    }}>
-      <Typography variant="h5" gutterBottom sx={{
-        color: 'var(--accent-text)',
-        fontWeight: 'bold',
-        fontSize: isMobile ? '1.2rem' : '1.5rem',
-        mb: 2
-      }}>
-        Tasks Audit Dashboard
-      </Typography>
+    <Box>
+      <PageHeader
+        title="Tasks audit reports"
+        description="DVOC · Installation NPS audit: KPIs, breakdowns, escalation and cumulative benchmarks, and the full task register."
+        actions={<Button variant="outlined" component={RouterLink} to="/tasks-list" startIcon={<MdArrowBack />}>Back to tasks</Button>}
+      />
 
       {/* Advanced Analytics & Filter Section */}
-      <Paper sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px dashed #6366f1', bgcolor: 'rgba(99, 102, 241, 0.04)' }}>
+      <Box sx={{ mb: 2 }}>
 
         {/* Consolidated Premium KPI Cards */}
         {/* Comprehensive Statistics Dashboard */}
@@ -10687,43 +10478,43 @@ const AllTasksList = () => {
               icon={<MdHistory />}
             // subLabel={`Actual Audits: ${actualAudits}`}
             />
-            <StatBar label="NPS Score" value={nps} color={nps >= 50 ? "#4caf50" : nps >= 0 ? "#ff9800" : "#f44336"} icon={<MdInsights />} />
-            <StatBar label="Promoters" value={`${promoterRate}%`} color="#4caf50" icon={<MdStar />} />
-            <StatBar label="Detractors" value={`${detractorRate}%`} color="#f44336" icon={<MdError />} />
-            <StatBar label="Neutrals" value={`${neutralRate}%`} color="#ff9800" icon={<MdRadioButtonUnchecked />} />
+            <StatBar label="NPS Score" value={nps} color={nps >= 50 ? "#16A34A" : nps >= 0 ? "#D97706" : "#DC2626"} icon={<MdInsights />} />
+            <StatBar label="Promoters" value={`${promoterRate}%`} color="#16A34A" icon={<MdStar />} />
+            <StatBar label="Detractors" value={`${detractorRate}%`} color="#DC2626" icon={<MdError />} />
+            <StatBar label="Neutrals" value={`${neutralRate}%`} color="#D97706" icon={<MdRadioButtonUnchecked />} />
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
             <StatBar label="Total Tasks" value={totalTasks} color="var(--accent-text)" icon={<MdAssignmentTurnedIn />} />
             <StatBar label="Total Issues" value={totalIssues} color="var(--accent-text)" icon={<MdAssignmentTurnedIn />} />
-            <StatBar label="Detractors" value={detractorsCount} color="#f44336" icon={<MdError />} />
-            <StatBar label="Neutrals" value={neutralsCount} color="#ff9800" icon={<MdRadioButtonUnchecked />} />
+            <StatBar label="Detractors" value={detractorsCount} color="#DC2626" icon={<MdError />} />
+            <StatBar label="Neutrals" value={neutralsCount} color="#D97706" icon={<MdRadioButtonUnchecked />} />
           </Stack>
 
           {/* Expandable Detailed Stats */}
-          <Accordion sx={{ bgcolor: 'var(--overlay-subtle)', color: '#fff', '&:before': { display: 'none' }, boxShadow: 'none' }}>
+          <Accordion sx={{ bgcolor: 'var(--overlay-subtle)', color: 'var(--text)', '&:before': { display: 'none' }, boxShadow: 'none' }}>
             <AccordionSummary expandIcon={<MdExpandMore style={{ color: 'var(--text)' }} />} sx={{ borderBottom: '1px solid var(--border)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <MdBarChart style={{ color: 'var(--accent-text)' }} />
-                <Typography fontWeight="bold">Detailed Breakdown (Top 5 Results)</Typography>
+                <Typography fontWeight="600">Detailed Breakdown (Top 5 Results)</Typography>
               </Box>
             </AccordionSummary>
             <AccordionDetails>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Reasons" data={topReasons} color="#2196f3" category="reason" />
+                  <MiniTable title="Top Reasons" data={topReasons} color="#2563EB" category="reason" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Sub-Reasons" data={topSubReasons} color="#9c27b0" category="subReason" />
+                  <MiniTable title="Top Sub-Reasons" data={topSubReasons} color="#6C47FF" category="subReason" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Root Causes" data={topRootCauses} color="#e91e63" category="rootCause" />
+                  <MiniTable title="Top Root Causes" data={topRootCauses} color="#DB2777" category="rootCause" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Owners" data={topOwners} color="#00bcd4" category="responsible" />
+                  <MiniTable title="Top Owners" data={topOwners} color="#2563EB" category="responsible" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="ITN Related" data={topITN} color="#ff5722" category="itnRelated" />
+                  <MiniTable title="ITN Related" data={topITN} color="#D97706" category="itnRelated" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
                   <MiniTable title="Subscription Related" data={topSubRel} color="#8bc34a" category="relatedToSubscription" />
@@ -10732,7 +10523,7 @@ const AllTasksList = () => {
             </AccordionDetails>
           </Accordion>
         </Box>
-      </Paper>
+      </Box>
 
       {/* Search and Export Bar */}
       <Box sx={{
@@ -10750,11 +10541,11 @@ const AllTasksList = () => {
         overflowY: 'hidden',
         '&::-webkit-scrollbar': { height: '4px' },
         '&::-webkit-scrollbar-track': { background: 'var(--surface)' },
-        '&::-webkit-scrollbar-thumb': { background: '#555', borderRadius: '4px' }
+        '&::-webkit-scrollbar-thumb': { background: 'var(--border-strong)', borderRadius: '4px' }
       }}>
         {/* Date Filters Merged */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-          <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="caption" sx={{ fontWeight: '600', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <MdDateRange /> Date:
           </Typography>
           <Box sx={{
@@ -10766,18 +10557,18 @@ const AllTasksList = () => {
               minWidth: 'auto',
               px: 1,
               py: 0.5,
-              borderRadius: '12px',
+              borderRadius: "10px",
               textTransform: 'none',
               fontSize: '0.72rem',
               fontWeight: 600,
               backgroundColor: 'var(--surface)',
               borderColor: 'var(--border)',
               color: 'var(--text-secondary)',
-              '&:hover': { borderColor: 'var(--accent)', backgroundColor: 'rgba(123, 104, 238, 0.08)' },
+              '&:hover': { borderColor: 'var(--accent)', backgroundColor: 'rgba(108, 71, 255, 0.08)' },
               '&.MuiButton-contained': {
                 backgroundColor: 'var(--accent)',
-                color: 'var(--text)',
-                '&:hover': { backgroundColor: '#6854d9' }
+                color: 'var(--on-accent)',
+                '&:hover': { backgroundColor: 'var(--accent-hover)' }
               }
             }
           }}>
@@ -10824,11 +10615,11 @@ const AllTasksList = () => {
                   textField: {
                     size: 'small',
                     sx: {
-                      width: 110,
+                      width: 140,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
                         backgroundColor: 'var(--surface)',
-                        borderRadius: '12px',
+                        borderRadius: "10px",
                         color: 'var(--text)'
                       },
                       '& .MuiInputLabel-root': { fontSize: '0.75rem', color: 'var(--text-secondary)' },
@@ -10845,11 +10636,11 @@ const AllTasksList = () => {
                   textField: {
                     size: 'small',
                     sx: {
-                      width: 110,
+                      width: 140,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
                         backgroundColor: 'var(--surface)',
-                        borderRadius: '12px',
+                        borderRadius: "10px",
                         color: 'var(--text)'
                       },
                       '& .MuiInputLabel-root': { fontSize: '0.75rem', color: 'var(--text-secondary)' },
@@ -10865,12 +10656,12 @@ const AllTasksList = () => {
                   setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
                 }}
                 sx={{
-                  borderRadius: '12px',
+                  borderRadius: "10px",
                   textTransform: 'none',
                   flexShrink: 0,
                   fontSize: '0.75rem',
                   backgroundColor: 'var(--accent)',
-                  '&:hover': { backgroundColor: '#6854d9' }
+                  '&:hover': { backgroundColor: 'var(--accent-hover)' }
                 }}
               >
                 Apply
@@ -10889,11 +10680,11 @@ const AllTasksList = () => {
           flexShrink: 0,
           p: 0.5,
           px: 1.2,
-          borderRadius: '14px',
-          backgroundColor: '#141226',
-          border: '1px solid #2e2857'
+          borderRadius: "10px",
+          backgroundColor: 'var(--surface-subtle)',
+          border: '1px solid var(--border)'
         }}>
-          <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#c084fc', display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+          <Typography variant="caption" sx={{ fontWeight: '600', color: 'var(--accent-text)', display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
             <MdHistory /> Cumulative Benchmark:
           </Typography>
           <Box sx={{
@@ -10912,11 +10703,11 @@ const AllTasksList = () => {
               backgroundColor: 'var(--surface)',
               borderColor: 'var(--border)',
               color: 'var(--text-secondary)',
-              '&:hover': { borderColor: '#c084fc', backgroundColor: 'rgba(192, 132, 252, 0.08)' },
+              '&:hover': { borderColor: 'var(--accent-text)', backgroundColor: 'var(--accent-subtle)' },
               '&.MuiButton-contained': {
-                backgroundColor: '#7c3aed',
-                color: 'var(--text)',
-                '&:hover': { backgroundColor: '#6d28d9' }
+                backgroundColor: 'var(--accent)',
+                color: 'var(--on-accent)',
+                '&:hover': { backgroundColor: 'var(--accent-hover)' }
               }
             }
           }}>
@@ -10968,15 +10759,15 @@ const AllTasksList = () => {
                   textField: {
                     size: 'small',
                     sx: {
-                      width: 110,
+                      width: 140,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
                         backgroundColor: 'var(--surface)',
                         borderRadius: '10px',
                         color: 'var(--text)'
                       },
-                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#c084fc' },
-                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #4c1d95' }
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: 'var(--accent-text)' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid var(--border)' }
                     }
                   }
                 }}
@@ -10989,15 +10780,15 @@ const AllTasksList = () => {
                   textField: {
                     size: 'small',
                     sx: {
-                      width: 110,
+                      width: 140,
                       '& .MuiInputBase-root': {
                         fontSize: '0.75rem',
                         backgroundColor: 'var(--surface)',
                         borderRadius: '10px',
                         color: 'var(--text)'
                       },
-                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: '#c084fc' },
-                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #4c1d95' }
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem', color: 'var(--accent-text)' },
+                      '& .MuiOutlinedInput-notchedOutline': { border: '1px solid var(--border)' }
                     }
                   }
                 }}
@@ -11013,8 +10804,8 @@ const AllTasksList = () => {
                   textTransform: 'none',
                   flexShrink: 0,
                   fontSize: '0.75rem',
-                  backgroundColor: '#7c3aed',
-                  '&:hover': { backgroundColor: '#6d28d9' }
+                  backgroundColor: 'var(--accent)',
+                  '&:hover': { backgroundColor: 'var(--accent-hover)' }
                 }}
               >
                 Apply Acc.
@@ -11030,7 +10821,7 @@ const AllTasksList = () => {
             disabled={loading}
             sx={{
               color: 'var(--accent-text)',
-              '&:hover': { backgroundColor: 'rgba(123, 104, 238, 0.08)' }
+              '&:hover': { backgroundColor: 'rgba(108, 71, 255, 0.08)' }
             }}
           >
             <MdRefresh className={loading ? 'animate-spin' : ''} />
@@ -11048,20 +10839,6 @@ const AllTasksList = () => {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             label="Filter"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11102,20 +10879,6 @@ const AllTasksList = () => {
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             label="Feedback Severity"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11159,20 +10922,6 @@ const AllTasksList = () => {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             label="Task Status"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11190,7 +10939,7 @@ const AllTasksList = () => {
             </MenuItem>
             <MenuItem value="Todo">
               <Box display="flex" alignItems="center" gap={1}>
-                <MdError style={{ color: '#ff9800' }} />
+                <MdError style={{ color: '#D97706' }} />
                 <span>Todo</span>
               </Box>
             </MenuItem>
@@ -11202,13 +10951,13 @@ const AllTasksList = () => {
             </MenuItem>
             <MenuItem value="Closed">
               <Box display="flex" alignItems="center" gap={1}>
-                <MdCheckCircle style={{ color: '#4caf50' }} />
+                <MdCheckCircle style={{ color: '#16A34A' }} />
                 <span>Closed</span>
               </Box>
             </MenuItem>
             <MenuItem value="Completed">
               <Box display="flex" alignItems="center" gap={1}>
-                <MdCheckCircle style={{ color: '#4caf50' }} />
+                <MdCheckCircle style={{ color: '#16A34A' }} />
                 <span>Completed</span>
               </Box>
             </MenuItem>
@@ -11226,20 +10975,6 @@ const AllTasksList = () => {
             value={governorateFilter}
             onChange={(e) => setGovernorateFilter(e.target.value)}
             label="Governorate"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11266,20 +11001,6 @@ const AllTasksList = () => {
             value={districtFilter}
             onChange={(e) => setDistrictFilter(e.target.value)}
             label="District"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11306,20 +11027,6 @@ const AllTasksList = () => {
             value={subconFilter}
             onChange={(e) => setSubconFilter(e.target.value)}
             label="Subcon"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11346,20 +11053,6 @@ const AllTasksList = () => {
             value={supervisorFilter}
             onChange={(e) => setSupervisorFilter(e.target.value)}
             label="Supervisor"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11391,11 +11084,11 @@ const AllTasksList = () => {
               label="Team Name"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: '20px',
+                  borderRadius: "10px",
                   backgroundColor: 'var(--surface)',
                   color: 'var(--text)',
                   '& fieldset': { border: 'none' },
-                  '&:hover fieldset': { border: '1px solid #666 !important' },
+                  '&:hover fieldset': { border: '1px solid var(--text-muted) !important' },
                   '&.Mui-focused fieldset': { border: '1px solid var(--accent) !important' },
                 },
                 '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
@@ -11423,20 +11116,6 @@ const AllTasksList = () => {
             value={validationFilter}
             onChange={(e) => setValidationFilter(e.target.value)}
             label="Validation"
-            sx={{
-              color: 'var(--text)',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface)',
-              '& .MuiOutlinedInput-notchedOutline': {
-                border: 'none',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid #666 !important',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: '1px solid var(--accent) !important',
-              },
-            }}
             MenuProps={{
               PaperProps: {
                 sx: {
@@ -11462,22 +11141,12 @@ const AllTasksList = () => {
           flexGrow: 1
         }}>
           <Button
-            variant="contained"
+            variant={activeAdvSearch ? "contained" : "outlined"}
             startIcon={<MdSearch />}
             onClick={() => setAdvancedSearchOpen(true)}
-            sx={{
-              bgcolor: activeAdvSearch ? '#4caf50' : '#7b68ee',
-              color: 'var(--text)',
-              borderRadius: '20px',
-              px: 3,
-              '&:hover': {
-                bgcolor: activeAdvSearch ? '#388e3c' : '#6854d9'
-              },
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap'
-            }}
+            sx={{ whiteSpace: 'nowrap' }}
           >
-            {activeAdvSearch ? "Advanced Filers Active" : "Advanced Search"}
+            {activeAdvSearch ? "Advanced filters on" : "Advanced search"}
           </Button>
 
           {activeAdvSearch && (
@@ -11489,9 +11158,9 @@ const AllTasksList = () => {
                 setActiveAdvSearch(false);
               }}
               sx={{
-                color: '#f44336',
-                fontWeight: 'bold',
-                '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.08)' }
+                color: '#DC2626',
+                fontWeight: '600',
+                '&:hover': { bgcolor: 'rgba(220, 38, 38, 0.08)' }
               }}
             >
               Clear Search
@@ -11511,13 +11180,13 @@ const AllTasksList = () => {
               startIcon={<MdFileDownload />}
               sx={{
                 borderColor: 'var(--border)',
-                color: '#1976d2',
+                color: '#2563EB',
                 '&:hover': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  borderColor: '#666',
+                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  borderColor: 'var(--text-muted)',
                 },
                 textTransform: 'none',
-                borderRadius: '20px',
+                borderRadius: "10px",
                 px: 3,
                 whiteSpace: 'nowrap',
                 flexGrow: isMobile ? 1 : 0
@@ -11533,13 +11202,13 @@ const AllTasksList = () => {
                 startIcon={<IoMdAdd />}
                 sx={{
                   borderColor: 'var(--border)',
-                  color: '#4caf50',
+                  color: '#16A34A',
                   '&:hover': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
-                    borderColor: '#666',
+                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                    borderColor: 'var(--text-muted)',
                   },
                   textTransform: 'none',
-                  borderRadius: '20px',
+                  borderRadius: "10px",
                   px: 3,
                   whiteSpace: 'nowrap',
                   flexGrow: isMobile ? 1 : 0
@@ -11566,16 +11235,16 @@ const AllTasksList = () => {
         border: '1px solid var(--border)',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', fontWeight: 700 }}>Status Summary:</Typography>
+          <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Status Summary:</Typography>
         </Box>
         {[{
           label: 'Closed',
           count: closedCount,
-          color: '#4caf50'
+          color: '#16A34A'
         }, {
           label: 'In Progress',
           count: inProgressCount,
-          color: '#2196f3'
+          color: '#2563EB'
         }, {
           label: 'Todo',
           count: todoCount,
@@ -11596,7 +11265,7 @@ const AllTasksList = () => {
             }}
           >
             <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 600 }}>{item.label}</Typography>
-            <Typography variant="subtitle2" sx={{ color: item.color, fontWeight: 800 }}>{item.count}</Typography>
+            <Typography variant="subtitle2" sx={{ color: item.color, fontWeight: 600 }}>{item.count}</Typography>
           </Box>
         ))}
       </Box>
@@ -11616,7 +11285,7 @@ const AllTasksList = () => {
             "& .MuiTableCell-root": {
               color: "var(--text-secondary)",
               fontSize: "0.875rem",
-              fontWeight: "bold",
+              fontWeight: "600",
               borderBottom: "1px solid var(--border)",
             }
           },
@@ -11637,7 +11306,7 @@ const AllTasksList = () => {
             height: "8px",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#666",
+            backgroundColor: "var(--text-muted)",
             borderRadius: "4px",
           },
           "&::-webkit-scrollbar-track": {
@@ -11797,12 +11466,12 @@ const AllTasksList = () => {
                       }}
                       sx={{
                         backgroundColor: task._id === selectedRowId
-                          ? 'rgba(123, 104, 238, 0.15) !important'
+                          ? 'rgba(108, 71, 255, 0.15) !important'
                           : task.readBy?.includes(user?._id)
                             ? '#f0f0f0'
                             : '#ffffff',
                         transition: '0.2s',
-                        borderLeft: task.readBy?.includes(user?._id) ? '6px solid #7b68ee' : '6px solid transparent',
+                        borderLeft: task.readBy?.includes(user?._id) ? '6px solid #6C47FF' : '6px solid transparent',
                         '&:hover': { backgroundColor: '#f5f5f5' }
                       }}
                     >
@@ -11811,8 +11480,8 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Box display="flex" flexDirection="column" gap={0.5}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{task.slid || "-"}</Typography>
-                          <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ fontWeight: '600' }}>{task.slid || "-"}</Typography>
+                          <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: '600' }}>
                             REQ: {task.requestNumber || "-"}
                           </Typography>
                           {task.validationStatus === 'Validated' ? (
@@ -11821,7 +11490,7 @@ const AllTasksList = () => {
                               size="small"
                               icon={<MdCheckCircle style={{ color: 'var(--text)' }} />}
                               sx={{
-                                backgroundColor: '#4caf50',
+                                backgroundColor: '#16A34A',
                                 color: 'var(--text)',
                                 height: '20px',
                                 fontSize: '0.65rem',
@@ -11834,7 +11503,7 @@ const AllTasksList = () => {
                               size="small"
                               icon={<MdError style={{ color: 'var(--text)' }} />}
                               sx={{
-                                backgroundColor: '#ff9800',
+                                backgroundColor: '#D97706',
                                 color: 'var(--text)',
                                 height: '20px',
                                 fontSize: '0.65rem',
@@ -11846,7 +11515,7 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Box display="flex" flexDirection="column" gap={0.2}>
-                          <Typography fontWeight={700} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.85rem' }}>
+                          <Typography fontWeight={600} sx={{ direction: 'rtl', textAlign: 'right', fontSize: '0.85rem' }}>
                             {task.customerName || task.customer?.customerName || "-"}
                           </Typography>
                           <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem' }}>
@@ -11855,7 +11524,7 @@ const AllTasksList = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: '600' }}>
                           {task.contactNumber || task.customer?.contactNumber || '-'}
                         </Typography>
                       </TableCell>
@@ -11883,7 +11552,7 @@ const AllTasksList = () => {
                                         textTransform: 'none',
                                         color: 'var(--accent-text)',
                                         fontSize: '0.75rem',
-                                        fontWeight: 'bold',
+                                        fontWeight: '600',
                                         '&:hover': { background: 'transparent', textDecoration: 'underline' }
                                       }}
                                     >
@@ -11900,10 +11569,10 @@ const AllTasksList = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#2196f3' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#2563EB' }}>
                           {task.operation || task.technicalDetails?.operation || "-"}
                         </Typography>
-                        <Typography variant="caption" sx={{ display: 'block', color: '#9c27b0', fontWeight: 'bold' }}>
+                        <Typography variant="caption" sx={{ display: 'block', color: '#6C47FF', fontWeight: '600' }}>
                           {task.tarrifName || "-"}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">{task.category}</Typography>
@@ -11913,15 +11582,15 @@ const AllTasksList = () => {
                           label={task.priority || "Normal"}
                           size="small"
                           sx={{
-                            fontWeight: 'bold',
+                            fontWeight: '600',
                             fontSize: '0.7rem',
                             height: '24px',
-                            backgroundColor: task.priority === 'High' ? 'rgba(244, 67, 54, 0.15)' :
-                              task.priority === 'Medium' ? 'rgba(255, 152, 0, 0.15)' :
-                                task.priority === 'Low' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                            color: task.priority === 'High' ? '#f44336' :
-                              task.priority === 'Medium' ? '#ff9800' :
-                                task.priority === 'Low' ? '#4caf50' : '#fff',
+                            backgroundColor: task.priority === 'High' ? 'rgba(220, 38, 38, 0.15)' :
+                              task.priority === 'Medium' ? 'rgba(217, 119, 6, 0.15)' :
+                                task.priority === 'Low' ? 'rgba(22, 163, 74, 0.15)' : 'var(--overlay-subtle)',
+                            color: task.priority === 'High' ? '#DC2626' :
+                              task.priority === 'Medium' ? '#D97706' :
+                                task.priority === 'Low' ? '#16A34A' : 'var(--text)',
                             border: '1px solid',
                             borderColor: 'divider'
                           }}
@@ -11932,12 +11601,12 @@ const AllTasksList = () => {
                           label={task.status}
                           size="small"
                           sx={{
-                            fontWeight: 800,
+                            fontWeight: 600,
                             borderRadius: '6px',
-                            bgcolor: (task.status === 'Closed' || task.status === 'Completed') ? 'rgba(76, 175, 80, 0.15)' :
-                              task.status === 'In Progress' ? 'rgba(33, 150, 243, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                            color: (task.status === 'Closed' || task.status === 'Completed') ? '#4caf50' :
-                              task.status === 'In Progress' ? '#2196f3' : '#fff',
+                            bgcolor: (task.status === 'Closed' || task.status === 'Completed') ? 'rgba(22, 163, 74, 0.15)' :
+                              task.status === 'In Progress' ? 'rgba(37, 99, 235, 0.15)' : 'var(--overlay-subtle)',
+                            color: (task.status === 'Closed' || task.status === 'Completed') ? '#16A34A' :
+                              task.status === 'In Progress' ? '#2563EB' : 'var(--text)',
                             border: '1px solid',
                             borderColor: 'divider'
                           }}
@@ -11946,7 +11615,7 @@ const AllTasksList = () => {
 
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ fontWeight: '600' }}>
                             {task.governorate || "-"}
                           </Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -11956,17 +11625,17 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'var(--accent-text)' }}>
+                          <Typography variant="body2" sx={{ fontWeight: '600', color: 'var(--accent-text)' }}>
                             {task.teamName || "-"}
                           </Typography>
-                          <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
+                          <Typography variant="caption" sx={{ fontWeight: '600', color: 'text.secondary' }}>
                             {task.teamCompany || "-"}
                           </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          <Typography variant="body2" sx={{ fontWeight: '600' }}>
                             {Array.isArray(task.reason) ? task.reason.join(", ") : (task.reason || "-")}
                           </Typography>
                         </Box>
@@ -11977,12 +11646,12 @@ const AllTasksList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#f44336', fontSize: '0.8rem' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#DC2626', fontSize: '0.8rem' }}>
                           {Array.isArray(task.rootCause) ? task.rootCause.join(", ") : (task.rootCause || task.technicalDetails?.rootCause || "-")}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold', fontSize: '0.7rem', color: 'var(--accent-text)' }}>
+                        <Typography variant="caption" sx={{ display: 'block', fontWeight: '600', fontSize: '0.7rem', color: 'var(--accent-text)' }}>
                           {Array.isArray(task.responsible) ? task.responsible.join(", ") : (task.responsible || "-")}
                         </Typography>
                       </TableCell>
@@ -11991,10 +11660,10 @@ const AllTasksList = () => {
                           label={Array.isArray(task.itnRelated) ? task.itnRelated.join(", ") : (task.itnRelated || "-")}
                           size="small"
                           sx={{
-                            fontWeight: 'bold',
+                            fontWeight: '600',
                             fontSize: '0.7rem',
-                            bgcolor: (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                            color: (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' ? '#4caf50' : '#fff',
+                            bgcolor: (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' ? 'rgba(22, 163, 74, 0.15)' : 'var(--overlay-subtle)',
+                            color: (Array.isArray(task.itnRelated) && task.itnRelated.includes('Yes')) || task.itnRelated === 'Yes' ? '#16A34A' : 'var(--text)',
                             border: '1px solid',
                             borderColor: 'divider'
                           }}
@@ -12025,10 +11694,10 @@ const AllTasksList = () => {
                           label={task.gaiaCheck || "No"}
                           size="small"
                           sx={{
-                            fontWeight: 'bold',
+                            fontWeight: '600',
                             fontSize: '0.7rem',
-                            bgcolor: task.gaiaCheck === 'Yes' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)',
-                            color: task.gaiaCheck === 'Yes' ? '#4caf50' : '#f44336',
+                            bgcolor: task.gaiaCheck === 'Yes' ? 'rgba(22, 163, 74, 0.15)' : 'rgba(220, 38, 38, 0.15)',
+                            color: task.gaiaCheck === 'Yes' ? '#16A34A' : '#DC2626',
                             border: '1px solid',
                             borderColor: 'divider'
                           }}
@@ -12068,7 +11737,7 @@ const AllTasksList = () => {
                                 textTransform: 'none',
                                 color: 'var(--accent-text)',
                                 fontSize: '0.75rem',
-                                fontWeight: 'bold',
+                                fontWeight: '600',
                                 '&:hover': { background: 'transparent', textDecoration: 'underline' }
                               }}
                             >
@@ -12080,12 +11749,12 @@ const AllTasksList = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Tooltip title={dropdownOptions['TRANSACTION_TYPE']?.find(opt => opt.value === task.latestGaia?.transactionType)?.label || task.latestGaia?.transactionType || "N/A"}>
-                            <Typography variant="body2" sx={{ fontWeight: 900, color: 'primary.main', fontSize: '0.85rem' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', fontSize: '0.85rem' }}>
                               {task.latestGaia?.transactionType || "-"}
                             </Typography>
                           </Tooltip>
                           <Tooltip title={dropdownOptions['TRANSACTION_STATE']?.find(opt => opt.value === task.latestGaia?.transactionState)?.label || task.latestGaia?.transactionState || "N/A"}>
-                            <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', mt: -0.5, fontSize: '0.7rem' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mt: -0.5, fontSize: '0.7rem' }}>
                               {task.latestGaia?.transactionState || "-"}
                             </Typography>
                           </Tooltip>
@@ -12093,7 +11762,7 @@ const AllTasksList = () => {
                       </TableCell>
                       <TableCell>
                         <Tooltip title={dropdownOptions['UNF_REASON_CODE']?.find(opt => opt.value === task.latestGaia?.unfReasonCode)?.label || task.latestGaia?.unfReasonCode || "N/A"}>
-                          <Typography variant="caption" sx={{ color: '#FF5722', fontWeight: 900, fontSize: '0.8rem' }}>
+                          <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600, fontSize: '0.8rem' }}>
                             {task.latestGaia?.unfReasonCode || "—"}
                           </Typography>
                         </Tooltip>
@@ -12116,8 +11785,8 @@ const AllTasksList = () => {
                             borderColor: 'var(--accent)',
                             color: 'var(--accent-text)',
                             '&:hover': {
-                              borderColor: '#6854d9',
-                              backgroundColor: 'rgba(123, 104, 238, 0.08)'
+                              borderColor: 'var(--accent-hover)',
+                              backgroundColor: 'rgba(108, 71, 255, 0.08)'
                             }
                           }}
                         >
@@ -12149,9 +11818,9 @@ const AllTasksList = () => {
                                 }
                               }}
                               sx={{
-                                color: task.readBy?.includes(user?._id) ? '#7b68ee' : '#b0b0b0',
+                                color: task.readBy?.includes(user?._id) ? '#6C47FF' : '#b0b0b0',
                                 '&:hover': {
-                                  color: task.readBy?.includes(user?._id) ? '#6854d9' : '#7b68ee'
+                                  color: task.readBy?.includes(user?._id) ? 'var(--accent-hover)' : '#6C47FF'
                                 }
                               }}
                             >
@@ -12166,7 +11835,7 @@ const AllTasksList = () => {
                                 toggleFavorite(task);
                               }}
                               sx={{
-                                color: isFavorited ? '#ffc107' : '#6b7280',
+                                color: isFavorited ? '#D97706' : '#6b7280',
                                 '&:hover': {
                                   color: isFavorited ? '#ffd700' : '#ffffff'
                                 }
@@ -12184,8 +11853,8 @@ const AllTasksList = () => {
                                 setRecordTicketDialogOpen(true);
                               }}
                               sx={{
-                                color: '#10b981',
-                                '&:hover': { color: '#059669' }
+                                color: '#16A34A',
+                                '&:hover': { color: '#16A34A' }
                               }}
                             >
                               <MdHistory />
@@ -12217,26 +11886,25 @@ const AllTasksList = () => {
                                       setSelectedTask(task);
                                       setEditDialogOpen(true);
                                     }}
-                                    sx={{ color: '#ffc107' }}
+                                    sx={{ color: '#D97706' }}
                                   >
                                     <MdEdit />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Delete Task">
+                                {user?.role === 'Admin' && <Tooltip title="Delete permanently…">
                                   <IconButton
                                     size="small"
                                     color="error"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setTaskToDelete(task);
-                                      setConfirmSlid('');
                                       setDeleteDialogOpen(true);
                                     }}
-                                    sx={{ color: '#f44336' }}
+                                    sx={{ color: '#DC2626' }}
                                   >
                                     <MdDelete />
                                   </IconButton>
-                                </Tooltip>
+                                </Tooltip>}
                               </>
                             )
                           }
@@ -12339,56 +12007,30 @@ const AllTasksList = () => {
       }
 
       {/* Categorical Drill-down Dialog */}
-      <Dialog
+      <AppDialog
         open={drillDownState.open}
         onClose={() => setDrillDownState(prev => ({ ...prev, open: false }))}
-        fullWidth
-        maxWidth="lg"
-        PaperProps={{
-          sx: {
-            backgroundColor: 'var(--bg)',
-            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
-            borderRadius: '24px',
-            border: '1px solid var(--border)',
-            minHeight: '60vh'
-          }
-        }}
+        size="xl"
+        title="Tasks in this breakdown"
+        description={`${drillDownState.title} · ${drillDownState.tasks.length} task${drillDownState.tasks.length === 1 ? '' : 's'}`}
+        actions={<Button variant="outlined" onClick={() => setDrillDownState(prev => ({ ...prev, open: false }))}>Close</Button>}
+        bodySx={{ p: 0 }}
       >
-        <DialogTitle sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          pb: 1,
-          borderBottom: '1px solid var(--border)'
-        }}>
-          <Box>
-            <Typography variant="h5" sx={{ color: 'var(--text)', fontWeight: 900, mb: 0.5 }}>
-              Detailed Breakdown Tasks
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-              {drillDownState.title} ({drillDownState.tasks.length} Tasks)
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setDrillDownState(prev => ({ ...prev, open: false }))} sx={{ color: 'var(--text)' }}>
-            <MdClose />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Date</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Week</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>SLID</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Customer</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Verbatim</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Reason</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Root Cause</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Team Name</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Owner</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>Score</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 'bold', fontSize: '0.75rem' }} align="right">Action</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Date</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Week</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>SLID</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Customer</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Verbatim</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Reason</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Team Name</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Owner</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Score</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }} align="right">Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -12400,19 +12042,19 @@ const AllTasksList = () => {
                     <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
                       {task.interviewDate ? getWeekDisplay(task.interviewDate) : '-'}
                     </TableCell>
-                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: 'bold' }}>{task.slid}</TableCell>
+                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: '600' }}>{task.slid}</TableCell>
                     <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem', maxWidth: 280, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 280, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                       {task.customerFeedback || task.feedback || task.verbatim || '-'}
                     </TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                       {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
                     </TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                       {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || task.technicalDetails?.rootCause || '-'}
                     </TableCell>
                     <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.teamName || '-'}</TableCell>
-                    <TableCell sx={{ color: alpha('#fff', 0.8), fontSize: '0.75rem' }}>
+                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                       {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
                     </TableCell>
                     <TableCell>
@@ -12423,11 +12065,11 @@ const AllTasksList = () => {
                           sx={{
                             height: 20,
                             fontSize: '0.65rem',
-                            fontWeight: 'bold',
-                            bgcolor: task.evaluationScore >= 9 ? 'rgba(76, 175, 80, 0.2)' :
-                              task.evaluationScore >= 7 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-                            color: task.evaluationScore >= 9 ? '#4caf50' :
-                              task.evaluationScore >= 7 ? '#ff9800' : '#f44336'
+                            fontWeight: '600',
+                            bgcolor: task.evaluationScore >= 9 ? 'rgba(22, 163, 74, 0.2)' :
+                              task.evaluationScore >= 7 ? 'rgba(217, 119, 6, 0.2)' : 'rgba(220, 38, 38, 0.2)',
+                            color: task.evaluationScore >= 9 ? '#16A34A' :
+                              task.evaluationScore >= 7 ? '#D97706' : '#DC2626'
                           }}
                         />
                       )}
@@ -12443,8 +12085,8 @@ const AllTasksList = () => {
                         sx={{
                           textTransform: 'none',
                           color: 'var(--accent-text)',
-                          fontWeight: 'bold',
-                          '&:hover': { bgcolor: alpha('#7b68ee', 0.1) }
+                          fontWeight: '600',
+                          '&:hover': { bgcolor: alpha('#6C47FF', 0.1) }
                         }}
                       >
                         View Details
@@ -12455,135 +12097,23 @@ const AllTasksList = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
+      {/* Permanent delete: backup export + typed confirmation */}
+      <SafeDeleteDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        fullWidth
-        maxWidth="sm"
-        fullScreen={isMobile}
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: 'var(--surface)',
-            boxShadow: 'none',
-            borderRadius: isMobile ? 0 : '12px',
-            border: '1px solid var(--border)'
-          }
+        onClose={() => { setDeleteDialogOpen(false); setTaskToDelete(null); }}
+        records={taskToDelete ? [taskToDelete] : []}
+        noun={{ one: 'task', many: 'tasks' }}
+        nameOf={(t) => [t.slid, t.customerName].filter(Boolean).join(' · ')}
+        exportColumns={TASK_COLUMNS}
+        exportFilename="dvoc-task"
+        onDelete={(list) => bulkDelete(DELETE_PATHS.tasks, list.map((t) => t._id))}
+        onDeleted={({ deleted }) => {
+          setAllTasks((prev) => prev.filter((t) => !deleted.includes(t._id)));
+          window.dispatchEvent(new CustomEvent('dashboard-refresh'));
         }}
-      >
-        <DialogTitle sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          backgroundColor: 'var(--surface)',
-          color: '#f44336',
-          borderBottom: '1px solid var(--border)',
-          padding: isMobile ? '12px 16px' : '20px 24px',
-        }}>
-          <MdDelete size={28} />
-          <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontWeight: 900, letterSpacing: -0.5 }}>
-            Critical Protocol: Confirm Deletion
-          </Typography>
-        </DialogTitle>
-
-        <DialogContent sx={{
-          backgroundColor: 'var(--surface)',
-          padding: isMobile ? '16px' : '24px 24px',
-        }}>
-          <Stack spacing={3}>
-            <Box>
-              <Typography variant="body1" sx={{ color: 'var(--text)', mb: 1.5, fontWeight: 500 }}>
-                Are you sure you want to delete this task?
-              </Typography>
-              <Box sx={{
-                p: 1.5,
-                bgcolor: alpha('#f44336', 0.1),
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: alpha('#f44336', 0.3),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 2
-              }}>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 900, textTransform: 'uppercase' }}>Target SLID:</Typography>
-                <Typography variant="h6" sx={{ color: '#f44336', fontWeight: 900, fontFamily: 'monospace' }}>{taskToDelete?.slid}</Typography>
-              </Box>
-              <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>
-                This action will move the task and all its technical sub-logs to the trash. It will no longer appear in active dashboards.
-              </Typography>
-            </Box>
-
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha('#f44336', 0.05), borderStyle: 'dashed', borderColor: '#f44336' }}>
-              <Typography variant="caption" sx={{ color: '#f44336', fontWeight: 900, display: 'block', mb: 1, textTransform: 'uppercase' }}>
-                Required Authorization
-              </Typography>
-              <TextField
-                fullWidth
-                label="Enter SLID to Confirm"
-                placeholder={taskToDelete?.slid}
-                value={confirmSlid}
-                onChange={(e) => setConfirmSlid(e.target.value)}
-                autoFocus
-                size="small"
-                variant="outlined"
-                helperText="Enter the exact SLID displayed above to enable deletion."
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    color: 'var(--text)',
-                    '& fieldset': { borderColor: alpha('#fff', 0.2) },
-                    '&:hover fieldset': { borderColor: '#f44336' },
-                    '&.Mui-focused fieldset': { borderColor: '#f44336' }
-                  },
-                  '& .MuiInputLabel-root': { color: 'var(--text-secondary)' },
-                  '& .MuiFormHelperText-root': { color: 'var(--text-muted)' }
-                }}
-              />
-            </Paper>
-          </Stack>
-        </DialogContent>
-
-        <DialogActions sx={{
-          backgroundColor: alpha('#000', 0.2),
-          borderTop: '1px solid var(--border)',
-          padding: isMobile ? '8px 16px' : '16px 24px',
-        }}>
-          <Button
-            onClick={() => setDeleteDialogOpen(false)}
-            sx={{
-              color: 'var(--text-secondary)',
-              fontWeight: 900,
-              '&:hover': { color: 'var(--text)' }
-            }}
-          >
-            ABORT
-          </Button>
-          <Box sx={{ flexGrow: 1 }} />
-          <Button
-            onClick={handleDeleteTask}
-            variant="contained"
-            color="error"
-            disabled={confirmSlid !== taskToDelete?.slid}
-            sx={{
-              backgroundColor: '#f44336',
-              fontWeight: 900,
-              px: 4,
-              '&:hover': {
-                backgroundColor: '#d32f2f',
-              },
-              '&.Mui-disabled': {
-                backgroundColor: alpha('#f44336', 0.1),
-                color: alpha('#fff', 0.2)
-              }
-            }}
-          >
-            CONFIRM PURGE
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
       {/* Add Task Dialog */}
       <AddTask
@@ -12592,41 +12122,16 @@ const AllTasksList = () => {
         setUpdateRefetchTasks={() => setUpdateRefetchTasks(prev => prev + 1)}
       />
       {/* Read More Dialog */}
-      <Dialog
+      <AppDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            borderRadius: 2
-          }
-        }}
+        title={dialogTitle}
+        actions={<Button variant="outlined" onClick={() => setDialogOpen(false)}>Close</Button>}
       >
-        <DialogTitle sx={{ borderBottom: '1px solid var(--border)' }}>
-          {dialogTitle}
-          <IconButton
-            onClick={() => setDialogOpen(false)}
-            sx={{ position: 'absolute', right: 8, top: 8, color: 'var(--text-secondary)' }}
-          >
-            <MdClose />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{
-          mt: 2,
-          direction: dialogTitle === "GAIA Content" ? 'ltr' : 'rtl',
-          textAlign: dialogTitle === "GAIA Content" ? 'left' : 'right'
-        }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-            {dialogContent || "No content available."}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ borderTop: '1px solid var(--border)' }}>
-          <Button onClick={() => setDialogOpen(false)} sx={{ color: 'var(--text)' }}>Close</Button>
-        </DialogActions>
-      </Dialog>
+        <Typography dir={dialogTitle === "GAIA Content" ? 'ltr' : 'rtl'} sx={{ whiteSpace: 'pre-wrap', fontSize: 13.5 }}>
+          {dialogContent || "No content available."}
+        </Typography>
+      </AppDialog>
 
       {/* Record Performance Ticket Dialog */}
       <RecordTicketDialog
