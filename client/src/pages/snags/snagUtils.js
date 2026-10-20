@@ -40,7 +40,7 @@ export const filterSnags = (list, f) => {
         .filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (f.source.length ? !f.source.includes(sourceOf(s)) : !isOjoSnag(s)) return false;
+    if (f.source.length ? !f.source.includes(sourceOf(s)) : taxonomyOfIssue(s).category !== (f.tracker || "OJO Snags")) return false;
     if (f.status.length && !f.status.includes(statusOf(s).label)) return false;
     if (f.category.length && !categoriesOf(s).some((c) => f.category.includes(c))) return false;
     if (f.team.length && !f.team.includes(s.teamName || "")) return false;

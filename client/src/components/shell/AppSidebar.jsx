@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Box, Tooltip, IconButton, Typography } from "@mui/material";
 import ChevronRight from "@mui/icons-material/ChevronRight";
 import KeyboardDoubleArrowLeft from "@mui/icons-material/KeyboardDoubleArrowLeft";
 import KeyboardDoubleArrowRight from "@mui/icons-material/KeyboardDoubleArrowRight";
-import { visibleSections } from "./navConfig";
+import { visibleSections, withCustomTables } from "./navConfig";
+import api from "../../api/api";
 
 export const Brand = ({ collapsed }) => (
   <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
@@ -50,14 +51,23 @@ const itemSx = (active, collapsed) => ({
 const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showCollapse = true }) => {
   const user = useSelector((s) => s?.auth?.user);
   const { pathname } = useLocation();
-  const sections = useMemo(() => visibleSections(user), [user]);
+  const [tables, setTables] = useState([]);
+  useEffect(() => {
+    if (!user) return undefined;
+    let off = false;
+    const load = () => api.get("/custom-tables").then(({ data }) => !off && setTables(Array.isArray(data) ? data : [])).catch(() => {});
+    load();
+    window.addEventListener("custom-tables-changed", load);
+    return () => { off = true; window.removeEventListener("custom-tables-changed", load); };
+  }, [user]);
+  const sections = useMemo(() => withCustomTables(visibleSections(user), tables), [user, tables]);
   const [openGroups, setOpenGroups] = useState({});
 
   // Only one item is highlighted, even when two links share a path.
   const activeKey = useMemo(() => {
     for (const s of sections)
       for (const i of s.items) {
-        const links = i.children ? i.children.map((c) => ({ key: `${i.label}/${c.label}`, to: c.to })) : [{ key: i.label, to: i.to }];
+        const links = i.children ? i.children.map((c) => ({ key: `${i.label}/${c.to}`, to: c.to })) : [{ key: i.label, to: i.to }];
         for (const l of links) if (pathname === l.to || pathname.startsWith(l.to + "/")) return l.key;
       }
     return null;
@@ -87,7 +97,7 @@ const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showColl
               {section.items.map((item) => {
                 const Icon = item.icon;
                 if (item.children) {
-                  const childActive = item.children.some((c) => activeKey === `${item.label}/${c.label}`);
+                  const childActive = item.children.some((c) => activeKey === `${item.label}/${c.to}`);
                   const open = openGroups[item.label] ?? childActive;
                   if (collapsed) {
                     const first = item.children[0];
@@ -115,7 +125,7 @@ const AppSidebar = ({ collapsed = false, onToggleCollapsed, onNavigate, showColl
                       {open && (
                         <Box sx={{ ml: "21px", pl: 1.25, borderLeft: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "2px", mt: "2px" }}>
                           {item.children.map((c) => (
-                            <Box key={c.label} component={Link} to={c.to} onClick={onNavigate} sx={itemSx(activeKey === `${item.label}/${c.label}`, false)}>
+                            <Box key={c.to} component={Link} to={c.to} onClick={onNavigate} sx={itemSx(activeKey === `${item.label}/${c.to}`, false)}>
                               {c.label}
                             </Box>
                           ))}

@@ -22,6 +22,7 @@ import { exportRows } from "../../utils/exportRows";
 import { taxonomyOfIssue } from "../../constants/taxonomy";
 import SnagTable from "./SnagTable";
 import SnagSheet from "./SnagSheet";
+import CategoryTables from "../tables/CategoryTables";
 import { DATE_RANGES, NON_OJO_SOURCES, categoriesOf, filterSnags, reportedDate, snagTypeOf, sourceOf, statusOf } from "./snagUtils";
 
 const CustomerIssueDialog = lazy(() => import("../../components/CustomerIssueDialog"));
@@ -60,7 +61,16 @@ const EXPORT_COLUMNS = [
   ["Resolution details", (s) => s.resolutionDetails],
 ];
 
-const OjoSnagsPage = () => {
+// One page for every tracker whose records are customer issues (OJO Snags, TCRM, TRC, Internal Audit).
+const TRACKERS = {
+  "OJO Snags": { title: "OJO Snags", description: "Joint-quality snags raised by OJO on field installations and maintenance.", add: "Report snag", file: "ojo-snags", tabs: true },
+  TCRM: { title: "TCRM", description: "Customer complaints received through TCRM and how each was resolved.", add: "Add complaint", file: "tcrm" },
+  TRC: { title: "TRC", description: "Complaints escalated through the regulator (TRC) and their resolution.", add: "Add complaint", file: "trc" },
+  "Internal Audit (FAT)": { title: "Internal Audit (FAT)", description: "Findings from internal field acceptance (FAT) audits.", add: "Add finding", file: "internal-audit" },
+};
+
+const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
+  const meta = TRACKERS[tracker] || TRACKERS["OJO Snags"];
   const user = useSelector((s) => s?.auth?.user);
   const isAdmin = user?.role === "Admin";
   const [params, setParams] = useSearchParams();
@@ -127,7 +137,7 @@ const OjoSnagsPage = () => {
     return () => clearTimeout(id);
   }, [draft, f.q, setF]);
 
-  const base = useMemo(() => filterSnags(snags, { ...f, tab: "all" }), [snags, f]);
+  const base = useMemo(() => filterSnags(snags, { ...f, tab: "all", tracker }), [snags, f, tracker]);
   const rows = useMemo(() => (f.tab === "all" ? base : base.filter((s) => snagTypeOf(s) === f.tab)), [base, f.tab]);
   const tabCount = (t) => (t === "all" ? base.length : base.filter((s) => snagTypeOf(s) === t).length);
   const openSnag = useMemo(() => snags.find((s) => s._id === openId) || null, [snags, openId]);
@@ -142,6 +152,7 @@ const OjoSnagsPage = () => {
   }, [snags]);
 
   const sourceValue = f.source.length ? f.source : options.source.map((o) => o.value).filter((v) => !NON_OJO_SOURCES.includes(v));
+  const fileBase = `${meta.file}${meta.tabs ? `-${f.tab.toLowerCase()}` : ""}`;
   const activeFilters = f.q || f.range || LIST_KEYS.some((k) => f[k].length);
 
   const patch = async (id, body) => {
@@ -202,21 +213,21 @@ const OjoSnagsPage = () => {
   return (
     <Box>
       <PageHeader
-        title="OJO Snags"
-        description="Joint-quality snags raised by OJO on field installations and maintenance."
+        title={meta.title}
+        description={meta.description}
         actions={
           <>
-            <DataMenu entity="snags" viewRows={rows} filename={`ojo-snags-${f.tab.toLowerCase()}`} onImported={() => setRefresh((r) => r + 1)} />
+            <DataMenu entity="snags" viewRows={rows} filename={fileBase} onImported={() => setRefresh((r) => r + 1)} />
             <IconButton aria-label="More" onClick={(e) => setMore(e.currentTarget)} sx={{ width: 32, height: 32, border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)", backgroundColor: "var(--surface)" }}>
               <MoreHoriz fontSize="small" />
             </IconButton>
             {isAdmin && (
               <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => setDialog({ mode: "add" })}>
-                Report snag
+                {meta.add}
               </Button>
             )}
             <Menu anchorEl={more} open={Boolean(more)} onClose={() => setMore(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
-              <MenuItem onClick={() => { setMore(null); exportRows(rows, EXPORT_COLUMNS, { format: "csv", filename: `ojo-snags-${f.tab.toLowerCase()}` }); }}>
+              <MenuItem onClick={() => { setMore(null); exportRows(rows, EXPORT_COLUMNS, { format: "csv", filename: fileBase }); }}>
                 <ListItemIcon><FileDownloadOutlined fontSize="small" /></ListItemIcon>Export view as CSV
               </MenuItem>
             </Menu>
@@ -224,6 +235,7 @@ const OjoSnagsPage = () => {
         }
       />
 
+      {meta.tabs && (
       <Tabs value={f.tab} onChange={(_e, v) => setF({ tab: v })} aria-label="Snag type" sx={{ mb: 2 }}>
         {TABS.map((t) => (
           <Tab
@@ -240,6 +252,9 @@ const OjoSnagsPage = () => {
           />
         ))}
       </Tabs>
+      )}
+
+      <CategoryTables category={tracker} sub={meta.tabs && f.tab !== "all" ? f.tab : undefined} title={meta.tabs && f.tab !== "all" ? `${f.tab} tables` : "Tables"} compact />
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap", mb: 2 }}>
         <SegmentedControl
@@ -259,7 +274,7 @@ const OjoSnagsPage = () => {
         <FilterChip label="Status" options={["Open", "Dispatched", "Resolved"].map((v) => ({ value: v, label: v }))} value={f.status} onChange={(v) => setF({ status: v })} />
         <FilterChip label="Issue" options={options.category} value={f.category} onChange={(v) => setF({ category: v })} searchable />
         <FilterChip label="Field team" options={options.team} value={f.team} onChange={(v) => setF({ team: v })} searchable />
-        <FilterChip label="Source" options={options.source} value={sourceValue} onChange={(v) => setF({ source: v.length ? v : [] })} />
+        {meta.tabs && <FilterChip label="Source" options={options.source} value={sourceValue} onChange={(v) => setF({ source: v.length ? v : [] })} />}
         <FilterChip label="Date" single options={DATE_RANGES} value={f.range ? [f.range] : []} onChange={(v) => setF({ range: v[0] || "" })} />
         {activeFilters && (
           <Button variant="text" size="small" startIcon={<FilterAltOffOutlined sx={{ fontSize: 16 }} />} onClick={() => { setDraft(""); setF({ q: "", range: "", ...Object.fromEntries(LIST_KEYS.map((k) => [k, []])) }); }} sx={{ color: "var(--text-secondary)", height: 28 }}>
@@ -267,7 +282,7 @@ const OjoSnagsPage = () => {
           </Button>
         )}
         <Box sx={{ flex: 1 }} />
-        <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)" }}>{loading ? "Loading…" : `${rows.length.toLocaleString()} snag${rows.length === 1 ? "" : "s"}`}</Typography>
+        <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)" }}>{loading ? "Loading…" : `${rows.length.toLocaleString()} ${tracker === "OJO Snags" ? "snag" : "record"}${rows.length === 1 ? "" : "s"}`}</Typography>
       </Box>
 
       {error && <ErrorState title="Snags didn't load" message={error} onRetry={() => { setLoading(true); setRefresh((r) => r + 1); }} sx={{ mb: 2 }} />}

@@ -5,7 +5,7 @@ const ConfirmDialog = ({ open, title = "Are you sure?", description, confirmLabe
     <DialogTitle>{title}</DialogTitle>
     {description && (
       <DialogContent sx={{ pt: "0 !important" }}>
-        <Typography sx={{ fontSize: 13, color: "var(--text-secondary)" }}>{description}</Typography>
+        <Typography component={typeof description === "string" ? "p" : "div"} sx={{ fontSize: 13, color: "var(--text-secondary)" }}>{description}</Typography>
       </DialogContent>
     )}
     <DialogActions>

@@ -51,8 +51,11 @@ const sheetWarnings = (sheet, headerIdx) => {
 /**
  * Multi-sheet import wizard.
  * entity: default target; allowed: entities this page may import into.
+ * entities: optional definitions overriding the built-in ones (custom tables).
+ *   A definition may carry importer: { start({ file, sheet, mapping }) → run, send(records, { mode, key, dryRun, run, final }) → { results } }.
  */
-const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [defaultEntity], onImported, context = {} }) => {
+const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [defaultEntity], onImported, context = {}, entities }) => {
+  const E = entities || ENTITIES;
   const [step, setStep] = useState(0);
   const [file, setFile] = useState(null);
   const [sheets, setSheets] = useState([]); // { name, rows, merges, include, target, headerIdx, mapping, defaults, save }
@@ -75,7 +78,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
 
   const included = sheets.map((s, i) => ({ ...s, idx: i })).filter((s) => s.include && s.target);
   const targets = [...new Set(included.map((s) => s.target))];
-  const keyOptions = targets.length === 1 ? ENTITIES[targets[0]].keys : [];
+  const keyOptions = targets.length === 1 ? E[targets[0]].keys : [];
   const effectiveKey = key || keyOptions[0]?.value || "";
 
   const onFile = async (f) => {
@@ -93,8 +96,8 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         // pick the allowed entity whose fields match this sheet best
         let best = defaultEntity, bestHits = -1, bestIdx = 0;
         for (const e of allowed) {
-          const idx = detectHeaderRow(sh.rows, ENTITIES[e].fields);
-          const hits = (sh.rows[idx] || []).filter((h) => ENTITIES[e].fields.some((fd) => headerScore(h, fd) >= 0.8)).length;
+          const idx = detectHeaderRow(sh.rows, E[e].fields);
+          const hits = (sh.rows[idx] || []).filter((h) => E[e].fields.some((fd) => headerScore(h, fd) >= 0.8)).length;
           if (hits > bestHits) [best, bestHits, bestIdx] = [e, hits, idx];
         }
         const header = sh.rows[bestIdx] || [];
@@ -104,7 +107,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
           include: dataRows > 0 && bestHits >= 1,
           target: best,
           headerIdx: bestIdx,
-          mapping: autoMap(header, ENTITIES[best].fields, saved[best]),
+          mapping: autoMap(header, E[best].fields, saved[best]),
           defaults: {},
           save: true,
         };
@@ -126,7 +129,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         if (j !== i) return s;
         const next = { ...s, ...patch };
         if (patch.target !== undefined || patch.headerIdx !== undefined) {
-          next.mapping = autoMap(next.rows[next.headerIdx] || [], ENTITIES[next.target].fields, loadSaved(next.target));
+          next.mapping = autoMap(next.rows[next.headerIdx] || [], E[next.target].fields, loadSaved(next.target));
           next.defaults = {};
         }
         return next;
@@ -135,17 +138,21 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
 
   // ---- validation (client conversion + server dry run)
   const runChunks = useCallback(
-    async (records, target, dryRun, onChunk) => {
+    async (records, target, dryRun, onChunk, run) => {
+      const importer = E[target].importer;
       const results = [];
       for (let i = 0; i < records.length; i += CHUNK) {
-        const body = records.slice(i, i + CHUNK).map((r) => toApiRow(target, r, context));
-        const { data } = await api.post(`/import/${target}`, { rows: body, mode, key: effectiveKey || undefined, dryRun });
+        const chunk = records.slice(i, i + CHUNK);
+        const opts = { mode, key: effectiveKey || undefined, dryRun };
+        const data = importer
+          ? await importer.send(chunk, { ...opts, run, final: i + CHUNK >= records.length })
+          : (await api.post(`/import/${target}`, { rows: chunk.map((r) => toApiRow(target, r, context)), ...opts })).data;
         results.push(...data.results);
         onChunk?.(Math.min(records.length, i + CHUNK));
       }
       return results;
     },
-    [mode, effectiveKey, context]
+    [mode, effectiveKey, context, E]
   );
 
   const validate = async () => {
@@ -154,7 +161,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
     try {
       const out = {};
       for (const s of included) {
-        const { records, problems } = buildRecords(s.rows, s.headerIdx, s.mapping, ENTITIES[s.target].fields, s.defaults);
+        const { records, problems } = buildRecords(s.rows, s.headerIdx, s.mapping, E[s.target].fields, s.defaults);
         const badRows = new Set(problems.map((p) => p.row));
         const clean = records.filter((r) => !badRows.has(r.__row));
         const server = clean.length ? await runChunks(clean, s.target, true) : [];
@@ -205,12 +212,13 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         const okRows = new Set(v.server.filter((r) => r.status !== "error").map((r) => r.row));
         const toSend = v.records.filter((r) => okRows.has(r.__row));
         let sent = 0;
+        const run = toSend.length && E[s.target].importer?.start ? await E[s.target].importer.start({ file, sheet: s.name, mapping: s.mapping, header: s.rows[s.headerIdx] || [] }) : {};
         const res = toSend.length
           ? await runChunks(toSend, s.target, false, (n) => {
               done += n - sent;
               sent = n;
               setProgress(Math.round((done / total) * 100));
-            })
+            }, run)
           : [];
         out[s.idx] = { ...v, final: res };
         if (s.save) storeSaved(s.target, s.rows[s.headerIdx] || [], s.mapping);
@@ -242,14 +250,14 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
 
   // ------------------------------------------------------------ render
   const cur = sheets[active];
-  const curFields = cur ? ENTITIES[cur.target].fields : [];
+  const curFields = cur ? E[cur.target].fields : [];
   const mappedKeys = new Set(cur?.mapping.filter(Boolean));
   const missingRequired = curFields.filter((f) => f.required && !mappedKeys.has(f.key));
-  const allMappedOk = included.every((s) => ENTITIES[s.target].fields.filter((f) => f.required).every((f) => s.mapping.includes(f.key) || s.defaults[f.key]));
+  const allMappedOk = included.every((s) => E[s.target].fields.filter((f) => f.required).every((f) => s.mapping.includes(f.key) || s.defaults[f.key]));
 
   const sheetTabs = (
     <Tabs value={Math.max(0, included.findIndex((s) => s.idx === active))} onChange={(_e, i) => setActive(included[i].idx)} variant="scrollable" sx={{ mb: 2 }}>
-      {included.map((s) => <Tab key={s.idx} label={`${s.name} → ${ENTITIES[s.target].short}`} />)}
+      {included.map((s) => <Tab key={s.idx} label={`${s.name} → ${E[s.target].short}`} />)}
     </Tabs>
   );
 
@@ -283,7 +291,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
             <Box>
               <UploadFileOutlined sx={{ fontSize: 40, color: "var(--text-muted)" }} />
               <Typography sx={{ fontSize: 15, fontWeight: 600, mt: 1 }}>Drop a file here or click to browse</Typography>
-              <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)", mt: 0.5 }}>.xlsx, .xls or .csv · into {allowed.map((e) => ENTITIES[e].short).join(", ")}</Typography>
+              <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)", mt: 0.5 }}>.xlsx, .xls or .csv · into {allowed.map((e) => E[e].short).join(", ")}</Typography>
             </Box>
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => onFile(e.target.files?.[0])} />
           </Box>
@@ -305,7 +313,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
                       <Typography sx={{ fontSize: 11.5, color: "var(--text-muted)" }}>{Math.max(0, s.rows.length - s.headerIdx - 1)} data rows · {(s.rows[s.headerIdx] || []).filter(Boolean).length} columns</Typography>
                     </Box>
                     <TextField select value={s.target} onChange={(e) => updateSheet(i, { target: e.target.value })} disabled={!s.include} slotProps={{ htmlInput: { "aria-label": "Import into" } }}>
-                      {allowed.map((e) => <MenuItem key={e} value={e}>{ENTITIES[e].label}</MenuItem>)}
+                      {allowed.map((e) => <MenuItem key={e} value={e}>{E[e].label}</MenuItem>)}
                     </TextField>
                     <TextField type="number" label="Header row" value={s.headerIdx + 1} disabled={!s.include} onChange={(e) => updateSheet(i, { headerIdx: Math.max(0, Math.min(s.rows.length - 1, Number(e.target.value) - 1)) })} slotProps={{ inputLabel: { shrink: true } }} />
                     <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
@@ -454,7 +462,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
               const c = { created: f.filter((x) => x.status === "ok" && x.action === "create").length, updated: f.filter((x) => x.status === "ok" && x.action === "update").length, skipped: f.filter((x) => x.action === "skip").length, failed: f.filter((x) => x.status === "error").length + new Set(r.problems.map((p) => p.row)).size + r.server.filter((x) => x.status === "error").length };
               return (
                 <Box key={s.idx} sx={{ display: "flex", gap: 1, alignItems: "center", py: 1, borderBottom: "1px solid var(--border)" }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{s.name} → {ENTITIES[s.target].label}</Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{s.name} → {E[s.target].label}</Typography>
                   <Badge tone="success">{c.created} created</Badge>
                   <Badge tone="info">{c.updated} updated</Badge>
                   <Badge>{c.skipped} skipped</Badge>

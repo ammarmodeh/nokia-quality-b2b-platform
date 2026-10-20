@@ -10,6 +10,10 @@ import EngineeringOutlined from "@mui/icons-material/EngineeringOutlined";
 import QuizOutlined from "@mui/icons-material/QuizOutlined";
 import ListAltOutlined from "@mui/icons-material/ListAltOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import PhoneCallbackOutlined from "@mui/icons-material/PhoneCallbackOutlined";
+import SupportAgentOutlined from "@mui/icons-material/SupportAgentOutlined";
+import GavelOutlined from "@mui/icons-material/GavelOutlined";
+import VerifiedOutlined from "@mui/icons-material/VerifiedOutlined";
 
 // Single source of truth for the sidebar and the command palette.
 // Only pages that are part of the redesign scope are listed here; anything
@@ -28,13 +32,22 @@ export const NAV_SECTIONS = [
   },
   {
     title: "Trackers",
+    // Custom tables are added under their tracker at runtime (see withCustomTables).
     items: [
-      { label: "OJO Snags", to: "/ojo-snags", icon: ReportProblemOutlined, keywords: "customer issues snags" },
+      { label: "Closure Call", to: "/closure-call", icon: PhoneCallbackOutlined, category: "Closure Call", keywords: "call back survey" },
+      { label: "OJO Snags", to: "/ojo-snags", icon: ReportProblemOutlined, category: "OJO Snags", keywords: "customer issues snags" },
       {
         label: "DVOC",
         icon: FactCheckOutlined,
-        children: [{ label: "Installation", to: "/tasks-list", keywords: "dvoc tasks nps" }],
+        category: "DVOC",
+        children: [
+          { label: "Installation tasks", to: "/tasks-list", keywords: "dvoc tasks nps" },
+          { label: "Workspace", to: "/dvoc", keywords: "dvoc maintenance tables" },
+        ],
       },
+      { label: "TCRM", to: "/tcrm", icon: SupportAgentOutlined, category: "TCRM", keywords: "complaints" },
+      { label: "TRC", to: "/trc", icon: GavelOutlined, category: "TRC", keywords: "complaints regulator" },
+      { label: "Internal Audit (FAT)", to: "/internal-audit", icon: VerifiedOutlined, category: "Internal Audit (FAT)", keywords: "fat audit" },
     ],
   },
   {
@@ -89,8 +102,30 @@ const EXTRA_TITLES = {
 export const resolveCrumbs = (pathname, user) => {
   if (EXTRA_TITLES[pathname]) return EXTRA_TITLES[pathname];
   if (pathname.startsWith("/tasks/view-task")) return ["Tasks", "Task details"];
+  if (pathname.startsWith("/tables/")) return ["Trackers", "Table"];
   const match = flatPages(user)
     .filter((p) => pathname === p.to || pathname.startsWith(p.to + "/"))
     .sort((a, b) => b.to.length - a.to.length)[0];
   return match ? [match.section, match.label] : [];
+};
+
+/**
+ * Put each tracker's custom tables under it in the sidebar. A single-link tracker
+ * becomes a group ("Overview" + its tables) once it has tables.
+ */
+export const withCustomTables = (sections, tables = []) => {
+  if (!tables.length) return sections;
+  const byCat = new Map();
+  for (const t of tables) {
+    if (!byCat.has(t.issueCategory)) byCat.set(t.issueCategory, []);
+    byCat.get(t.issueCategory).push({ label: t.name, to: `/tables/${t._id}`, keywords: `table ${t.issueSubCategory || ""}` });
+  }
+  return sections.map((s) => ({
+    ...s,
+    items: s.items.map((i) => {
+      const extra = i.category && byCat.get(i.category);
+      if (!extra) return i;
+      return { ...i, children: [...(i.children || [{ label: "Overview", to: i.to }]), ...extra] };
+    }),
+  }));
 };

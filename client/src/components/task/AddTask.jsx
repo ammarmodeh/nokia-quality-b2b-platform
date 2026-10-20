@@ -156,7 +156,8 @@ const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, han
   );
 };
 
-const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
+// initialValues pre-fills the form (e.g. "Create task from row" on a custom table); onCreated receives the new task.
+const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreated }) => {
   // const user = useSelector((state) => state?.auth?.user);
 
   const [fieldTeams, setFieldTeams] = useState([]);
@@ -243,7 +244,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
     register,
     watch,
     formState: { errors },
-  } = useForm();
+  } = useForm({ defaultValues: initialValues || {} });
 
   const [priority, setPriority] = useState(task?.priority?.toUpperCase() || "Not specified");
   const [teamCompany, setTeamCompany] = useState("Not specified");
@@ -379,7 +380,8 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks }) => {
 
       if (response.status === 201) {
         setOpen(false);
-        setUpdateRefetchTasks(prev => !prev);
+        setUpdateRefetchTasks?.(prev => !prev);
+        onCreated?.(response.data?.task || response.data);
         alert('Task created successfully!');
       }
     } catch (error) {

@@ -30,6 +30,7 @@ import userNoteRoutes from "./routes/userNoteRoutes.js";
 import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import importRoutes from "./routes/importRoutes.js";
+import { customTableRouter, tableTemplateRouter, storedFileRouter } from "./routes/customTableRoutes.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
 
@@ -134,6 +135,9 @@ app.use("/api/user-notes", userNoteRoutes);
 app.use("/api/audit", fieldAuditRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/import", importRoutes);
+app.use("/api/custom-tables", customTableRouter);
+app.use("/api/table-templates", tableTemplateRouter);
+app.use("/api/stored-files", storedFileRouter);
 app.use("/api/training-sessions", trainingSessionRoutes);
 
 // Static Uploads Folder

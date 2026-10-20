@@ -7,3 +7,5 @@ node_modules/
 reach-field-audit-user_credentials.csv
 
 How AWS S3 Configured .md
+# files stored by custom tables when S3 is not configured
+uploads/stored/

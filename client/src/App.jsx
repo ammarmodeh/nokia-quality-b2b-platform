@@ -49,6 +49,8 @@ const NeutralTasks = lazy(() => import("./pages/NeutralTasks"));
 const DropdownManagement = lazy(() => import("./pages/DropdownManagement"));
 const LabAssessment = lazy(() => import("./pages/LabAssessment"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const TablePage = lazy(() => import("./pages/tables/TablePage"));
+const CategoryWorkspace = lazy(() => import("./pages/tables/CategoryWorkspace"));
 const QuizManagement = lazy(() => import("./pages/QuizManagement"));
 const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnalytics"));
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
@@ -170,6 +172,12 @@ const App = () => {
           <Route path="/policies" element={<Hidden><PoliciesList /></Hidden>} />
           <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
           <Route path="/ojo-snags" element={<CustomerIssuesList />} />
+          <Route path="/tcrm" element={<CustomerIssuesList key="TCRM" tracker="TCRM" />} />
+          <Route path="/trc" element={<CustomerIssuesList key="TRC" tracker="TRC" />} />
+          <Route path="/internal-audit" element={<CustomerIssuesList key="FAT" tracker="Internal Audit (FAT)" />} />
+          <Route path="/closure-call" element={<CategoryWorkspace key="cc" category="Closure Call" />} />
+          <Route path="/dvoc" element={<CategoryWorkspace key="dvoc" category="DVOC" />} />
+          <Route path="/tables/:id" element={<TablePage />} />
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
           <Route path="/change-password" element={<Navigate to="/settings?tab=security" replace />} />
           <Route path="/assigned-to-me" element={<Hidden><AssignedToMe /></Hidden>} />

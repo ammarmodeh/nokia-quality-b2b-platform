@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import DashboardCustomizeOutlined from "@mui/icons-material/DashboardCustomizeOutlined";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
@@ -47,6 +48,8 @@ import {
   ArrowDownward
 } from "@mui/icons-material";
 
+
+const TemplateLibrary = lazy(() => import("./tables/TemplateLibrary"));
 const SettingsPage = () => {
   const { user } = useSelector((state) => state.auth);
 
@@ -175,6 +178,7 @@ const SettingsPage = () => {
       ...(isAdmin ? [{ key: "users", label: "Users & roles", icon: ManageAccountsOutlined }] : []),
       { key: "appearance", label: "Appearance", icon: ContrastOutlined },
     ] },
+    { group: "Data", items: [{ key: "templates", label: "Table templates", icon: DashboardCustomizeOutlined }] },
   ];
 
   const field = (name, label, props = {}) => (
@@ -327,6 +331,7 @@ const SettingsPage = () => {
           {tab === "profile" && <Profile embedded />}
           {tab === "security" && <ChangePassword embedded />}
           {tab === "users" && isAdmin && <Users embedded />}
+          {tab === "templates" && <Suspense fallback={null}><TemplateLibrary /></Suspense>}
           {tab === "appearance" && (
             <SectionCard title="Appearance" description="Choose how QOps Tracker looks on this device.">
               <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 1.5 }}>

@@ -153,7 +153,9 @@ export const convert = (field, raw) => {
       return d === undefined ? { error: `"${raw}" is not a recognised date` } : { value: d ? d.toISOString() : undefined };
     }
     case "enum": {
-      const hit = field.options.find((o) => norm(o) === norm(raw));
+      let hit = field.options.find((o) => norm(o) === norm(raw));
+      // y / n / true / false for a Yes-No list
+      if (!hit && field.options.includes("Yes") && field.options.includes("No")) hit = YES.includes(norm(raw)) ? "Yes" : NO.includes(norm(raw)) ? "No" : undefined;
       return hit ? { value: hit } : { error: `"${raw}" is not one of ${field.options.join(", ")}` };
     }
     case "yesno": {

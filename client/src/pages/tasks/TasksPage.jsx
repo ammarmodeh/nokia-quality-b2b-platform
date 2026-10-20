@@ -144,6 +144,12 @@ const TasksPage = () => {
   const [error, setError] = useState(null);
   const [refresh, setRefresh] = useState(0);
   const [openId, setOpenId] = useState(null);
+  // ?task=<id> opens that task (links from custom tables and the calendar)
+  const [deepLink] = useSearchParams();
+  const linkedTask = deepLink.get("task");
+  useEffect(() => {
+    if (linkedTask) setOpenId(linkedTask);
+  }, [linkedTask]);
   const [selection, setSelection] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editTask, setEditTask] = useState(null);
