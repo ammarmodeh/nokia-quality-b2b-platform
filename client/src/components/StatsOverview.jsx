@@ -3,37 +3,21 @@ import {
   Card,
   CardContent,
   Typography,
-  Divider,
   Box,
   Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
   LinearProgress,
-  useTheme
 } from "@mui/material";
 import { Person, Assessment, EmojiEvents } from '@mui/icons-material';
-import React from "react";
 
-const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
-  const theme = useTheme();
+const StatsOverview = ({ stats, supervisorStats, colors }) => {
 
   if (!stats) return null;
 
   const glassStyle = {
     background: colors.surface,
-    
-    
     border: `1px solid ${colors.border}`,
     borderRadius: '10px',
     boxShadow: 'var(--shadow-xs)',
-    transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease',
-    '&:hover': {
-      transform: 'none',
-      boxShadow: `0 12px 40px 0 ${colors.primary}30`,
-      borderColor: `${colors.primary}40`,
-    }
   };
 
   const totalSupervisorAssessments = Object.values(supervisorStats || {})
@@ -78,13 +62,13 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
 
   return (
     <Box sx={{ mt: 2 }}>
-      <Grid container spacing={3} sx={{ mb: 6 }}>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
         {/* Main Stats Card */}
         <Grid item xs={12} md={6}>
           <Card sx={glassStyle}>
-            <CardContent sx={{ p: 4 }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 700 }}>
+                <Typography component="h2" sx={{ fontSize: 15, color: "var(--text)", fontWeight: 600 }}>
                   Network Performance
                 </Typography>
                 <Assessment sx={{ color: colors.primary }} />
@@ -95,7 +79,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                   <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 0.5, display: 'block' }}>
                     Global Average
                   </Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                  <Typography variant="h3" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                     {Math.round(stats.overallStats.averageScore || 0)}%
                   </Typography>
                 </Box>
@@ -103,7 +87,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                   <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 0.5, display: 'block' }}>
                     Total Depth
                   </Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                  <Typography variant="h3" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                     {totalAssessments}
                   </Typography>
                 </Box>
@@ -123,10 +107,10 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                     value={(count / (totalAssessments || 1)) * 100}
                     sx={{
                       height: 6,
-                      borderRadius: 3,
+                      borderRadius: "10px",
                       bgcolor: 'var(--overlay-subtle)',
                       '& .MuiLinearProgress-bar': {
-                        borderRadius: 3,
+                        borderRadius: "10px",
                         backgroundColor: range.includes('Excel') ? colors.success :
                           range.includes('Good') ? colors.success :
                             range.includes('Fair') ? colors.primary :
@@ -143,9 +127,9 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
         {/* Performance Leaders Card */}
         <Grid item xs={12} md={6}>
           <Card sx={glassStyle}>
-            <CardContent sx={{ p: 4 }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" sx={{ color: colors.warning, fontWeight: 700 }}>
+                <Typography component="h2" sx={{ fontSize: 15, color: "var(--text)", fontWeight: 600 }}>
                   Performance Leaders
                 </Typography>
                 <EmojiEvents sx={{ color: colors.warning }} />
@@ -154,31 +138,31 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
               <Box sx={{
                 p: 2.5,
                 borderRadius: '8px',
-                bgcolor: 'rgba(16, 185, 129, 0.08)',
-                border: '1px solid rgba(16, 185, 129, 0.1)',
+                bgcolor: 'rgba(22, 163, 74, 0.08)',
+                border: '1px solid rgba(22, 163, 74, 0.1)',
                 mb: 3
               }}>
-                <Typography variant="caption" sx={{ color: colors.success, fontWeight: 700, mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: colors.success, fontWeight: 600, mb: 0.5, display: 'block' }}>
                   Top Performer
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>{topTeam?.teamName || "N/A"}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800, color: colors.success }}>{Math.round(topTeam?.averageScore || 0)}%</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: colors.textPrimary }}>{topTeam?.teamName || "N/A"}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 600, color: colors.success }}>{Math.round(topTeam?.averageScore || 0)}%</Typography>
                 </Box>
               </Box>
 
               <Box sx={{
                 p: 2.5,
                 borderRadius: '8px',
-                bgcolor: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.1)'
+                bgcolor: 'rgba(220, 38, 38, 0.08)',
+                border: '1px solid rgba(220, 38, 38, 0.1)'
               }}>
-                <Typography variant="caption" sx={{ color: colors.error, fontWeight: 700, mb: 0.5, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: colors.error, fontWeight: 600, mb: 0.5, display: 'block' }}>
                   Attention Required
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary }}>{bottomTeam?.teamName || "N/A"}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800, color: colors.error }}>{Math.round(bottomTeam?.averageScore || 0)}%</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: colors.textPrimary }}>{bottomTeam?.teamName || "N/A"}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 600, color: colors.error }}>{Math.round(bottomTeam?.averageScore || 0)}%</Typography>
                 </Box>
               </Box>
             </CardContent>
@@ -188,11 +172,11 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
         {/* Supervisor Contributions Card */}
         <Grid item xs={12}>
           <Card sx={{ ...glassStyle, '&:hover': { ...glassStyle['&:hover'], transform: 'none' } }}>
-            <CardContent sx={{ p: 4 }}>
+            <CardContent sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Person sx={{ color: colors.primary }} />
-                  <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700 }}>
+                  <Typography component="h2" sx={{ fontSize: 15, color: "var(--text)", fontWeight: 600 }}>
                     Supervisory Oversight
                   </Typography>
                 </Box>
@@ -209,7 +193,7 @@ const StatsOverview = ({ stats, supervisorStats, colors, isMobile }) => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{
                           bgcolor: colors.primary,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           boxShadow: `0 0 12px ${colors.primary}40`
                         }}>
                           {supervisor?.name?.split(' ').map(n => n[0]).join('') || '?'}

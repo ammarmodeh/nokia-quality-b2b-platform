@@ -15,23 +15,19 @@ import {
   FormControl,
   InputLabel,
   IconButton,
-  FormLabel,
   RadioGroup,
   Radio,
-  Alert,
-  Tooltip
 } from "@mui/material";
 import {
   ExpandMore,
   ExpandLess,
   CheckCircle,
-  ErrorOutline,
   Info,
   Assignment,
   Psychology,
   Handyman,
   SupportAgent,
-  EmojiEvents
+  EmojiEvents,
 } from '@mui/icons-material';
 import { useSelector } from "react-redux";
 import { StepRail, StepFooter } from "./ui/Stepper";
@@ -151,7 +147,7 @@ const AssessmentForm = ({
     <Paper component="form" onSubmit={handleSubmit} sx={{ ...glassStyle, p: { xs: 3, md: 5 }, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 5 }}>
         <Box>
-          <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 800, color: colors.textPrimary, mb: 1 }}>
+          <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: 600, color: colors.textPrimary, mb: 1 }}>
             {editMode ? "Refine Assessment" : "Operational Audit"}
           </Typography>
           <Typography variant="body2" sx={{ color: colors.textSecondary }}>
@@ -166,7 +162,7 @@ const AssessmentForm = ({
             sx={{
               height: 48,
               fontSize: '1.25rem',
-              fontWeight: 800,
+              fontWeight: 600,
               bgcolor: `${colors[getPerformanceColor(overallPercentage)]}20`,
               color: colors[getPerformanceColor(overallPercentage)],
               border: `2px solid ${colors[getPerformanceColor(overallPercentage)]}40`,
@@ -193,7 +189,7 @@ const AssessmentForm = ({
         <Box key={category} sx={{ mb: 6 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3, borderBottom: `1px solid ${colors.border}`, pb: 1.5 }}>
             <Box sx={{ color: colors.primary }}>{categoryIcons[category] || <Assignment />}</Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: colors.textPrimary }}>{category}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: colors.textPrimary }}>{category}</Typography>
           </Box>
 
           {checkPoints.filter(p => p.category === category).map((point, idx) => {
@@ -202,7 +198,7 @@ const AssessmentForm = ({
               <Box key={idx} sx={checkpointStyle}>
                 <Grid container spacing={3} alignItems="center">
                   <Grid item xs={12} md={5}>
-                    <Typography variant={isMobile ? "subtitle2" : "subtitle1"} sx={{ fontWeight: 700, mb: 0.5 }}>{point.name}</Typography>
+                    <Typography variant={isMobile ? "subtitle2" : "subtitle1"} sx={{ fontWeight: 600, mb: 0.5 }}>{point.name}</Typography>
                     <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 2, fontSize: isMobile ? '0.75rem' : '0.875rem' }}>{point.description}</Typography>
 
                     {isEquipmentCheckpoint(point.name) && (
@@ -233,7 +229,7 @@ const AssessmentForm = ({
                         size={isMobile ? "small" : "medium"}
                         disabled={point.isAvailable === false}
                         onChange={(e) => handleCheckPointChange(realIndex, "score", e.target.value)}
-                        sx={{ borderRadius: '12px', fontSize: isMobile ? '0.8rem' : '1rem' }}
+                        sx={{ borderRadius: "10px", fontSize: isMobile ? '0.8rem' : '1rem' }}
                       >
                         {point.isAvailable === false ? (
                           <MenuItem value={0}>Score Fixed to 0 (Not Available)</MenuItem>
@@ -254,7 +250,7 @@ const AssessmentForm = ({
                         value={point.notes || ""}
                         onChange={(e) => handleCheckPointChange(realIndex, "notes", e.target.value)}
                         disabled={point.isAvailable === false}
-                        sx={{ direction: 'rtl', '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                        sx={{ direction: 'rtl', '& .MuiOutlinedInput-root': { borderRadius: "10px" } }}
                       />
                       <IconButton onClick={() => toggleNotes(realIndex)} sx={{ color: colors.textSecondary }}>
                         {expandedNotes[realIndex] ? <ExpandLess /> : <ExpandMore />}
@@ -283,7 +279,7 @@ const AssessmentForm = ({
             );
           })}
         </Box>
-        <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>Final Observations</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>Final Observations</Typography>
         <TextField
           label="Comprehensive Auditor Feedback"
           fullWidth
@@ -300,7 +296,7 @@ const AssessmentForm = ({
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           <Button type="button" variant="outlined" onClick={() => goTo(CATEGORIES.length - 1)}>Back</Button>
           {editMode && (
-            <Button type="button" onClick={onCancel} sx={{ px: 4, borderRadius: '12px', color: colors.textSecondary }}>
+            <Button type="button" onClick={onCancel} sx={{ px: 4, borderRadius: "10px", color: colors.textSecondary }}>
               Discard Changes
             </Button>
           )}

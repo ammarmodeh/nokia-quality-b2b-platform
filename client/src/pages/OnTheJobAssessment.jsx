@@ -5,16 +5,9 @@ import {
   Box,
   Typography,
   Button,
-  Alert,
   useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  TextField,
 } from "@mui/material";
-import { Circle, Download } from '@mui/icons-material';
+import { Download } from '@mui/icons-material';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Legend } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import * as XLSX from 'xlsx';
@@ -28,9 +21,30 @@ import StatsOverview from "../components/StatsOverview";
 import TeamList from "../components/TeamList";
 import TeamSelector from "../components/TeamSelector";
 import AssessmentList from "../components/AssessmentList";
+import PageHeader from "../components/ui/PageHeader";
+import SectionCard from "../components/ui/SectionCard";
+import FilterChip from "../components/ui/FilterChip";
+import ErrorState from "../components/ui/ErrorState";
+import AppDialog from "../components/ui/AppDialog";
+import SafeDeleteDialog from "../components/ui/SafeDeleteDialog";
+import { bulkDelete, DELETE_PATHS } from "../api/bulkDelete";
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Legend, ChartDataLabels);
+
+// Every field of an on-the-job assessment, for the backup taken before a permanent delete.
+const OJT_BACKUP_COLUMNS = [
+  ["Team", (a) => a.fieldTeamName || a.fieldTeamId?.teamName],
+  ["Assessment date", (a) => (a.assessmentDate ? new Date(a.assessmentDate) : "")],
+  ["Conducted by", (a) => a.conductedBy || ""],
+  ["Overall score (%)", (a) => a.overallScore ?? ""],
+  ["Status", (a) => a.status || ""],
+  ["Category scores", (a) => Object.entries(a.categoryScores || {}).map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join("; ")],
+  ["Checkpoints", (a) => (a.checkPoints || []).map((c) => `${c.name} (${c.category}): ${c.score}${c.isCompleted ? " ✓" : ""}${c.notes ? ` — ${c.notes}` : ""}`).join("; ")],
+  ["Feedback", (a) => a.feedback || ""],
+  ["Created", (a) => (a.createdAt ? new Date(a.createdAt) : "")],
+  ["Record ID", (a) => a._id],
+];
 
 const OnTheJobAssessment = () => {
   const user = useSelector((state) => state?.auth?.user);
@@ -56,23 +70,7 @@ const OnTheJobAssessment = () => {
   const [supervisorStats, setSupervisorStats] = useState({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState(null);
-  const [teamNameConfirmation, setTeamNameConfirmation] = useState("");
   const [otjFilterStatus, setOtjFilterStatus] = useState('all'); // 'all', 'with', 'without'
-
-  // Consistent scoring labels function
-  const [settings, setSettings] = useState(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await api.get('/settings');
-        setSettings(response.data);
-      } catch (err) {
-        console.error('Failed to fetch settings');
-      }
-    };
-    fetchSettings();
-  }, []);
 
   const getScoreLabel = useCallback((score) => {
     // Thresholds adjusted for 0-100 percentage scale
@@ -336,13 +334,6 @@ const OnTheJobAssessment = () => {
     shadow: 'var(--shadow-xs)'
   }), []);
 
-  // Clerk-style surfaces (kept under the old names used throughout the page)
-  const glassStyle = {
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '10px',
-    boxShadow: 'var(--shadow-xs)',
-  };
 
 
   const fetchData = useCallback(async () => {
@@ -462,14 +453,6 @@ const OnTheJobAssessment = () => {
   }, []);
 
   // Helper to ensure scores are shown on 1-5 scale in exports
-  const formatScoreForExport = useCallback((score) => {
-    const numScore = Number(score) || 0;
-    // If score is > 5, it's likely a percentage (0-100)
-    if (numScore > 5) {
-      return (numScore / 20).toFixed(1);
-    }
-    return numScore.toFixed(1);
-  }, []);
 
   // Helper to fix sheet range
   const fixSheetRange = (ws) => {
@@ -482,7 +465,9 @@ const OnTheJobAssessment = () => {
         if (decoded.r > maxR) maxR = decoded.r;
         if (decoded.c < minC) minC = decoded.c;
         if (decoded.c > maxC) maxC = decoded.c;
-      } catch (e) {}
+      } catch {
+        /* not a cell address */
+      }
     });
     if (minR !== Infinity) {
       ws['!ref'] = XLSX.utils.encode_range({ s: { r: minR, c: minC }, e: { r: maxR, c: maxC } });
@@ -1116,7 +1101,7 @@ const OnTheJobAssessment = () => {
         ...completeAssessment
       };
 
-      const response = await api.post(
+      await api.post(
         "/on-the-job-assessments",
         payload,
         {
@@ -1274,74 +1259,12 @@ const OnTheJobAssessment = () => {
   }, []);
 
   const handleDeleteAssessment = (assessmentId) => {
-    if (user.role !== 'Admin') {
-      alert("You do not have permission to delete the assessments.");
+    if (user?.role !== "Admin") {
+      toast.error("Only admins can delete assessments");
       return;
     }
-
-    const assessment = assessments.find(a => a._id === assessmentId);
-    setAssessmentToDelete(assessment);
+    setAssessmentToDelete(assessments.find((a) => a._id === assessmentId) || null);
     setDeleteDialogOpen(true);
-  };
-
-  const confirmDeleteAssessment = async () => {
-    if (!assessmentToDelete) return;
-
-    // Check if the entered team name matches
-    if (teamNameConfirmation !== selectedTeam?.teamName) {
-      setError("Team name does not match. Please enter the exact team name to confirm deletion.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Remove from local state first
-      setAssessments(prev => prev.filter(a => a._id !== assessmentToDelete._id));
-      setAllAssessments(prev => prev.filter(a => a._id !== assessmentToDelete._id));
-      setStats(prev => ({
-        ...prev,
-        overallStats: {
-          ...prev.overallStats,
-          totalAssessments: prev.overallStats.totalAssessments - 1
-        }
-      }));
-
-      // Make API call to delete permanently
-      await api.delete(
-        `/on-the-job-assessments/${assessmentToDelete._id}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
-      );
-
-      // Reset dialog state
-      setDeleteDialogOpen(false);
-      setTeamNameConfirmation("");
-      setAssessmentToDelete(null);
-
-      // Refresh all data to update global stats
-      await fetchData();
-      toast.success("Assessment deleted successfully");
-    } catch (error) {
-      console.error("Error deleting assessment:", error);
-      setError("Failed to delete assessment");
-      toast.error("Failed to delete assessment");
-
-      // Revert local state if deletion fails
-      if (assessmentToDelete) {
-        setAssessments(prev => [...prev, assessmentToDelete]);
-        setAllAssessments(prev => [...prev, assessmentToDelete]);
-        setStats(prev => ({
-          ...prev,
-          overallStats: {
-            ...prev.overallStats,
-            totalAssessments: prev.overallStats.totalAssessments + 1
-          }
-        }));
-      }
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleEditAssessment = (assessment) => {
@@ -1398,78 +1321,35 @@ const OnTheJobAssessment = () => {
 
   const MemoizedAssessmentForm = React.memo(AssessmentForm);
 
+  const canAssess = user?.title === "Field Technical Support - QoS" || user?.role === "Admin";
+  const assessedCount = fieldTeams.filter((team) => teamAssessmentsMap[team._id]?.length > 0).length;
+  const closeDetail = () => { setOpenDetailDialog(false); setSelectedAssessment(null); };
+  const closeEdit = () => { setEditMode(false); setSelectedAssessment(null); setOpenEditDialog(false); };
+
   return (
-    <Box sx={{
-      color: colors.textPrimary,
-      // p: { xs: 2, md: 4 },
-      transition: 'background-color 0.3s ease'
-    }}>
-      <Box>
-        {/* Modern Header Section */}
-        <Box sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', md: 'center' },
-          mb: 3,
-          gap: 2
-        }}>
-          <Box>
-            <Typography component="h1" sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.25 }}>
-              On-the-Job Assessment
-            </Typography>
-            <Typography sx={{ mt: 0.5, fontSize: 13.5, color: 'var(--text-secondary)' }}>
-              Field observations of technicians on live jobs, with scores and team analytics.
-            </Typography>
-          </Box>
+    <Box>
+      <PageHeader
+        title="On-the-Job Assessment"
+        description="Field observations of technicians on live jobs, with scores and team analytics."
+        actions={<Button variant="outlined" startIcon={<Download sx={{ fontSize: 16 }} />} onClick={handleExportTeamSummary}>Export summary</Button>}
+      />
 
-          {/* Global Actions */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              onClick={handleExportTeamSummary}
-              variant="outlined"
-              startIcon={<Download />}
-              sx={{
-                borderColor: colors.border,
-                color: colors.textPrimary,
-                borderRadius: '12px',
-                textTransform: 'none',
-                px: 3,
-                py: 1,
-                ...glassStyle,
-                '&:hover': {
-                  borderColor: colors.primary,
-                  backgroundColor: colors.primaryHover
-                }
-              }}
-            >
-              Export Global Summary
-            </Button>
-          </Box>
-        </Box>
+      {error && <ErrorState title="Something went wrong" message={error} onRetry={() => fetchData()} sx={{ mb: 2 }} />}
 
-        {/* Improved Team Selector with Glass Effect */}
-        <Box sx={{
-          ...glassStyle,
-          p: 3,
-          mb: 5,
-          background: 'var(--surface)'
-        }}>
-          <Typography variant="subtitle1" sx={{ color: colors.primary, fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Circle sx={{ fontSize: 10 }} /> Select Operational Team
-          </Typography>
-          <TeamSelector
-            fieldTeams={fieldTeams}
-            selectedTeam={selectedTeam}
-            setSelectedTeam={setSelectedTeam}
-            loading={loading}
-            colors={colors}
-            onNewAssessment={handleNewAssessment}
-            canAssess={user?.title === "Field Technical Support - QoS" || user?.role === "Admin"}
-          />
-        </Box>
+      <SectionCard title="Team" description="Pick a field team to see and record its on-the-job assessments." sx={{ mb: 2 }}>
+        <TeamSelector
+          fieldTeams={fieldTeams}
+          selectedTeam={selectedTeam}
+          setSelectedTeam={setSelectedTeam}
+          loading={loading}
+          colors={colors}
+          onNewAssessment={handleNewAssessment}
+          canAssess={canAssess}
+        />
+      </SectionCard>
 
-        {selectedTeam && !selectedAssessment && (
+      {selectedTeam && !selectedAssessment && (
+        <Box sx={{ mb: 2 }}>
           <AssessmentList
             assessments={assessments}
             colors={colors}
@@ -1478,7 +1358,6 @@ const OnTheJobAssessment = () => {
             onSelectAssessment={handleSelectAssessment}
             onEditAssessment={handleEditAssessment}
             onDeleteAssessment={handleDeleteAssessment}
-            onNewAssessment={(user?.title === "Field Technical Support - QoS" || user?.role === "Admin") ? handleNewAssessment : undefined}
             user={user}
             page={assessmentsPage}
             rowsPerPage={assessmentsRowsPerPage}
@@ -1489,262 +1368,124 @@ const OnTheJobAssessment = () => {
             }}
             loading={loading}
           />
-        )}
-
-        {/* Detail Dialog */}
-        {selectedAssessment && selectedTeam && !editMode && openDetailDialog && (
-          <Dialog
-            open={openDetailDialog}
-            onClose={() => {
-              setOpenDetailDialog(false);
-              setSelectedAssessment(null);
-            }}
-            fullScreen
-            PaperProps={{
-              sx: {
-                backgroundColor: colors.surface,
-                color: colors.textPrimary
-              }
-            }}
-          >
-            <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
-              Assessment Details for {selectedTeam.teamName}
-            </DialogTitle>
-            <DialogContent>
-              <AssessmentDetail
-                assessment={selectedAssessment}
-                team={selectedTeam}
-                colors={colors}
-                getPerformanceColor={getPerformanceColor}
-                getCategoryChartData={getCategoryChartData}
-                horizontalChartOptions={horizontalChartOptions}
-                analyzeCategoryPerformance={analyzeCategoryPerformance}
-                getLabelForCheckpoint={getLabelForCheckpoint}
-                getScoreLabel={getScoreLabel}
-                isMobile={isMobile}
-                onBack={() => {
-                  setOpenDetailDialog(false);
-                  setSelectedAssessment(null);
-                }}
-                onEdit={() => {
-                  setEditMode(true);
-                  setOpenDetailDialog(false);
-                  setOpenEditDialog(true);
-                }}
-                onExportExcel={() => handleExportIndividualAssessment(selectedAssessment, selectedTeam.teamName)}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => handleExportIndividualAssessment(selectedAssessment, selectedTeam.teamName)}
-                startIcon={<Download />}
-                sx={{ color: colors.primary }}
-              >
-                Export Assessment
-              </Button>
-              <Button
-                onClick={() => {
-                  setOpenDetailDialog(false);
-                  setSelectedAssessment(null);
-                }}
-                sx={{ color: colors.textSecondary }}
-              >
-                Close
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
-
-        {/* New Assessment Dialog */}
-        {(user?.title === "Field Technical Support - QoS" || user?.role === "Admin") && selectedTeam && (
-          <Dialog
-            open={openAssessmentDialog}
-            onClose={() => setOpenAssessmentDialog(false)}
-            fullScreen
-            PaperProps={{
-              sx: {
-                backgroundColor: colors.surface,
-                color: colors.textPrimary,
-              }
-            }}
-          >
-            <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
-              New Assessment for {selectedTeam.teamName}
-            </DialogTitle>
-            <DialogContent sx={{ p: 1 }}>
-              <Box sx={{ mb: 2, p: 2, bgcolor: colors.surfaceElevated, borderRadius: '8px', border: `1px solid ${colors.border}` }}>
-                <Typography variant="h6" sx={{ color: colors.primary }}>Assessment In Progress</Typography>
-              </Box>
-              <MemoizedAssessmentForm
-                key={selectedTeam?._id || 'new-assessment'}
-                initialAssessment={initialAssessmentData}
-                loading={loading}
-                colors={colors}
-                onSubmit={handleSubmitAssessment}
-                calculateOverallScore={calculateOverallScore}
-                getPerformanceColor={getPerformanceColor}
-                editMode={false}
-                getScoreLabel={getScoreLabel}
-                isMobile={isMobile}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => setOpenAssessmentDialog(false)}
-                sx={{ color: colors.textSecondary }}
-              >
-                Cancel
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
-
-        {/* Edit Assessment Dialog */}
-        {editMode && selectedAssessment && selectedTeam && (
-          <Dialog
-            open={openEditDialog}
-            onClose={() => {
-              setEditMode(false);
-              setSelectedAssessment(null);
-              setOpenEditDialog(false);
-            }}
-            fullScreen
-            PaperProps={{
-              sx: {
-                backgroundColor: colors.surface,
-                color: colors.textPrimary
-              }
-            }}
-          >
-            <DialogTitle sx={{ color: colors.primary, fontWeight: 'bold' }}>
-              Edit Assessment for {selectedTeam.teamName}
-            </DialogTitle>
-            <DialogContent>
-              <AssessmentForm
-                initialAssessment={selectedAssessment}
-                loading={loading}
-                colors={colors}
-                onSubmit={handleUpdateAssessment}
-                calculateOverallScore={calculateOverallScore}
-                getPerformanceColor={getPerformanceColor}
-                editMode={editMode}
-                onCancel={() => {
-                  setEditMode(false);
-                  setSelectedAssessment(null);
-                  setOpenEditDialog(false);
-                }}
-                getScoreLabel={getScoreLabel}
-                isMobile={isMobile}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => {
-                  setEditMode(false);
-                  setSelectedAssessment(null);
-                  setOpenEditDialog(false);
-                }}
-                sx={{ color: colors.textSecondary }}
-              >
-                Cancel
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
-
-        <StatsOverview
-          key={JSON.stringify(stats) + JSON.stringify(supervisorStats)}
-          stats={stats}
-          supervisorStats={supervisorStats}
-          colors={colors}
-          isMobile={isMobile}
-          getScoreLabel={getScoreLabel}
-        />
-
-        {/* Export Team Summary Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Button
-            onClick={handleExportTeamSummary}
-            variant="contained"
-            startIcon={<Download />}
-            sx={{
-              backgroundColor: colors.primary,
-              '&:hover': {
-                backgroundColor: '#1d4ed8',
-              }
-            }}
-          >
-            Export Team Summary
-          </Button>
         </Box>
+      )}
 
-        {fieldTeams.length > 0 && (
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ color: colors.textSecondary, mb: 2, fontWeight: 600 }}>
-              Filter Teams by OTJ Assessment Status:
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button
-                onClick={() => setOtjFilterStatus('all')}
-                variant={otjFilterStatus === 'all' ? 'contained' : 'outlined'}
-                sx={{
-                  backgroundColor: otjFilterStatus === 'all' ? colors.primary : 'transparent',
-                  borderColor: otjFilterStatus === 'all' ? colors.primary : colors.border,
-                  color: otjFilterStatus === 'all' ? 'white' : colors.textPrimary,
-                  '&:hover': {
-                    backgroundColor: otjFilterStatus === 'all' ? '#1d4ed8' : colors.primaryHover,
-                    borderColor: colors.primary,
-                  },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                All Teams ({fieldTeams.length})
-              </Button>
-              <Button
-                onClick={() => setOtjFilterStatus('with')}
-                variant={otjFilterStatus === 'with' ? 'contained' : 'outlined'}
-                sx={{
-                  backgroundColor: otjFilterStatus === 'with' ? '#10b981' : 'transparent',
-                  borderColor: otjFilterStatus === 'with' ? '#10b981' : colors.border,
-                  color: otjFilterStatus === 'with' ? 'white' : colors.textPrimary,
-                  '&:hover': {
-                    backgroundColor: otjFilterStatus === 'with' ? '#059669' : 'rgba(16, 185, 129, 0.15)',
-                    borderColor: '#10b981',
-                  },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                With OTJ Assessment ({fieldTeams.filter(team => teamAssessmentsMap[team._id]?.length > 0).length})
-              </Button>
-              <Button
-                onClick={() => setOtjFilterStatus('without')}
-                variant={otjFilterStatus === 'without' ? 'contained' : 'outlined'}
-                sx={{
-                  backgroundColor: otjFilterStatus === 'without' ? '#f59e0b' : 'transparent',
-                  borderColor: otjFilterStatus === 'without' ? '#f59e0b' : colors.border,
-                  color: otjFilterStatus === 'without' ? 'white' : colors.textPrimary,
-                  '&:hover': {
-                    backgroundColor: otjFilterStatus === 'without' ? '#d97706' : 'rgba(245, 158, 11, 0.15)',
-                    borderColor: '#f59e0b',
-                  },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                Without OTJ Assessment ({fieldTeams.filter(team => !teamAssessmentsMap[team._id]?.length).length})
-              </Button>
-            </Box>
-          </Box>
+      {/* Detail */}
+      <AppDialog
+        open={Boolean(selectedAssessment && selectedTeam && !editMode && openDetailDialog)}
+        onClose={closeDetail}
+        size="xl"
+        title={selectedTeam ? `Assessment · ${selectedTeam.teamName}` : "Assessment"}
+        description={selectedAssessment?.assessmentDate ? format(new Date(selectedAssessment.assessmentDate), "d MMM yyyy") : undefined}
+        extraActions={selectedAssessment && selectedTeam && (
+          <Button variant="outlined" startIcon={<Download sx={{ fontSize: 16 }} />} onClick={() => handleExportIndividualAssessment(selectedAssessment, selectedTeam.teamName)}>Export</Button>
         )}
+        actions={<Button variant="outlined" onClick={closeDetail}>Close</Button>}
+      >
+        {selectedAssessment && selectedTeam && (
+          <AssessmentDetail
+            assessment={selectedAssessment}
+            team={selectedTeam}
+            colors={colors}
+            getPerformanceColor={getPerformanceColor}
+            getCategoryChartData={getCategoryChartData}
+            horizontalChartOptions={horizontalChartOptions}
+            analyzeCategoryPerformance={analyzeCategoryPerformance}
+            getLabelForCheckpoint={getLabelForCheckpoint}
+            getScoreLabel={getScoreLabel}
+            isMobile={isMobile}
+            onBack={closeDetail}
+            onEdit={() => {
+              setEditMode(true);
+              setOpenDetailDialog(false);
+              setOpenEditDialog(true);
+            }}
+            onExportExcel={() => handleExportIndividualAssessment(selectedAssessment, selectedTeam.teamName)}
+          />
+        )}
+      </AppDialog>
 
-        {fieldTeams.length > 0 && (
+      {/* New */}
+      {canAssess && selectedTeam && (
+        <AppDialog
+          open={openAssessmentDialog}
+          onClose={() => setOpenAssessmentDialog(false)}
+          size="xl"
+          title={`New assessment · ${selectedTeam.teamName}`}
+          description="Score each checkpoint; the overall score updates as you go."
+          actions={<Button variant="outlined" onClick={() => setOpenAssessmentDialog(false)}>Cancel</Button>}
+        >
+          <MemoizedAssessmentForm
+            key={selectedTeam?._id || "new-assessment"}
+            initialAssessment={initialAssessmentData}
+            loading={loading}
+            colors={colors}
+            onSubmit={handleSubmitAssessment}
+            calculateOverallScore={calculateOverallScore}
+            getPerformanceColor={getPerformanceColor}
+            editMode={false}
+            getScoreLabel={getScoreLabel}
+            isMobile={isMobile}
+          />
+        </AppDialog>
+      )}
+
+      {/* Edit */}
+      <AppDialog
+        open={Boolean(editMode && selectedAssessment && selectedTeam && openEditDialog)}
+        onClose={closeEdit}
+        size="xl"
+        title={selectedTeam ? `Edit assessment · ${selectedTeam.teamName}` : "Edit assessment"}
+        actions={<Button variant="outlined" onClick={closeEdit}>Cancel</Button>}
+      >
+        {editMode && selectedAssessment && selectedTeam && (
+          <AssessmentForm
+            initialAssessment={selectedAssessment}
+            loading={loading}
+            colors={colors}
+            onSubmit={handleUpdateAssessment}
+            calculateOverallScore={calculateOverallScore}
+            getPerformanceColor={getPerformanceColor}
+            editMode={editMode}
+            onCancel={closeEdit}
+            getScoreLabel={getScoreLabel}
+            isMobile={isMobile}
+          />
+        )}
+      </AppDialog>
+
+      <StatsOverview
+        key={JSON.stringify(stats) + JSON.stringify(supervisorStats)}
+        stats={stats}
+        supervisorStats={supervisorStats}
+        colors={colors}
+        isMobile={isMobile}
+        getScoreLabel={getScoreLabel}
+      />
+
+      {fieldTeams.length > 0 && (
+        <>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap", mt: 3, mb: 1.5 }}>
+            <Typography component="h2" sx={{ fontSize: 15, fontWeight: 600, mr: 1 }}>Teams</Typography>
+            <FilterChip
+              label="OTJ assessment"
+              single
+              value={otjFilterStatus === "all" ? [] : [otjFilterStatus]}
+              onChange={(v) => setOtjFilterStatus(v[0] || "all")}
+              options={[
+                { value: "with", label: "Assessed", hint: assessedCount },
+                { value: "without", label: "Not assessed yet", hint: fieldTeams.length - assessedCount },
+              ]}
+            />
+            <Box sx={{ flex: 1 }} />
+            <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)" }}>{assessedCount} of {fieldTeams.length} teams assessed</Typography>
+          </Box>
           <TeamList
-            fieldTeams={fieldTeams.filter(team => {
-              if (otjFilterStatus === 'with') return teamAssessmentsMap[team._id]?.length > 0;
-              if (otjFilterStatus === 'without') return !teamAssessmentsMap[team._id]?.length;
-              return true; // 'all'
+            fieldTeams={fieldTeams.filter((team) => {
+              if (otjFilterStatus === "with") return teamAssessmentsMap[team._id]?.length > 0;
+              if (otjFilterStatus === "without") return !teamAssessmentsMap[team._id]?.length;
+              return true;
             })}
             colors={colors}
             isTeamAssessed={isTeamAssessed}
@@ -1763,91 +1504,24 @@ const OnTheJobAssessment = () => {
             onSelectTeam={setSelectedTeam}
             isMobile={isMobile}
           />
-        )}
+        </>
+      )}
 
-        {error && (
-          <Alert severity="error" sx={{
-            mb: 3,
-            backgroundColor: '#2d0000',
-            color: '#ff6e6e',
-            border: '1px solid #ff3d3d',
-            borderRadius: '8px'
-          }}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog
-          open={deleteDialogOpen}
-          onClose={() => {
-            setDeleteDialogOpen(false);
-            setTeamNameConfirmation("");
-          }}
-          aria-labelledby="delete-dialog-title"
-          PaperProps={{
-            sx: {
-              backgroundColor: colors.surface,
-              color: colors.textPrimary
-            }
-          }}
-        >
-          <DialogTitle id="delete-dialog-title">Confirm Deletion</DialogTitle>
-          <DialogContent>
-            <DialogContentText sx={{ color: colors.textSecondary, mb: 2 }}>
-              Are you sure you want to delete this assessment? This action cannot be undone.
-            </DialogContentText>
-            <DialogContentText sx={{ color: colors.textSecondary, mb: 2 }}>
-              To confirm, please enter the team name: <strong>{selectedTeam?.teamName}</strong>
-            </DialogContentText>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="team-name"
-              label="Team Name"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={teamNameConfirmation}
-              onChange={(e) => setTeamNameConfirmation(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: colors.border,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: colors.primary,
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: colors.textSecondary,
-                },
-                '& .MuiInputBase-input': {
-                  color: colors.textPrimary,
-                },
-              }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setTeamNameConfirmation("");
-              }}
-              sx={{ color: colors.textSecondary }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmDeleteAssessment}
-              disabled={teamNameConfirmation !== selectedTeam?.teamName}
-              sx={{ color: colors.error }}
-            >
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
+      <SafeDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => { setDeleteDialogOpen(false); setAssessmentToDelete(null); }}
+        records={assessmentToDelete ? [assessmentToDelete] : []}
+        noun={{ one: "on-the-job assessment", many: "on-the-job assessments" }}
+        nameOf={(a) => `${a.fieldTeamName || selectedTeam?.teamName || "Team"} · ${a.assessmentDate ? format(new Date(a.assessmentDate), "d MMM yyyy") : ""} · ${a.overallScore ?? 0}%`}
+        exportColumns={OJT_BACKUP_COLUMNS}
+        exportFilename="on-the-job-assessment"
+        onDelete={(list) => bulkDelete(DELETE_PATHS.ojt, list.map((a) => a._id))}
+        onDeleted={({ deleted }) => {
+          setAssessments((prev) => prev.filter((a) => !deleted.includes(a._id)));
+          setAllAssessments((prev) => prev.filter((a) => !deleted.includes(a._id)));
+          fetchData();
+        }}
+      />
     </Box>
   );
 };

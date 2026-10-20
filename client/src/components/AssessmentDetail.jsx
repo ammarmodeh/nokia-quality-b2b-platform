@@ -1,5 +1,5 @@
 import { tok } from "../theme/tokens";
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
 import api from "../api/api";
@@ -9,13 +9,9 @@ import {
   Button,
   Paper,
   Card,
-  CardContent,
   Chip,
   Divider,
-  TextField,
-  Avatar,
   Grid,
-  Tooltip
 } from "@mui/material";
 import {
   ArrowBack,
@@ -24,12 +20,11 @@ import {
   TrendingDown,
   Info,
   AssignmentTurnedIn,
-  Person,
   Event,
   Assistant,
   Grade,
   Download,
-  PictureAsPdf
+  PictureAsPdf,
 } from '@mui/icons-material';
 import { Bar } from 'react-chartjs-2';
 
@@ -99,7 +94,7 @@ ${weaknesses || "No critical weaknesses identified in this audit."}
 | :--- | :---: | :--- | :--- |
 ${auditLogs}
 
-## ✍️ Auditor's Final Synthesis
+## ✍️ Auditor’s final synthesis
 ${assessment.feedback || "No additional qualitative feedback provided."}
 
 ---
@@ -141,7 +136,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
     backdropFilter: 'blur(16px) saturate(180%)',
     WebkitBackdropFilter: 'blur(16px) saturate(180%)',
     border: `1px solid ${colors.border}`,
-    borderRadius: '24px',
+    borderRadius: "10px",
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
   };
 
@@ -193,7 +188,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
             sx={{
               borderColor: colors.border,
               color: colors.textPrimary,
-              borderRadius: '12px',
+              borderRadius: "10px",
               textTransform: 'none',
               ...glassStyle,
               '&:hover': { borderColor: colors.primary, bgcolor: colors.primaryHover }
@@ -208,7 +203,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
             sx={{
               borderColor: colors.border,
               color: colors.textPrimary,
-              borderRadius: '12px',
+              borderRadius: "10px",
               textTransform: 'none',
               ...glassStyle,
               '&:hover': { borderColor: colors.primary, bgcolor: colors.primaryHover }
@@ -238,7 +233,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
           <Grid item xs={12} md={8}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
               <Grade sx={{ color: colors.warning }} />
-              <Typography variant="h4" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+              <Typography variant="h4" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                 Performance Audit Report
               </Typography>
             </Box>
@@ -252,7 +247,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
                   <Event sx={{ fontSize: 18, color: colors.primary }} />
                   <Typography variant="caption" sx={{ color: colors.textSecondary }}>Audit Date</Typography>
                 </Box>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   {new Date(assessment.assessmentDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
                 </Typography>
               </Grid>
@@ -261,7 +256,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
                   <AssignmentTurnedIn sx={{ fontSize: 18, color: colors.success }} />
                   <Typography variant="caption" sx={{ color: colors.textSecondary }}>Verification</Typography>
                 </Box>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>Compliance Validated</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>Compliance Validated</Typography>
               </Grid>
             </Grid>
           </Grid>
@@ -269,7 +264,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
           <Grid item xs={12} md={4}>
             <Box sx={{
               p: 3,
-              borderRadius: '20px',
+              borderRadius: "10px",
               bgcolor: tok('--overlay-subtle'),
               border: `1px solid ${colors.border}`,
               textAlign: 'center'
@@ -278,7 +273,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
                 Overall Proficiency
               </Typography>
               <Typography variant="h2" sx={{
-                fontWeight: 900,
+                fontWeight: 600,
                 color: colors[getPerformanceColor(assessment.overallScore)],
                 mb: 1
               }}>
@@ -289,7 +284,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
                 sx={{
                   bgcolor: `${colors[getPerformanceColor(assessment.overallScore)]}20`,
                   color: colors[getPerformanceColor(assessment.overallScore)],
-                  fontWeight: 800,
+                  fontWeight: 600,
                   px: 2
                 }}
               />
@@ -304,7 +299,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
           <Paper sx={{ ...glassStyle, p: 4, height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
               <BarChart sx={{ color: colors.primary }} />
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>Proficiency Breakdown</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Proficiency Breakdown</Typography>
             </Box>
             <Box ref={chartRef} sx={{ height: 400 }}>
               {chartData && <Bar data={chartData} options={chartOptions} />}
@@ -314,15 +309,15 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
 
         <Grid item xs={12} lg={5}>
           <Paper sx={{ ...glassStyle, p: 4, height: '100%' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 4 }}>Cognitive Insights</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 4 }}>Cognitive Insights</Typography>
 
             <Box sx={{ mb: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: colors.success, mb: 2 }}>
                 <TrendingUp fontSize="small" />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Core Strengths</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Core Strengths</Typography>
               </Box>
               {checkpointStrengths.slice(0, 3).map((cp, idx) => (
-                <Box key={idx} sx={{ p: 1.5, mb: 1.5, bgcolor: 'rgba(16, 185, 129, 0.05)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                <Box key={idx} sx={{ p: 1.5, mb: 1.5, bgcolor: 'rgba(22, 163, 74, 0.05)', borderRadius: "10px", border: '1px solid rgba(22, 163, 74, 0.1)' }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{cp.name}</Typography>
                   <Typography variant="caption" sx={{ color: colors.textSecondary }}>Level: {getLabelForCheckpoint(cp.name, cp.score)}</Typography>
                 </Box>
@@ -332,10 +327,10 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: colors.error, mb: 2 }}>
                 <TrendingDown fontSize="small" />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Growth Opportunities</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>Growth Opportunities</Typography>
               </Box>
               {checkpointWeaknesses.slice(0, 3).map((cp, idx) => (
-                <Box key={idx} sx={{ p: 1.5, mb: 1.5, bgcolor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                <Box key={idx} sx={{ p: 1.5, mb: 1.5, bgcolor: 'rgba(220, 38, 38, 0.05)', borderRadius: "10px", border: '1px solid rgba(220, 38, 38, 0.1)' }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{cp.name}</Typography>
                   <Typography variant="caption" sx={{ color: colors.textSecondary }}>Issue: {getLabelForCheckpoint(cp.name, cp.score)}</Typography>
                 </Box>
@@ -349,21 +344,21 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
       <Paper sx={{ ...glassStyle, p: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 4 }}>
           <Assistant sx={{ color: colors.primary }} />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>Detailed Audit Logs</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Detailed Audit Logs</Typography>
         </Box>
 
         {assessment.checkPoints.map((point, index) => (
           <Box key={index} sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>{point.name}</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>{point.name}</Typography>
                 <Typography variant="body2" sx={{ color: colors.textSecondary }}>{point.description}</Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Chip
                   label={`${point.score}/5`}
                   size="small"
-                  sx={{ bgcolor: `${colors[getPerformanceColor(point.score)]}15`, color: colors[getPerformanceColor(point.score)], fontWeight: 800 }}
+                  sx={{ bgcolor: `${colors[getPerformanceColor(point.score)]}15`, color: colors[getPerformanceColor(point.score)], fontWeight: 600 }}
                 />
                 <Chip
                   label={getLabelForCheckpoint(point.name, point.score)}
@@ -374,7 +369,7 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
             </Box>
 
             {point.notes && (
-              <Box sx={{ mt: 2, p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: '12px', borderLeft: `4px solid ${colors.primary}` }}>
+              <Box sx={{ mt: 2, p: 2, bgcolor: tok('--overlay-subtle'), borderRadius: "10px", borderLeft: `4px solid ${colors.primary}` }}>
                 <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 0.5, display: 'block' }}>Specialist Observations:</Typography>
                 <Typography variant="body2" sx={{ direction: 'rtl', textAlign: 'right', color: colors.textPrimary }}>{point.notes}</Typography>
               </Box>
@@ -389,12 +384,12 @@ ${assessment.feedback || "No additional qualitative feedback provided."}
       <Paper sx={{ ...glassStyle, p: 4, mb: 6 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
           <Info sx={{ color: colors.primary }} />
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>Auditor's Final Synthesis</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Auditor’s Final Synthesis</Typography>
         </Box>
         <Typography variant="body1" sx={{
           p: 3,
           bgcolor: tok('--overlay-subtle'),
-          borderRadius: '16px',
+          borderRadius: "10px",
           border: `1px solid ${colors.border}`,
           color: colors.textPrimary,
           direction: 'rtl',

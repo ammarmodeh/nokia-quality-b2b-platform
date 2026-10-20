@@ -1,364 +1,73 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  TablePagination,
-  Avatar,
-  IconButton,
-  TextField,
-  LinearProgress,
-  Tooltip
-} from "@mui/material";
-import {
-  Search,
-  ChevronRight,
-  Assignment,
-  Groups,
-  Analytics
-} from '@mui/icons-material';
+import { useState } from 'react';
+import { Box, InputBase, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
+import SearchIcon from "@mui/icons-material/Search";
+import Badge from "./ui/Badge";
+import EmptyState from "./ui/EmptyState";
+import { gridSx } from "../pages/tasks/gridSx";
 
+const TONE = { success: 'success', warning: 'warning', error: 'danger', info: 'info' };
+
+/** Field teams with their on-the-job assessment count and average; click a row to open the team. */
 const TeamList = ({
   fieldTeams,
-  colors,
   teamAssessmentsMap,
   getTeamAverageScore,
   getPerformanceColor,
   getScoreLabel,
   loading,
-  page,
-  rowsPerPage,
-  onPageChange,
-  onRowsPerPageChange,
   onSelectTeam,
-  isMobile
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const rows = (fieldTeams || []).filter((team) => (team.teamName || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  const countOf = (team) => (teamAssessmentsMap[String(team._id)] || []).length;
 
-  const filteredTeams = (fieldTeams || []).filter(team =>
-    (team.teamName || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const glassStyle = {
-    background: colors.surface,
-    backdropFilter: 'blur(16px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    overflowX: 'auto'
-  };
+  const columns = [
+    {
+      field: 'teamName', headerName: 'Team', flex: 1, minWidth: 180,
+      renderCell: ({ row }) => (
+        <Box sx={{ minWidth: 0 }}>
+          <Typography noWrap dir="auto" sx={{ fontSize: 13, fontWeight: 500 }}>{row.teamName}</Typography>
+          <Typography noWrap sx={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{row.teamCompany || `ID ${String(row._id).slice(-6).toUpperCase()}`}</Typography>
+        </Box>
+      ),
+    },
+    { field: 'count', headerName: 'Assessments', type: 'number', width: 130, align: 'left', headerAlign: 'left', valueGetter: (_v, row) => countOf(row) },
+    {
+      field: 'average', headerName: 'Average', type: 'number', width: 110, align: 'left', headerAlign: 'left',
+      valueGetter: (_v, row) => (countOf(row) ? Math.round(getTeamAverageScore(row._id)) : null),
+      renderCell: ({ value }) => (value === null ? <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)' }}>—</Typography> : `${value}%`),
+    },
+    {
+      field: 'result', headerName: 'Result', width: 160,
+      valueGetter: (_v, row) => (countOf(row) ? getScoreLabel(getTeamAverageScore(row._id)) : 'Not assessed'),
+      renderCell: ({ row, value }) => (countOf(row)
+        ? <Badge tone={TONE[getPerformanceColor(getTeamAverageScore(row._id))] || 'neutral'} dot>{value}</Badge>
+        : <Badge>{value}</Badge>),
+    },
+  ];
 
   return (
-    <Box sx={{ mb: 6 }}>
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        mb: 3,
-        flexDirection: { xs: 'column', md: 'row' },
-        gap: 2
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Groups sx={{ color: colors.primary }} />
-          <Typography variant="h5" sx={{ fontWeight: 800, color: colors.textPrimary }}>
-            Operational Units
-          </Typography>
-        </Box>
-        <TextField
-          placeholder="Quick search unit..."
-          size="small"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: <Search sx={{ color: colors.textSecondary, mr: 1, fontSize: 20 }} />,
-            sx: {
-              borderRadius: '12px',
-              backgroundColor: 'var(--overlay-subtle)',
-              border: `1px solid ${colors.border}`,
-              color: colors.textPrimary,
-              width: { xs: '100%', md: 300 },
-              '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-            }
-          }}
-        />
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 32, px: 1.25, width: { xs: '100%', sm: 260 }, mb: 1.5, borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-xs)', '&:focus-within': { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-ring)' } }}>
+        <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)' }} />
+        <InputBase value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search teams…" inputProps={{ 'aria-label': 'Search teams' }} sx={{ flex: 1, fontSize: 13 }} />
       </Box>
-
-      {isMobile ? (
-        // Mobile Card View
-        <Box>
-          {filteredTeams
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((team) => {
-              const teamAssessments = teamAssessmentsMap[team._id.toString()] || [];
-              const assessmentCount = teamAssessments.length;
-              const isAssessed = assessmentCount > 0;
-              const averageScore = isAssessed ? getTeamAverageScore(team._id) : 0;
-
-              return (
-                <Paper
-                  key={team._id}
-                  onClick={() => onSelectTeam(team)}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    borderRadius: '16px',
-                    bgcolor: 'var(--overlay-subtle)',
-                    border: `1px solid ${colors.border}`,
-                    cursor: 'pointer',
-                    '&:active': { bgcolor: 'var(--overlay-subtle)' }
-                  }}
-                >
-                  {/* Header: Avatar, Name, ID */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar sx={{
-                      bgcolor: `${colors.primary}20`,
-                      color: colors.primary,
-                      fontWeight: 700,
-                      width: 48,
-                      height: 48,
-                      fontSize: '1rem'
-                    }}>
-                      {team.teamName.substring(0, 2).toUpperCase()}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: colors.textPrimary }}>
-                        {team.teamName}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                        ID: {team._id.toString().slice(-6).toUpperCase()}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Stats Row */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Assignment sx={{ fontSize: 16, color: colors.textSecondary }} />
-                      <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                        {assessmentCount} audits
-                      </Typography>
-                    </Box>
-                    {isAssessed ? (
-                      <Chip
-                        label={getScoreLabel(averageScore)}
-                        size="small"
-                        sx={{
-                          height: 24,
-                          fontSize: '0.75rem',
-                          bgcolor: `${colors[getPerformanceColor(averageScore)]}15`,
-                          color: colors[getPerformanceColor(averageScore)],
-                          borderColor: `${colors[getPerformanceColor(averageScore)]}30`,
-                          fontWeight: 700,
-                          borderRadius: '6px'
-                        }}
-                      />
-                    ) : (
-                      <Chip
-                        label="No Data"
-                        size="small"
-                        sx={{ height: 24, fontSize: '0.75rem', bgcolor: 'var(--overlay-subtle)', color: colors.textSecondary }}
-                      />
-                    )}
-                  </Box>
-
-                  {/* Progress Bar */}
-                  {isAssessed ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <LinearProgress
-                        variant="determinate"
-                        value={averageScore}
-                        sx={{
-                          flex: 1,
-                          height: 6,
-                          borderRadius: 3,
-                          bgcolor: 'var(--overlay-subtle)',
-                          '& .MuiLinearProgress-bar': {
-                            bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
-                          }
-                        }}
-                      />
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: colors.textPrimary, minWidth: 35, textAlign: 'right' }}>
-                        {Math.round(averageScore)}%
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Typography variant="caption" sx={{ color: colors.textSecondary, fontStyle: 'italic', display: 'block', textAlign: 'center' }}>
-                      Pending Baseline
-                    </Typography>
-                  )}
-                </Paper>
-              );
-            })}
-
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredTeams.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={onPageChange}
-            onRowsPerPageChange={onRowsPerPageChange}
-            labelRowsPerPage="Rows:"
-            sx={{
-              color: colors.textSecondary,
-              '.MuiTablePagination-selectLabel': { mb: 0 },
-              '.MuiTablePagination-displayedRows': { mb: 0 },
-              borderTop: `1px solid ${colors.border}`,
-              '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
-              '& .MuiTablePagination-actions': { color: colors.textSecondary }
-            }}
-          />
-        </Box>
-      ) : (
-        // Desktop Table View
-        <TableContainer component={Paper} sx={glassStyle}>
-          <Table sx={{ minWidth: 650 }}>
-            <TableHead sx={{ bgcolor: 'rgba(99, 102, 241, 0.05)' }}>
-              <TableRow>
-                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Team Identity</TableCell>
-                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Audits Conducted</TableCell>
-                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Cumulative Perf.</TableCell>
-                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}` }}>Evaluation Status</TableCell>
-                <TableCell sx={{ color: colors.primary, fontWeight: 700, borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredTeams
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((team) => {
-                  const teamAssessments = teamAssessmentsMap[team._id.toString()] || [];
-                  const assessmentCount = teamAssessments.length;
-                  const isAssessed = assessmentCount > 0;
-                  const averageScore = isAssessed ? getTeamAverageScore(team._id) : 0;
-
-                  return (
-                    <TableRow
-                      key={team._id}
-                      sx={{
-                        '&:hover': {
-                          bgcolor: 'var(--overlay-subtle)',
-                          cursor: 'pointer'
-                        },
-                        transition: 'background-color 0.2s',
-                      }}
-                      onClick={() => onSelectTeam(team)}
-                    >
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{
-                            bgcolor: `${colors.primary}20`,
-                            color: colors.primary,
-                            fontWeight: 700,
-                            width: 40,
-                            height: 40,
-                            fontSize: '0.9rem'
-                          }}>
-                            {team.teamName.substring(0, 2).toUpperCase()}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 700, color: colors.textPrimary }}>
-                              {team.teamName}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                              ID: {team._id.toString().slice(-6).toUpperCase()}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Assignment sx={{ fontSize: 16, color: colors.textSecondary }} />
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>
-                            {assessmentCount} audits
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                        {isAssessed ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: colors.textPrimary, minWidth: 40 }}>
-                              {Math.round(averageScore)}%
-                            </Typography>
-                            <Box sx={{ flex: 1, minWidth: 100 }}>
-                              <LinearProgress
-                                variant="determinate"
-                                value={averageScore}
-                                sx={{
-                                  height: 6,
-                                  borderRadius: 3,
-                                  bgcolor: 'var(--overlay-subtle)',
-                                  '& .MuiLinearProgress-bar': {
-                                    bgcolor: colors[getPerformanceColor(averageScore)] || colors.primary
-                                  }
-                                }}
-                              />
-                            </Box>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" sx={{ color: colors.textSecondary, fontStyle: 'italic' }}>Pending Baseline</Typography>
-                        )}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}` }}>
-                        {isAssessed ? (
-                          <Chip
-                            label={getScoreLabel(averageScore)}
-                            size="small"
-                            sx={{
-                              bgcolor: `${colors[getPerformanceColor(averageScore)]}15`,
-                              color: colors[getPerformanceColor(averageScore)],
-                              borderColor: `${colors[getPerformanceColor(averageScore)]}30`,
-                              fontWeight: 700,
-                              borderRadius: '8px'
-                            }}
-                          />
-                        ) : (
-                          <Chip
-                            label="No Data"
-                            size="small"
-                            sx={{ bgcolor: 'var(--overlay-subtle)', color: colors.textSecondary, fontWeight: 700 }}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: `1px solid ${colors.border}`, textAlign: 'right' }}>
-                        <IconButton
-                          sx={{
-                            color: colors.primary,
-                            '&:hover': { bgcolor: `${colors.primary}10` }
-                          }}
-                        >
-                          <ChevronRight />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredTeams.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={onPageChange}
-            onRowsPerPageChange={onRowsPerPageChange}
-            sx={{
-              color: colors.textSecondary,
-              borderTop: `1px solid ${colors.border}`,
-              '& .MuiTablePagination-selectIcon': { color: colors.textSecondary },
-              '& .MuiTablePagination-actions': { color: colors.textSecondary }
-            }}
-          />
-        </TableContainer>
-      )}
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        getRowId={(r) => r._id}
+        loading={loading}
+        onRowClick={({ row }) => onSelectTeam(row)}
+        disableRowSelectionOnClick
+        autoHeight
+        rowHeight={52}
+        columnHeaderHeight={40}
+        pageSizeOptions={[10, 25, 50]}
+        initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'count', sort: 'desc' }] } }}
+        slots={{ noRowsOverlay: () => <EmptyState title="No teams match" minHeight={180} /> }}
+        sx={{ ...gridSx, minHeight: 260 }}
+      />
     </Box>
   );
 };
