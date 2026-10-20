@@ -64,6 +64,7 @@ export const CORE_CONCEPTS = {
   assignee: { label: "Assignee", types: ["user"], hint: "My work, task views" },
   fieldTeam: { label: "Field team", types: ["fieldTeam", "text"], hint: "Team Violation Tracker, team pages" },
   date: { label: "Date", types: ["date", "datetime"], hint: "Calendar, date filters, trends" },
+  schedule: { label: "Scheduled appointment / visit", types: ["date", "datetime"], hint: "Puts the row on the calendar on the booked day, marked as an appointment" },
   category: { label: "Category", types: ["taxonomy", "singleSelect"], hint: "Category breakdowns" },
   severity: { label: "Severity / score", types: ["singleSelect", "rating", "number"], hint: "Dashboard severity" },
   customerId: { label: "Customer / account ID", types: ["text", "phone", "number", "autoNumber"], hint: "Global search, linking to tasks" },

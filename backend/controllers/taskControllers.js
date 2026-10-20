@@ -1014,6 +1014,36 @@ export const getTaskTickets = async (req, res) => {
   }
 };
 
+/**
+ * Tickets that carry a follow-up / visit date in [from, to], for the global calendar.
+ * Each item names its parent record (DVOC task or customer issue) so the calendar can link to it.
+ */
+export const getScheduledTickets = async (req, res) => {
+  try {
+    const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 400 * 864e5);
+    const to = req.query.to ? new Date(req.query.to) : new Date(Date.now() + 200 * 864e5);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return res.status(400).json({ message: "Invalid date range" });
+    const tickets = await TaskTicket.find({ followUpDate: { $gte: from, $lte: to } })
+      .select("taskId taskType mainCategory status note followUpDate eventDate ticketId")
+      .limit(5000)
+      .lean();
+    // older snag tickets were saved with the default taskType "Task", so look in both collections
+    const ids = tickets.map((t) => t.taskId);
+    const [tasks, issues] = await Promise.all([
+      TaskSchema.find({ _id: { $in: ids } }, { slid: 1, customerName: 1, teamName: 1, status: 1, issueCategory: 1, issueSubCategory: 1 }).lean(),
+      CustomerIssueSchema.find({ _id: { $in: ids } }, { slid: 1, customerName: 1, teamName: 1, fromMain: 1, fromSub: 1, from: 1, snagType: 1, ticketId: 1, issueCategory: 1, issueSubCategory: 1 }).lean(),
+    ]);
+    const parent = Object.fromEntries([...tasks.map((p) => [String(p._id), { p, type: "Task" }]), ...issues.map((p) => [String(p._id), { p, type: "CustomerIssue" }])]);
+    res.json(
+      tickets
+        .filter((t) => parent[String(t.taskId)])
+        .map((t) => ({ ...t, taskType: parent[String(t.taskId)].type, parent: parent[String(t.taskId)].p }))
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getIssuePreventionStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;

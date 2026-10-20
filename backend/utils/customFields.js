@@ -10,13 +10,15 @@ export const FIELD_TYPES = [
   "autoNumber", "createdTime", "updatedTime", "createdBy", "updatedBy",
 ];
 export const READ_ONLY_TYPES = ["autoNumber", "createdTime", "updatedTime", "createdBy", "updatedBy"];
-export const CORE_CONCEPTS = ["status", "assignee", "fieldTeam", "date", "category", "severity", "customerId", "location"];
+export const CORE_CONCEPTS = ["status", "assignee", "fieldTeam", "date", "schedule", "category", "severity", "customerId", "location"];
 // which field types can feed each core concept
 export const CORE_TYPES = {
   status: ["singleSelect", "checkbox", "text"],
   assignee: ["user"],
   fieldTeam: ["fieldTeam", "text"],
   date: ["date", "datetime"],
+  // the booked appointment / scheduled visit (shown on the calendar on that day)
+  schedule: ["date", "datetime"],
   category: ["taxonomy", "singleSelect"],
   severity: ["singleSelect", "rating", "number"],
   customerId: ["text", "phone", "number", "autoNumber"],
@@ -161,6 +163,29 @@ export const systemColumns = (table, data) => {
   if (by.assignee) out.assignees = (data[by.assignee.key] || []).filter(isId);
   if (by.fieldTeam && by.fieldTeam.type === "fieldTeam") out.fieldTeamId = isId(data[by.fieldTeam.key]) ? data[by.fieldTeam.key] : undefined;
   if (by.date) out.dueDate = data[by.date.key] ? new Date(data[by.date.key]) : undefined;
+  return out;
+};
+
+// Date fields whose label reads like a booking are treated as scheduling dates.
+export const SCHEDULE_LABEL_RX = /appoint|visit|schedul|book|reserv|follow.?up|موعد|زيارة|حجز/i;
+const DATE_TYPES = ["date", "datetime"];
+
+/**
+ * Date fields that put a row on the global calendar, in priority order:
+ * the table's explicit choice (settings.calendarFields), otherwise the field
+ * mapped to "schedule", the one mapped to "date", and any date field whose
+ * label names an appointment or visit. Each item: { field, role: "schedule" | "date" }.
+ */
+export const calendarFieldsOf = (table) => {
+  const live = (table.fields || []).filter((f) => !f.archived && DATE_TYPES.includes(f.type));
+  const role = (f) => (f.coreMapping === "schedule" || (f.coreMapping !== "date" && SCHEDULE_LABEL_RX.test(f.label)) ? "schedule" : "date");
+  const chosen = table.settings?.calendarFields;
+  if (Array.isArray(chosen) && chosen.length) return chosen.map((k) => live.find((f) => f.key === k)).filter(Boolean).map((f) => ({ field: f, role: role(f) }));
+  const out = [];
+  const add = (f) => f && !out.some((x) => x.field.key === f.key) && out.push({ field: f, role: role(f) });
+  add(live.find((f) => f.coreMapping === "schedule"));
+  add(live.find((f) => f.coreMapping === "date"));
+  live.filter((f) => SCHEDULE_LABEL_RX.test(f.label)).forEach(add);
   return out;
 };
 

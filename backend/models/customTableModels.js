@@ -58,6 +58,8 @@ const customTableSchema = new Schema(
     nextAutoNumber: { type: Number, default: 1 },
     settings: {
       showInCalendar: { type: Boolean, default: true },
+      // date field keys that place rows on the calendar; empty = automatic (see calendarFieldsOf)
+      calendarFields: { type: [String], default: undefined },
       rowsAreTasks: { type: Boolean, default: false },
     },
     archived: { type: Boolean, default: false },

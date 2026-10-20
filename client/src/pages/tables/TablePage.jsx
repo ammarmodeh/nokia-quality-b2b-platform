@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { useNavigate, useParams, useSearchParams, Link as RouterLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { format } from "date-fns";
-import { Box, Button, Checkbox, Divider, IconButton, InputAdornment, ListItemIcon, Menu, MenuItem, Snackbar, Alert, TextField, Typography, FormControlLabel } from "@mui/material";
+import { Box, Button, Checkbox, Divider, IconButton, InputAdornment, ListItemIcon, Menu, MenuItem, Snackbar, Alert, TextField, Typography } from "@mui/material";
 import Search from "@mui/icons-material/Search";
 import ViewColumnOutlined from "@mui/icons-material/ViewColumnOutlined";
 import TableRowsOutlined from "@mui/icons-material/TableRowsOutlined";
@@ -27,6 +27,7 @@ import EditOutlined from "@mui/icons-material/EditOutlined";
 import ArchiveOutlined from "@mui/icons-material/ArchiveOutlined";
 import Close from "@mui/icons-material/Close";
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
+import EventAvailableOutlined from "@mui/icons-material/EventAvailableOutlined";
 import PageHeader from "../../components/ui/PageHeader";
 import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
 import ErrorState from "../../components/ui/ErrorState";
@@ -41,6 +42,7 @@ import KanbanView from "./KanbanView";
 import FieldManagerSheet from "./FieldManagerSheet";
 import RowSheet from "./RowSheet";
 import ImportHistorySheet from "./ImportHistorySheet";
+import CalendarFieldsDialog from "./CalendarFieldsDialog";
 import { FilterButton, SortButton } from "./ViewControls";
 import { choiceColor, formatValue, IMPORTABLE } from "./fieldTypes";
 import { applyView, groupRows, rawOf } from "./viewUtils";
@@ -122,6 +124,7 @@ const TablePage = () => {
   const [widths, setWidths] = useState({});
   const [confirm, setConfirm] = useState(null);
   const [rename, setRename] = useState(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // ordered + visible fields for this view
   const ordered = useMemo(() => {
@@ -352,9 +355,7 @@ const TablePage = () => {
         <MenuItem onClick={() => { setMoreAnchor(null); setRename({ table: true, label: table.name, description: table.description }); }}><ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon>Rename & describe</MenuItem>
         <MenuItem onClick={async () => { setMoreAnchor(null); try { await tablesApi.saveAsTemplate(id, { withRows: false }); t.notify("Saved to the template library", "neutral"); } catch (e) { t.notify(errText(e)); } }}><ListItemIcon><BookmarkAddOutlined fontSize="small" /></ListItemIcon>Save as template</MenuItem>
         <MenuItem onClick={async () => { setMoreAnchor(null); try { await tablesApi.saveAsTemplate(id, { withRows: true }); t.notify("Saved as a template with 20 sample rows", "neutral"); } catch (e) { t.notify(errText(e)); } }}><ListItemIcon><BookmarkAddOutlined fontSize="small" /></ListItemIcon>Save as template with sample rows</MenuItem>
-        <MenuItem>
-          <FormControlLabel sx={{ m: 0 }} control={<Checkbox size="small" checked={table.settings?.showInCalendar !== false} onChange={async (e) => { try { t.setTable(await tablesApi.update(id, { settings: { showInCalendar: e.target.checked } })); } catch (er) { t.notify(errText(er)); } }} />} label="Show in the global calendar" />
-        </MenuItem>
+        <MenuItem onClick={() => { setMoreAnchor(null); setCalendarOpen(true); }}><ListItemIcon><EventAvailableOutlined fontSize="small" /></ListItemIcon>Calendar dates…</MenuItem>
         <Divider />
         <MenuItem onClick={() => { setMoreAnchor(null); setConfirm("archive"); }} sx={{ color: "var(--danger)" }}><ListItemIcon><ArchiveOutlined fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Archive table</MenuItem>
       </Menu>
@@ -410,6 +411,8 @@ const TablePage = () => {
 
       <ConfirmDialog open={confirm === "archive"} title={`Archive “${table.name}”?`} description="The table and its rows are hidden from the workspace and sidebar. Nothing is deleted; an admin can restore it from the workspace's archived list." confirmLabel="Archive table" danger
         onClose={() => setConfirm(null)} onConfirm={async () => { try { await tablesApi.update(id, { archived: true }); navigate(ws.path); } catch (e) { t.notify(errText(e)); setConfirm(null); } }} />
+
+      <CalendarFieldsDialog open={calendarOpen} onClose={() => setCalendarOpen(false)} table={table} onSaved={(tb) => { t.setTable(tb); t.notify("Calendar dates saved", "neutral"); }} />
 
       {rename && (
         <ConfirmDialog open title={rename.field ? "Rename field" : rename.view ? "Rename view" : "Rename table"} confirmLabel="Save"

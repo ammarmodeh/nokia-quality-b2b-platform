@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Box, Button, Dialog, DialogContent, DialogTitle, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Alert, Typography } from "@mui/material";
 import ViewKanbanOutlined from "@mui/icons-material/ViewKanbanOutlined";
 import TableChartOutlined from "@mui/icons-material/TableChartOutlined";
+import EventAvailableOutlined from "@mui/icons-material/EventAvailableOutlined";
 import api from "../../api/api";
 import EventCalendar from "./EventCalendar";
 import FilterChip from "../ui/FilterChip";
@@ -17,6 +18,7 @@ import { tablesApi } from "../../pages/tables/tablesApi";
 const AddTask = lazy(() => import("../task/AddTask"));
 
 const SOURCES = [
+  { value: "scheduled", label: "Appointments & visits" },
   { value: "tasks", label: "Tasks (DVOC)" },
   { value: "snags", label: "Snags & complaints" },
   { value: "lab", label: "Lab assessments" },
@@ -24,22 +26,25 @@ const SOURCES = [
   { value: "tables", label: "Custom tables" },
 ];
 const ASSESSMENT_COLOR = { lab: "#0D9488", ojt: "#6366F1" };
+const SNAG_PATH = { "OJO Snags": "/ojo-snags", TCRM: "/tcrm", TRC: "/trc", "Internal Audit (FAT)": "/internal-audit" };
+const KIND_LABEL = { task: "DVOC task", snag: "Snag / complaint", lab: "Lab assessment", ojt: "On-the-job assessment", row: "Table row", visit: "Follow-up visit" };
 const idOf = (u) => (u && typeof u === "object" ? u._id : u);
 const teamOf = (x) => x?.teamName || x?.fieldTeamName || x?.fieldTeamId?.teamName || null;
 const utcDay = (d) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString();
 
 /**
- * One calendar for everything dated in the app: DVOC tasks (interview date),
+ * One calendar for everything dated in the app: booked appointments and visits
+ * (ticket follow-up dates, custom-table scheduling fields), DVOC tasks (interview date),
  * snags / complaints (reported date), lab and on-the-job assessments, and custom
  * table rows whose date field feeds the calendar. Tasks and table rows can be
  * dragged to another day; an empty day can start a new task or table row.
  */
 const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
   const navigate = useNavigate();
-  const [data, setData] = useState({ tasks: [], snags: [], lab: [], ojt: [], tables: [], tableList: [] });
+  const [data, setData] = useState({ tasks: [], snags: [], lab: [], ojt: [], tables: [], scheduled: [], tableList: [] });
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState([]);
-  const [sources, setSources] = useState(["tasks", "snags", "lab", "ojt", "tables"]);
+  const [sources, setSources] = useState(SOURCES.map((s) => s.value));
   const [cats, setCats] = useState([]);
   const [teams, setTeams] = useState([]);
   const [assignees, setAssignees] = useState([]);
@@ -59,6 +64,7 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
       lab: api.get("/lab-assessments").then((r) => r.data || []),
       ojt: api.get("/on-the-job-assessments").then((r) => r.data || []),
       tables: tablesApi.calendar({ from, to }),
+      scheduled: api.get("/tasks/scheduled-tickets", { params: { from, to } }).then((r) => r.data || []),
       tableList: tablesApi.list(),
       users: api.get("/users/get-all-users").then((r) => r.data || []),
       settings: api.get("/settings").then((r) => r.data || {}),
@@ -81,6 +87,16 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
 
   const events = useMemo(() => {
     const list = [];
+    const showScheduled = sources.includes("scheduled");
+    // booked appointments / visits: ticket follow-up dates (tasks and snags) and custom-table
+    // scheduling fields (below). `scheduled` puts a calendar mark on the chip.
+    if (showScheduled) {
+      for (const k of data.scheduled || []) {
+        const p = k.parent || {};
+        const tax = k.taskType === "CustomerIssue" ? taxonomyOfIssue(p) : taxonomyOfTask(p);
+        list.push({ id: `visit:${k._id}`, kind: "visit", raw: k, date: k.followUpDate, title: `Visit · ${p.customerName || p.slid || k.ticketId}`, subtitle: k.mainCategory, color: tax.color, tax, team: p.teamName, assignees: [], draggable: true, scheduled: true, status: k.status, dateLabel: "Follow-up date" });
+      }
+    }
     if (sources.includes("tasks"))
       for (const t of data.tasks) {
         const d = taskDate(t);
@@ -102,11 +118,14 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
           if (!d) continue;
           list.push({ id: `${k}:${a._id}`, kind: k, raw: a, date: d, title: `${k === "lab" ? "Lab" : "OJT"} · ${teamOf(a) || "Team"}`, subtitle: a.overallScore !== undefined ? `${Math.round(a.overallScore)}%` : "", color: ASSESSMENT_COLOR[k], tax: null, team: teamOf(a), assignees: [], draggable: false, status: a.status });
         }
-    if (sources.includes("tables"))
-      for (const r of data.tables) {
-        const tax = { category: r.issueCategory, subCategory: r.issueSubCategory, color: taxonomyByLabel[r.issueCategory]?.color, label: taxonomyLabel(r.issueCategory, r.issueSubCategory) };
-        list.push({ id: `row:${r.id}`, kind: "row", raw: r, date: r.date, title: r.title, subtitle: r.tableName, color: tax.color, tax, team: null, assignees: [], draggable: true, status: r.status });
-      }
+    for (const r of data.tables) {
+      // a row shows once per calendar date field; scheduling fields sit with appointments
+      const scheduled = r.role === "schedule";
+      if (!(scheduled ? showScheduled : sources.includes("tables"))) continue;
+      const tax = { category: r.issueCategory, subCategory: r.issueSubCategory, color: taxonomyByLabel[r.issueCategory]?.color, label: taxonomyLabel(r.issueCategory, r.issueSubCategory) };
+      const label = r.fieldLabel ? r.fieldLabel.split("|")[0].trim() : "";
+      list.push({ id: `row:${r.key || r.id}`, kind: "row", raw: r, date: r.date, title: scheduled ? `${label || "Appointment"} · ${r.title}` : r.title, subtitle: r.tableName, color: tax.color, tax, team: null, assignees: [], draggable: true, scheduled, status: r.status, dateLabel: label });
+    }
     return list.filter((e) => (!cats.length || (e.tax && cats.includes(e.tax.category))) && (!teams.length || teams.includes(e.team)) && (!assignees.length || e.assignees.some((a) => assignees.includes(a))));
   }, [data, sources, cats, teams, assignees]);
 
@@ -121,11 +140,14 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
     const iso = utcDay(day);
     const prev = data;
     try {
-      if (ev.kind === "task") {
+      if (ev.kind === "visit") {
+        setData((d) => ({ ...d, scheduled: d.scheduled.map((k) => (k._id === ev.raw._id ? { ...k, followUpDate: iso } : k)) }));
+        await api.put(`/tasks/tickets/${ev.raw._id}`, { followUpDate: iso });
+      } else if (ev.kind === "task") {
         setData((d) => ({ ...d, tasks: d.tasks.map((t) => (t._id === ev.raw._id ? { ...t, interviewDate: iso } : t)) }));
         await api.put(`/tasks/update-task/${ev.raw._id}`, { interviewDate: iso });
       } else if (ev.kind === "row") {
-        setData((d) => ({ ...d, tables: d.tables.map((r) => (r.id === ev.raw.id ? { ...r, date: iso } : r)) }));
+        setData((d) => ({ ...d, tables: d.tables.map((r) => ((r.key || r.id) === (ev.raw.key || ev.raw.id) ? { ...r, date: iso } : r)) }));
         await tablesApi.updateRow(ev.raw.tableId, ev.raw.id, { data: { [ev.raw.dateField]: ev.raw.dateType === "datetime" ? new Date(new Date(iso).getTime() + (new Date(ev.raw.date).getUTCHours() * 36e5)).toISOString() : iso } });
       }
       setToast({ tone: "info", message: `Moved “${ev.title}” to ${format(day, "d MMM")}` });
@@ -138,19 +160,29 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
   const go = (path) => { onNavigate?.(); navigate(path); };
   const openTarget = (ev) => {
     if (ev.kind === "task") return go(`/tasks-list?task=${ev.raw._id}`);
+    if (ev.kind === "visit") {
+      const p = ev.raw.parent || {};
+      if (ev.raw.taskType === "Task") return go(`/tasks-list?task=${p._id}`);
+      return go(`${SNAG_PATH[ev.tax?.category] || "/ojo-snags"}?q=${encodeURIComponent(p.slid || p.ticketId || "")}`);
+    }
     if (ev.kind === "row") return go(`/tables/${ev.raw.tableId}?row=${ev.raw.id}`);
     if (ev.kind === "snag") {
-      const path = { "OJO Snags": "/ojo-snags", TCRM: "/tcrm", TRC: "/trc", "Internal Audit (FAT)": "/internal-audit" }[ev.tax?.category] || "/ojo-snags";
+      const path = SNAG_PATH[ev.tax?.category] || "/ojo-snags";
       return go(`${path}?q=${encodeURIComponent(ev.raw.slid || ev.raw.ticketId || "")}`);
     }
     return go("/assessment-dashboard");
   };
 
-  const datedTables = data.tableList.filter((t) => t.fields?.some((f) => f.coreMapping === "date" && !f.archived));
+  // the field a new row gets the day in: the table's first calendar field, else its schedule / date mapping
+  const dayFieldOf = (t) => {
+    const live = (t.fields || []).filter((f) => !f.archived && ["date", "datetime"].includes(f.type));
+    return live.find((f) => f.key === t.settings?.calendarFields?.[0]) || live.find((f) => f.coreMapping === "schedule") || live.find((f) => f.coreMapping === "date");
+  };
+  const datedTables = data.tableList.filter((t) => t.settings?.showInCalendar !== false && dayFieldOf(t));
   const createRow = async (table) => {
     const day = creating;
     setCreating(null);
-    const f = table.fields.find((x) => x.coreMapping === "date" && !x.archived);
+    const f = dayFieldOf(table);
     try {
       const row = await tablesApi.createRow(table._id, { [f.key]: utcDay(day) });
       go(`/tables/${table._id}?row=${row._id}`);
@@ -175,21 +207,27 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
         {TAXONOMY.map((t) => <Box key={t.label} sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: t.color }} />{t.label}</Box>)}
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: ASSESSMENT_COLOR.lab }} />Lab</Box>
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: ASSESSMENT_COLOR.ojt }} />On-the-job</Box>
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: 11.5, color: "var(--text-secondary)" }}><EventAvailableOutlined sx={{ fontSize: 13 }} />Appointment / visit</Box>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
         <EventCalendar events={events} onOpen={setOpen} onMove={move} onCreate={setCreating} weekStartsOn={weekStartsOn} height="100%" />
       </Box>
 
-      <Sheet open={Boolean(open)} onClose={() => setOpen(null)} title={open?.title} description={open ? format(new Date(open.date), "EEEE d MMMM yyyy") : ""} width={440}
-        footer={open && <Box sx={{ display: "flex", justifyContent: "flex-end", width: "100%" }}><Button variant="contained" onClick={() => { const e = open; setOpen(null); openTarget(e); }}>Open {open.kind === "task" ? "task" : open.kind === "row" ? "row" : open.kind === "snag" ? "record" : "assessments"}</Button></Box>}>
+      <Sheet open={Boolean(open)} onClose={() => setOpen(null)} title={open?.title} description={open ? format(new Date(open.date), open.raw?.dateType === "datetime" ? "EEEE d MMMM yyyy · HH:mm" : "EEEE d MMMM yyyy") : ""} width={440}
+        footer={open && <Box sx={{ display: "flex", justifyContent: "flex-end", width: "100%" }}><Button variant="contained" onClick={() => { const e = open; setOpen(null); openTarget(e); }}>Open {open.kind === "task" ? "task" : open.kind === "row" ? "row" : open.kind === "snag" || open.kind === "visit" ? "record" : "assessments"}</Button></Box>}>
         {open && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
             <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
-              {open.tax ? <TaxonomyBadge tax={open.tax} /> : <Badge color={open.color}>{open.kind === "lab" ? "Lab assessment" : "On-the-job assessment"}</Badge>}
+              {open.scheduled && <Badge tone="accent">Scheduled</Badge>}
+              {open.tax ? <TaxonomyBadge tax={open.tax} /> : <Badge color={open.color}>{KIND_LABEL[open.kind]}</Badge>}
               {open.status && <Badge>{open.status}</Badge>}
             </Box>
             {[
-              ["SLID", open.raw.slid],
+              ["Type", KIND_LABEL[open.kind]],
+              ["Date field", open.dateLabel],
+              ["SLID", open.raw.slid || open.raw.parent?.slid],
+              ["Customer", open.raw.parent?.customerName],
+              ["Note", open.kind === "visit" ? open.raw.note : null],
               ["Ticket", open.raw.ticketId],
               ["Table", open.kind === "row" ? open.raw.tableName : null],
               ["Field team", open.team],
@@ -218,7 +256,7 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
             {datedTables.map((t) => (
               <ListItemButton key={t._id} onClick={() => createRow(t)}>
                 <ListItemIcon><TableChartOutlined fontSize="small" /></ListItemIcon>
-                <ListItemText primary={`New row in ${t.name}`} secondary={taxonomyLabel(t.issueCategory, t.issueSubCategory)} />
+                <ListItemText primary={`New row in ${t.name}`} secondary={`${taxonomyLabel(t.issueCategory, t.issueSubCategory)} · ${dayFieldOf(t).label.split("|")[0].trim()} set to this day`} />
               </ListItemButton>
             ))}
           </List>

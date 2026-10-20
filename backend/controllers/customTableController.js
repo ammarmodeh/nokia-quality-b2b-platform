@@ -3,7 +3,7 @@
 // any signed-in user (Member ≈ Supervisor) edits rows, views and imports.
 import mongoose from "mongoose";
 import { CustomTable, CustomRow, TableView, TableTemplate, ImportBatch, RowActivity } from "../models/customTableModels.js";
-import { FIELD_TYPES, READ_ONLY_TYPES, CORE_CONCEPTS, CORE_TYPES, newFieldKey, coerce, coerceData, systemColumns, convertValue } from "../utils/customFields.js";
+import { FIELD_TYPES, READ_ONLY_TYPES, CORE_CONCEPTS, CORE_TYPES, newFieldKey, coerce, coerceData, systemColumns, convertValue, calendarFieldsOf } from "../utils/customFields.js";
 import { validateTaxonomy } from "../utils/taxonomy.js";
 import { builtInTemplate } from "../utils/builtInTemplates.js";
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
@@ -143,7 +143,17 @@ export const updateTable = async (req, res) => {
   if (!t) return;
   const allowed = ["name", "description", "icon", "color", "visibility", "archived", "primaryField"];
   for (const k of allowed) if (req.body[k] !== undefined) t[k] = req.body[k];
-  if (req.body.settings) t.settings = { ...t.settings.toObject?.(), ...req.body.settings };
+  if (req.body.settings) {
+    const next = { ...req.body.settings };
+    if (next.calendarFields !== undefined) {
+      if (!Array.isArray(next.calendarFields)) return fail(res, 400, "calendarFields must be a list of field keys");
+      const dateKeys = t.fields.filter((f) => !f.archived && ["date", "datetime"].includes(f.type)).map((f) => f.key);
+      const bad = next.calendarFields.filter((k) => !dateKeys.includes(k));
+      if (bad.length) return fail(res, 400, "Only date fields can drive the calendar");
+      next.calendarFields = [...new Set(next.calendarFields)];
+    }
+    t.settings = { ...t.settings.toObject?.(), ...next };
+  }
   if (req.body.issueCategory !== undefined) {
     const err = validateTaxonomy(req.body.issueCategory, req.body.issueSubCategory || null);
     if (err) return fail(res, 400, err);
@@ -619,22 +629,52 @@ export const rollbackBatch = async (req, res) => {
 };
 
 // ---------------------------------------------------------------- cross-table
-/** Rows with a mapped date, for the global calendar. */
+/**
+ * Rows on the global calendar. A row shows once per calendar date field that has a
+ * value in [from, to] (see calendarFieldsOf: the table's chosen fields, else the
+ * schedule / date mappings and appointment-like date fields). Each event keeps the
+ * original keys (id = row id, date, dateField, dateType) and adds fieldLabel, role
+ * ("schedule" for a booked appointment / visit, "date" otherwise) and a unique key.
+ */
 export const calendarEvents = async (req, res) => {
   const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 45 * 864e5);
   const to = req.query.to ? new Date(req.query.to) : new Date(Date.now() + 45 * 864e5);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return fail(res, 400, "Invalid date range");
   const tables = await CustomTable.find({ archived: false, "settings.showInCalendar": true, ...visibleFilter(req) }).lean();
-  const withDate = tables.filter((t) => t.fields.some((f) => f.coreMapping === "date" && !f.archived));
-  const rows = await CustomRow.find({ tableId: { $in: withDate.map((t) => t._id) }, deleted: false, dueDate: { $gte: from, $lte: to } }).limit(3000).lean();
-  const byId = Object.fromEntries(withDate.map((t) => [String(t._id), t]));
-  res.json(
-    rows.map((r) => {
-      const t = byId[String(r.tableId)];
-      const title = r.data?.[t.primaryField];
-      const dateField = t.fields.find((f) => f.coreMapping === "date" && !f.archived);
-      return { id: r._id, tableId: t._id, tableName: t.name, issueCategory: t.issueCategory, issueSubCategory: t.issueSubCategory, title: typeof title === "object" ? JSON.stringify(title) : title || `#${r.autoNumber}`, date: r.dueDate, status: r.status, dateField: dateField.key, dateType: dateField.type };
-    })
-  );
+  const withDates = tables.map((t) => ({ t, cal: calendarFieldsOf(t) })).filter((x) => x.cal.length);
+  if (!withDates.length) return res.json([]);
+  // dates are stored as ISO strings, which sort the same way as the dates themselves
+  const range = { $gte: from.toISOString(), $lte: to.toISOString() };
+  const rows = await CustomRow.find({
+    deleted: false,
+    $or: withDates.map(({ t, cal }) => ({ tableId: t._id, $or: cal.map(({ field }) => ({ [`data.${field.key}`]: range })) })),
+  }).limit(5000).lean();
+  const byId = Object.fromEntries(withDates.map((x) => [String(x.t._id), x]));
+  const events = [];
+  for (const r of rows) {
+    const { t, cal } = byId[String(r.tableId)];
+    const title = r.data?.[t.primaryField];
+    for (const { field, role } of cal) {
+      const v = r.data?.[field.key];
+      if (!v || v < range.$gte || v > range.$lte) continue;
+      events.push({
+        id: r._id,
+        key: `${r._id}:${field.key}`,
+        tableId: t._id,
+        tableName: t.name,
+        issueCategory: t.issueCategory,
+        issueSubCategory: t.issueSubCategory,
+        title: typeof title === "object" && title !== null ? JSON.stringify(title) : title || `#${r.autoNumber}`,
+        date: v,
+        status: r.status,
+        dateField: field.key,
+        dateType: field.type,
+        fieldLabel: field.label,
+        role,
+      });
+    }
+  }
+  res.json(events);
 };
 
 // Dashboard roll-up: per table, row counts by tracker category, field team, status and

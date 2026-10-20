@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { protect } from "../middleware/authMiddleware.js";
 import {
+  getScheduledTickets,
   addTask,
   deleteTask,
   getTasks,
@@ -149,6 +150,7 @@ router.put("/:taskId/clear-notifications", protect, clearNotifications);
 router.get("/prevention-stats", protect, getIssuePreventionStats);
 router.get("/prevention-deep-dive", protect, getPreventionDeepDiveStats);
 
+router.get("/scheduled-tickets", protect, getScheduledTickets);
 router.post("/tickets", protect, addTaskTicket);
 router.get("/tickets/:taskId", protect, getTaskTickets);
 router.put("/tickets/:id", protect, updateTaskTicket);

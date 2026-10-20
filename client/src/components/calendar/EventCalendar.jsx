@@ -4,13 +4,15 @@ import { Box, Button, IconButton, Popover, Tooltip, Typography } from "@mui/mate
 import ChevronLeft from "@mui/icons-material/ChevronLeft";
 import ChevronRight from "@mui/icons-material/ChevronRight";
 import Add from "@mui/icons-material/Add";
+import EventAvailableOutlined from "@mui/icons-material/EventAvailableOutlined";
 import SegmentedControl from "../ui/SegmentedControl";
 
 const MAX_PER_DAY = 3;
 const keyOf = (d) => format(d, "yyyy-MM-dd");
 
 /**
- * events: [{ id, title, date (Date|string), color, subtitle, draggable }]
+ * events: [{ id, title, date (Date|string), color, subtitle, draggable, scheduled }]
+ * `scheduled` marks a booked appointment / visit (calendar icon instead of the dot).
  * onOpen(event) · onMove(event, newDay) (drag to reschedule) · onCreate(day) (click an empty day)
  */
 const EventChip = ({ ev, onOpen, dense = true }) => (
@@ -35,7 +37,11 @@ const EventChip = ({ ev, onOpen, dense = true }) => (
       "&:focus-visible": { outline: "2px solid var(--focus-ring)" },
     }}
   >
-    <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: ev.color || "var(--accent)", flexShrink: 0 }} />
+    {ev.scheduled ? (
+      <EventAvailableOutlined aria-label="Scheduled" sx={{ fontSize: 12, color: ev.color || "var(--accent)", flexShrink: 0 }} />
+    ) : (
+      <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: ev.color || "var(--accent)", flexShrink: 0 }} />
+    )}
     <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{ev.title}</Box>
     {!dense && ev.subtitle && <Box component="span" sx={{ color: "var(--text-muted)", fontSize: 11.5, whiteSpace: "nowrap" }}>{ev.subtitle}</Box>}
   </Box>

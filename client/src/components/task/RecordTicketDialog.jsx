@@ -2,7 +2,7 @@ import { alpha } from "../../theme/colorFns";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Stack, Typography, Box, IconButton, Grid, Table, TableHead, TableBody, TableRow, TableCell, TableContainer, Paper, Tooltip, Tabs, Tab, Divider, Autocomplete, createFilterOptions } from "@mui/material";
-import { MdClose, MdHistory, MdInput, MdInfo, MdEdit, MdDelete, MdWarning, MdAccessTime, MdPeople, MdVisibility, MdContentCopy } from "react-icons/md";
+import { MdClose, MdHistory, MdInput, MdEdit, MdDelete, MdWarning, MdVisibility, MdContentCopy } from "react-icons/md";
 import { format } from "date-fns";
 import api from "../../api/api";
 
@@ -32,7 +32,7 @@ const QUICK_PRESETS = [
     { label: "Ticket Closed", type: "RESOLVE", state: "ISSUE_RESOLVED", status: "Closed", reason: "206", note: "Issue fully resolved; ticket closed.", color: "#4f46e5" },
 ];
 
-const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdated, onTicketDeleted }) => {
+const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAdded, onTicketUpdated, onTicketDeleted }) => {
     const { user } = useSelector((state) => state.auth);
     const [tabValue, setTabValue] = useState(0);
     const [transactionType, setTransactionType] = useState("");
@@ -46,6 +46,8 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
     const [loading, setLoading] = useState(false);
     const [tickets, setTickets] = useState([]);
     const [isNaDate, setIsNaDate] = useState(false);
+    // booked visit / appointment with the customer (ticket followUpDate) — shown on the calendar
+    const [visitDate, setVisitDate] = useState("");
 
     // Dynamic Options States
     const [dropdowns, setDropdowns] = useState({
@@ -140,6 +142,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
         // Defaults will be handled by fetchDropdowns or manually here if needed
         setUnfReasonCode("");
         setNote("");
+        setVisitDate("");
         setEventDate(new Date().toISOString().split('T')[0]);
         setStatus(task?.status || "In Progress");
         setAgentName(user?.name || ""); // Include current user session
@@ -183,6 +186,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
         try {
             const ticketData = {
                 taskId: task._id,
+                taskType,
                 mainCategory: transactionType,
                 status: status,
                 note: note,
@@ -190,7 +194,9 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                 transactionType,
                 transactionState,
                 unfReasonCode,
-                agentName: agentName || user?.name || "User"
+                agentName: agentName || user?.name || "User",
+                followUpRequired: Boolean(visitDate),
+                followUpDate: visitDate || null
             };
 
             if (editingTicket) {
@@ -226,6 +232,7 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
         setNote(ticket.note || "");
         setEventDate(ticket.eventDate ? new Date(ticket.eventDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
         setIsNaDate(!ticket.eventDate);
+        setVisitDate(ticket.followUpDate ? new Date(ticket.followUpDate).toISOString().split('T')[0] : "");
         setStatus(ticket.status || "In Progress");
         setTabValue(0);
     };
@@ -447,6 +454,19 @@ const RecordTicketDialog = ({ open, onClose, task, onTicketAdded, onTicketUpdate
                                                     </label>
                                                 </Box>
                                             </Stack>
+                                        </Grid>
+
+                                        <Grid item xs={12} sm={4}>
+                                            <TextField
+                                                label="Scheduled visit / appointment"
+                                                type="date"
+                                                size="small"
+                                                fullWidth
+                                                value={visitDate}
+                                                onChange={(e) => setVisitDate(e.target.value)}
+                                                helperText="Optional. Shows on the calendar on this day."
+                                                InputLabelProps={{ shrink: true }}
+                                            />
                                         </Grid>
 
                                         <Grid item xs={12} sm={8}>
