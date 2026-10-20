@@ -1,4 +1,19 @@
 import DataMenu from "../components/dataio/DataMenu";
+import PageHeader from "../components/ui/PageHeader";
+import SectionCard from "../components/ui/SectionCard";
+import StatCard from "../components/ui/StatCard";
+import FilterChip from "../components/ui/FilterChip";
+import Badge from "../components/ui/Badge";
+import BulkBar from "../components/ui/BulkBar";
+import EmptyState from "../components/ui/EmptyState";
+import AppDialog from "../components/ui/AppDialog";
+import SafeDeleteDialog from "../components/ui/SafeDeleteDialog";
+import { bulkDelete, DELETE_PATHS } from "../api/bulkDelete";
+import { exportRows } from "../utils/exportRows";
+import SearchIcon from "@mui/icons-material/Search";
+import InputBase from "@mui/material/InputBase";
+import Checkbox from "@mui/material/Checkbox";
+import TablePagination from "@mui/material/TablePagination";
 import Sheet from "../components/ui/Sheet";
 import SegmentedControl from "../components/ui/SegmentedControl";
 import { tok } from "../theme/tokens";
@@ -6,7 +21,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Button,
   IconButton,
   Table,
@@ -15,24 +29,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
-  CircularProgress,
   Stack,
   Tooltip,
   MenuItem,
-  Card,
-  CardContent,
-  Chip,
   Autocomplete,
-  Grid,
-  useTheme,
-  useMediaQuery,
   Switch,
-  FormControlLabel
+  FormControlLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,18 +43,31 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   DragIndicator as DragIcon,
-  Category as CategoryIcon,
-  Quiz as QuizIcon,
   Update as UpdateIcon,
   ContentCopy as DuplicateIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import api from '../api/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+
+// Every field of a question, for exports and the backup before a permanent delete.
+const QUESTION_COLUMNS = [
+  ['Order', (q) => q.order ?? ''],
+  ['Quiz', (q) => q.quizType || 'Performance'],
+  ['Type', (q) => q.type || 'options'],
+  ['Category', (q) => q.category || ''],
+  ['Question', (q) => q.question],
+  ['Options', (q) => (q.options || []).join(' | ')],
+  ['Correct answer', (q) => q.correctAnswer || ''],
+  ['Guideline', (q) => q.guideline || ''],
+  ['Show guideline', (q) => (q.showGuideline ? 'yes' : 'no')],
+  ['Has image', (q) => (q.questionImage ? 'yes' : 'no')],
+  ['Record ID', (q) => q._id],
+];
 
 // Drag and Drop type
 const ItemTypes = {
@@ -59,7 +75,8 @@ const ItemTypes = {
 };
 
 // Draggable Row Component
-const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog, handleDelete, handleDuplicate, onSwapClick, colors }) => {
+const isArabic = (t) => /[؀-ۿ]/.test(t || '');
+const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog, handleDelete, handleDuplicate, onSwapClick, selected, onToggle, canDrag }) => {
   const ref = useRef(null);
   const [{ handlerId }, drop] = useDrop({
     accept: ItemTypes.QUESTION,
@@ -91,6 +108,7 @@ const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog,
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.QUESTION,
     item: () => ({ id: question._id, index }),
+    canDrag,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -102,125 +120,50 @@ const DraggableRow = ({ question, index, globalIndex, moveRow, handleOpenDialog,
     <TableRow
       ref={ref}
       data-handler-id={handlerId}
-      sx={{
-        bgcolor: isDragging ? 'rgba(255,255,255,0.05)' : 'inherit',
-        '&:hover': { bgcolor: 'var(--overlay-subtle)' },
-        '& td': { borderBottom: `1px solid ${colors.border}` },
-        cursor: 'move',
-        opacity: isDragging ? 0.5 : 1
-      }}
+      hover
+      selected={selected}
+      sx={{ opacity: isDragging ? 0.5 : 1, '&.Mui-selected, &.Mui-selected:hover': { backgroundColor: 'var(--accent-subtle)' } }}
     >
-      <TableCell sx={{ color: colors.textSecondary, width: '40px' }}>
-        <DragIcon sx={{ cursor: 'move', color: colors.textSecondary }} />
+      <TableCell padding="checkbox">
+        <Checkbox size="small" checked={selected} onChange={() => onToggle(question._id)} slotProps={{ input: { 'aria-label': `Select question ${globalIndex + 1}` } }} />
       </TableCell>
-      {/* Order Badge */}
-      <TableCell sx={{ width: '60px' }}>
-        <Tooltip title={`Position ${globalIndex + 1} — Click to swap with another question`} placement="right">
+      <TableCell sx={{ width: 36, px: 0.5 }}>
+        <Tooltip title={canDrag ? 'Drag to reorder' : 'Clear filters to drag'}>
+          <DragIcon sx={{ fontSize: 18, cursor: canDrag ? 'grab' : 'not-allowed', color: 'var(--text-muted)' }} />
+        </Tooltip>
+      </TableCell>
+      <TableCell sx={{ width: 64 }}>
+        <Tooltip title="Swap position with another question">
           <Box
+            component="button"
+            type="button"
             onClick={() => onSwapClick(globalIndex)}
-            sx={{
-              cursor: 'pointer',
-              width: 36, height: 36,
-              borderRadius: '10px',
-              bgcolor: 'rgba(123, 104, 238, 0.12)',
-              border: '1.5px solid rgba(123, 104, 238, 0.35)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: colors.primary, fontWeight: 'bold', fontSize: '13px',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                bgcolor: 'rgba(123, 104, 238, 0.28)',
-                borderColor: colors.primary,
-                transform: 'scale(1.08)'
-              }
-            }}
+            aria-label={`Position ${globalIndex + 1}, swap`}
+            sx={{ width: 30, height: 26, borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', font: 'inherit', fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer', fontVariantNumeric: 'tabular-nums', '&:hover': { borderColor: 'var(--accent)', color: 'var(--accent-text)' } }}
           >
             {globalIndex + 1}
           </Box>
         </Tooltip>
       </TableCell>
-      <TableCell sx={{ color: colors.textPrimary, maxWidth: '400px' }}>
-        <Typography variant="body2" sx={{
-          fontWeight: '500',
-          fontFamily: "'Inter', sans-serif",
-          direction: /[\u0600-\u06FF]/.test(question.question) ? 'rtl' : 'ltr',
-          textAlign: /[\u0600-\u06FF]/.test(question.question) ? 'right' : 'left'
-        }}>
+      <TableCell sx={{ maxWidth: 480 }}>
+        <Typography dir={isArabic(question.question) ? 'rtl' : 'ltr'} sx={{ fontSize: 13, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {question.question}
-          {question.questionImage && (
-            <Tooltip title="Has Image">
-              <Box component="span" sx={{ verticalAlign: 'middle', ml: 1, color: colors.primary, display: 'inline-flex' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
-              </Box>
-            </Tooltip>
-          )}
         </Typography>
+        {question.questionImage && <Typography sx={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Has image</Typography>}
       </TableCell>
-      <TableCell>
-        <Chip
-          label={question.category || 'General'}
-          size="small"
-          sx={{
-            bgcolor: 'rgba(123, 104, 238, 0.1)',
-            color: colors.primary,
-            fontWeight: 'bold',
-            border: `1px solid ${colors.primary}40`
-          }}
-        />
-      </TableCell>
-      <TableCell>
-        <Chip
-          label={question.type || 'options'}
-          size="small"
-          variant="outlined"
-          sx={{
-            color: question.type === 'essay' ? colors.secondary : colors.textSecondary,
-            borderColor: question.type === 'essay' ? `${colors.secondary}40` : colors.border
-          }}
-        />
-      </TableCell>
-      <TableCell align="right">
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
-          <Tooltip title="Duplicate">
-            <IconButton
-              onClick={() => handleDuplicate(question)}
-              sx={{ color: colors.secondary, '&:hover': { bgcolor: `${colors.secondary}20` } }}
-            >
-              <DuplicateIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="View">
-            <IconButton
-              onClick={() => handleOpenDialog(question, true)}
-              sx={{ color: colors.textSecondary, '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}
-            >
-              <ViewIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit">
-            <IconButton
-              onClick={() => handleOpenDialog(question)}
-              sx={{ color: colors.secondary, '&:hover': { bgcolor: `${colors.secondary}20` } }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton
-              onClick={() => handleDelete(question._id)}
-              sx={{ color: colors.error, '&:hover': { bgcolor: `${colors.error}20` } }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
+      <TableCell><Badge outline>{question.category || 'General'}</Badge></TableCell>
+      <TableCell><Badge tone={question.type === 'essay' ? 'info' : 'neutral'}>{question.type === 'essay' ? 'Essay' : 'Multiple choice'}</Badge></TableCell>
+      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+        <Tooltip title="View"><IconButton size="small" aria-label="View question" onClick={() => handleOpenDialog(question, true)}><ViewIcon fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Edit"><IconButton size="small" aria-label="Edit question" onClick={() => handleOpenDialog(question)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Duplicate"><IconButton size="small" aria-label="Duplicate question" onClick={() => handleDuplicate(question)}><DuplicateIcon fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Delete permanently…"><IconButton size="small" aria-label="Delete question" onClick={() => handleDelete(question._id)} sx={{ color: 'var(--danger)' }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
       </TableCell>
     </TableRow>
   );
 };
 
 const QuizManagement = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -240,7 +183,10 @@ const QuizManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [page, setPage] = useState(1);
-  const [rowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selection, setSelection] = useState([]);
+  const [deleting, setDeleting] = useState(null); // questions to delete permanently
+  const [savingOrder, setSavingOrder] = useState(false);
 
   // Swap Dialog State
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
@@ -291,7 +237,7 @@ const QuizManagement = () => {
     textSecondary: tok('--text-secondary'),
     error: tok('--danger'),
     success: tok('--success'),
-    chartColors: ['#7b68ee', '#3ea6ff', '#ff4d4d', '#4caf50', '#ffa726', '#ba68c8']
+    chartColors: ['#6C47FF', '#2563EB', '#DC2626', '#16A34A', '#D97706', '#6C47FF']
   };
 
   const fetchQuestions = async () => {
@@ -422,12 +368,15 @@ const QuizManagement = () => {
   }, [page, rowsPerPage, isDndEnabled]);
 
   const saveOrder = async () => {
+    setSavingOrder(true);
     try {
       const orderPayload = questions.map((q, index) => ({ _id: q._id, order: index }));
       await api.put('/quiz/reorder', { questions: orderPayload });
       toast.success('Question order saved');
     } catch (error) {
-      toast.error('Failed to save order');
+      toast.error(error?.response?.data?.message || 'Couldn’t save the order');
+    } finally {
+      setSavingOrder(false);
     }
   };
 
@@ -520,16 +469,14 @@ const QuizManagement = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this question?')) return;
-    try {
-      await api.delete(`/quiz/${id}`);
-      toast.success('Question deleted successfully');
-      fetchQuestions();
-    } catch (error) {
-      toast.error('Failed to delete question');
-    }
+  const handleDelete = (id) => {
+    const q = questions.find((x) => x._id === id);
+    if (q) setDeleting([q]);
   };
+  const selectedQuestions = questions.filter((q) => selection.includes(q._id));
+  const swapCandidates = questions
+    .map((q, idx) => ({ q, idx }))
+    .filter(({ q, idx }) => idx !== swapSourceIndex && (q.question || '').toLowerCase().includes(swapSearchQuery.toLowerCase()));
 
   if (loading && questions.length === 0) {
     return <LoadingSpinner variant="page" />;
@@ -538,236 +485,101 @@ const QuizManagement = () => {
   return (
     <DndProvider backend={HTML5Backend}>
       <Box>
-        <Stack
-          direction={isMobile ? "column" : "row"}
-          justifyContent="space-between"
-          alignItems={isMobile ? "flex-start" : "center"}
-          spacing={isMobile ? 2 : 0}
-          mb={3}
-        >
-          <Box>
-            <Typography component="h1" sx={{ fontSize: { xs: 20, md: 24 }, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.25 }}>
-              Manage Quiz
-            </Typography>
-            <Typography sx={{ mt: 0.5, fontSize: 13.5, color: 'var(--text-secondary)' }}>
-              Question bank for the field-team technical assessment: edit, reorder and review analytics.
-            </Typography>
+        <PageHeader
+          title="Manage Quiz"
+          description="Question bank for the field-team technical assessment: edit, reorder and review analytics."
+          actions={
+            <>
+              <DataMenu entity="quiz" viewRows={questions} filename="quiz-questions" onImported={fetchQuestions} />
+              <Button variant="outlined" startIcon={<UpdateIcon sx={{ fontSize: 16 }} />} onClick={saveOrder} disabled={savingOrder}>{savingOrder ? 'Saving…' : 'Save order'}</Button>
+              <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => handleOpenDialog()}>Add question</Button>
+            </>
+          }
+        />
+
+        {/* Analytics */}
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1.5fr 1.5fr' }, mb: 2 }}>
+          <Box sx={{ display: 'grid', gap: 1.5 }}>
+            <StatCard label="Questions" value={stats.totalQuestions} hint={selectedQuizType === 'IQ' ? 'IQ test' : 'Performance quiz'} />
+            <StatCard label="Categories" value={stats.totalCategories} />
           </Box>
-          <SegmentedControl
-            ariaLabel="Quiz type"
-            value={selectedQuizType}
-            onChange={setSelectedQuizType}
-            options={[{ value: 'Performance', label: 'Performance' }, { value: 'IQ', label: 'IQ test' }]}
-          />
-          <Stack direction={isMobile ? "column" : "row"} spacing={2} width={isMobile ? "100%" : "auto"}>
-            <DataMenu entity="quiz" viewRows={questions} filename="quiz-questions" onImported={fetchQuestions} />
-            <Button
-              variant="outlined"
-              startIcon={<UpdateIcon />}
-              onClick={saveOrder}
-              fullWidth={isMobile}
-              size={isMobile ? "small" : "medium"}
-
-            >
-              Save Order
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenDialog()}
-              fullWidth={isMobile}
-              size={isMobile ? "small" : "medium"}
-
-            >
-              Add Question
-            </Button>
-          </Stack>
-        </Stack>
-
-        {/* Analytics Dashboard */}
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} md={4}>
-            <Stack spacing={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4 }}>
-                <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>Total Questions</Typography>
-                    <Typography variant="h3" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>{stats.totalQuestions}</Typography>
-                  </Box>
-                  <Box sx={{ p: 2, borderRadius: '50%', bgcolor: 'rgba(123, 104, 238, 0.1)', color: colors.primary }}>
-                    <QuizIcon fontSize="large" />
-                  </Box>
-                </CardContent>
-              </Card>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4 }}>
-                <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>Categories</Typography>
-                    <Typography variant="h3" sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>{stats.totalCategories}</Typography>
-                  </Box>
-                  <Box sx={{ p: 2, borderRadius: '50%', bgcolor: 'rgba(62, 166, 255, 0.1)', color: colors.secondary }}>
-                    <CategoryIcon fontSize="large" />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Stack>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, height: '100%' }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ color: colors.textPrimary, mb: 2, fontWeight: 'bold' }}>Question Types</Typography>
-                <div style={{ height: 160 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats.typeDistribution} layout="vertical" margin={{ left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#333" />
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" stroke={colors.textSecondary} width={100} tick={{ fontSize: 12 }} />
-                      <RechartsTooltip
-                        contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                        itemStyle={{ color: 'var(--text)' }}
-                        cursor={{ fill: 'var(--overlay-subtle)' }}
-                      />
-                      <Bar dataKey="value" fill={colors.primary} radius={[0, 4, 4, 0]} barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, height: '100%' }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ color: colors.textPrimary, mb: 2, fontWeight: 'bold' }}>Category Distribution</Typography>
-                <div style={{ height: 160 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.categoryDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {stats.categoryDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={colors.chartColors[index % colors.chartColors.length]} stroke="rgba(0,0,0,0)" />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                        itemStyle={{ color: 'var(--text)' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Filter Toolbar */}
-        <Box sx={{
-          bgcolor: colors.surface,
-          p: 2,
-          mb: 3,
-          borderRadius: '16px',
-          border: `1px solid ${colors.border}`,
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 2,
-          alignItems: 'center'
-        }}>
-          <TextField
-            placeholder="Search questions..."
-            size="small"
-            fullWidth
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-            InputProps={{
-              startAdornment: (
-                <Box component="span" sx={{ mr: 1, color: colors.textSecondary, display: 'flex' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </Box>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: 'var(--overlay-subtle)',
-                '& fieldset': { borderColor: colors.border },
-                '&:hover fieldset': { borderColor: colors.primary },
-              },
-              '& input': { color: colors.textPrimary }
-            }}
-          />
-          <Stack direction="row" spacing={2} sx={{ minWidth: { md: '450px' }, width: { xs: '100%', md: 'auto' } }}>
-            <TextField
-              select
-              label="Category"
-              size="small"
-              fullWidth
-              value={categoryFilter}
-              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'var(--overlay-subtle)',
-                  '& fieldset': { borderColor: colors.border },
-                },
-                '& .MuiInputLabel-root': { color: colors.textSecondary },
-                '& .MuiSelect-select': { color: colors.textPrimary }
-              }}
-            >
-              <MenuItem value="All">All Categories</MenuItem>
-              <MenuItem value="General">General</MenuItem>
-              {availableCategories.map(cat => (
-                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Type"
-              size="small"
-              fullWidth
-              value={typeFilter}
-              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'var(--overlay-subtle)',
-                  '& fieldset': { borderColor: colors.border },
-                },
-                '& .MuiInputLabel-root': { color: colors.textSecondary },
-                '& .MuiSelect-select': { color: colors.textPrimary }
-              }}
-            >
-              <MenuItem value="All">All Types</MenuItem>
-              <MenuItem value="options">Multiple Choice</MenuItem>
-              <MenuItem value="essay">Essay</MenuItem>
-            </TextField>
-          </Stack>
+          <SectionCard title="Question types" bodySx={{ p: 2 }}>
+            <Box sx={{ height: 150 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.typeDistribution} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" stroke={colors.textSecondary} width={100} tick={{ fontSize: 12 }} />
+                  <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)', borderRadius: 8 }} itemStyle={{ color: 'var(--text)' }} cursor={{ fill: 'var(--overlay-subtle)' }} />
+                  <Bar dataKey="value" fill={colors.primary} radius={[0, 4, 4, 0]} barSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          </SectionCard>
+          <SectionCard title="Categories" bodySx={{ p: 2 }}>
+            <Box sx={{ height: 150 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.categoryDistribution} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={3} dataKey="value">
+                    {stats.categoryDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={colors.chartColors[index % colors.chartColors.length]} stroke="rgba(0,0,0,0)" />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text)', borderRadius: 8 }} itemStyle={{ color: 'var(--text)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+          </SectionCard>
         </Box>
 
-        <TableContainer component={Paper} sx={{
-          bgcolor: colors.surface,
-          backgroundImage: 'none',
-          border: `1px solid ${colors.border}`,
-          borderRadius: '16px',
-          overflow: 'auto',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-        }}>
-          <Table>
+        {/* Toolbar */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
+          <SegmentedControl ariaLabel="Quiz type" value={selectedQuizType} onChange={(v) => { setSelectedQuizType(v); setSelection([]); }} options={[{ value: 'Performance', label: 'Performance' }, { value: 'IQ', label: 'IQ test' }]} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 32, px: 1.25, width: { xs: '100%', sm: 260 }, mx: { sm: 0.5 }, borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-xs)', '&:focus-within': { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-ring)' } }}>
+            <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)' }} />
+            <InputBase value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }} placeholder="Search questions…" inputProps={{ 'aria-label': 'Search questions' }} sx={{ flex: 1, fontSize: 13 }} />
+          </Box>
+          <FilterChip label="Category" single searchable options={['General', ...availableCategories.filter((c) => c !== 'General')].map((c) => ({ value: c, label: c }))} value={categoryFilter === 'All' ? [] : [categoryFilter]} onChange={(v) => { setCategoryFilter(v[0] || 'All'); setPage(1); }} />
+          <FilterChip label="Type" single options={[{ value: 'options', label: 'Multiple choice' }, { value: 'essay', label: 'Essay' }]} value={typeFilter === 'All' ? [] : [typeFilter]} onChange={(v) => { setTypeFilter(v[0] || 'All'); setPage(1); }} />
+          <Box sx={{ flex: 1 }} />
+          <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+            {filteredQuestions.length} of {questions.length} questions{isDndEnabled ? ' · drag rows to reorder' : ''}
+          </Typography>
+        </Box>
+
+        {selectedQuestions.length > 0 && (
+          <BulkBar
+            count={selectedQuestions.length}
+            onExport={() => exportRows(selectedQuestions, QUESTION_COLUMNS, { filename: 'quiz-questions-selected' })}
+            onDelete={() => setDeleting(selectedQuestions)}
+            onClear={() => setSelection([])}
+          />
+        )}
+
+        <TableContainer>
+          <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
-                <TableCell width="40" sx={{ borderBottom: `2px solid ${colors.border}` }}></TableCell>
-                <TableCell width="60" sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}`, fontSize: '12px', letterSpacing: '0.08em' }}>ORDER</TableCell>
-                <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Question</TableCell>
-                <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Category</TableCell>
-                <TableCell sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Type</TableCell>
-                <TableCell align="right" sx={{ color: colors.textSecondary, fontWeight: 'bold', borderBottom: `2px solid ${colors.border}` }}>Actions</TableCell>
+              <TableRow>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    checked={paginatedQuestions.length > 0 && paginatedQuestions.every((q) => selection.includes(q._id))}
+                    indeterminate={paginatedQuestions.some((q) => selection.includes(q._id)) && !paginatedQuestions.every((q) => selection.includes(q._id))}
+                    onChange={(e) => setSelection((s) => (e.target.checked ? [...new Set([...s, ...paginatedQuestions.map((q) => q._id)])] : s.filter((id) => !paginatedQuestions.some((q) => q._id === id))))}
+                    slotProps={{ input: { 'aria-label': 'Select all on this page' } }}
+                  />
+                </TableCell>
+                <TableCell />
+                <TableCell>#</TableCell>
+                <TableCell>Question</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell align="right" />
               </TableRow>
             </TableHead>
             <TableBody>
               {paginatedQuestions.map((q, index) => {
-                const globalIndex = questions.findIndex(fullQ => fullQ._id === q._id);
+                const globalIndex = questions.findIndex((fullQ) => fullQ._id === q._id);
                 return (
                   <DraggableRow
                     key={q._id}
@@ -779,69 +591,35 @@ const QuizManagement = () => {
                     handleDelete={handleDelete}
                     handleDuplicate={handleDuplicate}
                     onSwapClick={handleSwapClick}
-                    colors={colors}
+                    selected={selection.includes(q._id)}
+                    onToggle={(id) => setSelection((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+                    canDrag={isDndEnabled}
                   />
                 );
               })}
               {paginatedQuestions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
-                    <Typography variant="body1" sx={{ color: colors.textSecondary }}>
-                      {questions.length === 0 ? 'No questions found. Add your first question to start!' : 'No questions match your filters.'}
-                    </Typography>
+                  <TableCell colSpan={7} sx={{ border: 0 }}>
+                    <EmptyState
+                      title={questions.length === 0 ? 'No questions yet' : 'No questions match'}
+                      description={questions.length === 0 ? 'Add the first question or import a sheet.' : 'Try another category or clear the search.'}
+                      minHeight={200}
+                    />
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-
-          {/* Pagination Controls */}
-          {filteredQuestions.length > rowsPerPage && (
-            <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', borderTop: `1px solid ${colors.border}` }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-                  Showing {Math.min(filteredQuestions.length, (page - 1) * rowsPerPage + 1)}-{Math.min(filteredQuestions.length, page * rowsPerPage)} of {filteredQuestions.length}
-                </Typography>
-                <Box sx={{
-                  '& .MuiPaginationItem-root': {
-                    color: colors.textSecondary,
-                    '&.Mui-selected': {
-                      bgcolor: 'rgba(123, 104, 238, 0.2)',
-                      color: colors.primary,
-                      fontWeight: 'bold'
-                    },
-                    '&:hover': {
-                      bgcolor: 'var(--overlay-subtle)'
-                    }
-                  }
-                }}>
-                  <Box component="nav">
-                    <Stack direction="row" spacing={1}>
-                      <IconButton
-                        disabled={page === 1}
-                        onClick={() => setPage(page - 1)}
-                        sx={{ color: colors.textSecondary }}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                      </IconButton>
-                      <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
-                        <Typography sx={{ color: colors.textPrimary, fontWeight: 'bold' }}>
-                          Page {page} of {Math.ceil(filteredQuestions.length / rowsPerPage)}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        disabled={page >= Math.ceil(filteredQuestions.length / rowsPerPage)}
-                        onClick={() => setPage(page + 1)}
-                        sx={{ color: colors.textSecondary }}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                      </IconButton>
-                    </Stack>
-                  </Box>
-                </Box>
-              </Stack>
-            </Box>
-          )}
+          <TablePagination
+            component="div"
+            count={filteredQuestions.length}
+            page={Math.max(0, page - 1)}
+            onPageChange={(_e, p) => setPage(p + 1)}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[10, 25, 50]}
+            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(1); }}
+            sx={{ borderTop: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+          />
         </TableContainer>
 
         <Sheet
@@ -868,7 +646,7 @@ const QuizManagement = () => {
         >
             <Stack spacing={3}>
               <Box>
-                <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 1, fontWeight: 'bold' }}>
+                <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 1, fontWeight: '600' }}>
                   Question Text (Arabic Supported)
                 </Typography>
                 <TextField
@@ -882,16 +660,6 @@ const QuizManagement = () => {
                     readOnly: isViewMode,
                     dir: /[\u0600-\u06FF]/.test(formData.question) ? 'rtl' : 'ltr',
                     style: { textAlign: /[\u0600-\u06FF]/.test(formData.question) ? 'right' : 'left' }
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: 'var(--overlay-subtle)',
-                      '& fieldset': { borderColor: colors.border },
-                      '&:hover fieldset': { borderColor: colors.primary },
-                      '&.Mui-focused fieldset': { borderColor: colors.primary },
-                    },
-                    input: { color: colors.textPrimary },
-                    textarea: { color: colors.textPrimary }
                   }}
                 />
               </Box>
@@ -934,12 +702,6 @@ const QuizManagement = () => {
                   value={formData.type}
                   disabled={isViewMode}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: colors.border },
-                    },
-                    '& .MuiInputLabel-root': { color: colors.textSecondary },
-                  }}
                 >
                   <MenuItem value="options">Multiple Choice</MenuItem>
                   <MenuItem value="essay">Essay / Free Text</MenuItem>
@@ -972,10 +734,6 @@ const QuizManagement = () => {
                       }}
                     />
                   )}
-                  sx={{
-                    '& .MuiAutocomplete-popupIndicator': { color: colors.textSecondary },
-                    '& .MuiAutocomplete-clearIndicator': { color: colors.textSecondary },
-                  }}
                 />
               </Stack>
 
@@ -986,12 +744,6 @@ const QuizManagement = () => {
                 value={formData.quizType}
                 disabled={isViewMode}
                 onChange={(e) => setFormData({ ...formData, quizType: e.target.value })}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: colors.border },
-                  },
-                  '& .MuiInputLabel-root': { color: colors.textSecondary },
-                }}
               >
                 <MenuItem value="Performance">Performance Assessment</MenuItem>
                 <MenuItem value="IQ">IQ Test</MenuItem>
@@ -999,7 +751,7 @@ const QuizManagement = () => {
 
               {formData.type === 'options' && (
                 <Box>
-                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 2, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 2, fontWeight: '600' }}>
                     Options & Correct Answer
                   </Typography>
                   <Stack spacing={2}>
@@ -1015,12 +767,6 @@ const QuizManagement = () => {
                               readOnly: isViewMode,
                               dir: /[\u0600-\u06FF]/.test(option) ? 'rtl' : 'ltr',
                               style: { textAlign: /[\u0600-\u06FF]/.test(option) ? 'right' : 'left' }
-                            }}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                bgcolor: 'var(--overlay-subtle)',
-                                '& fieldset': { borderColor: colors.border },
-                              }
                             }}
                           />
                           <Tooltip title="Upload Option Image">
@@ -1113,9 +859,9 @@ const QuizManagement = () => {
                 </Box>
               )}
 
-              <Box sx={{ border: '2px solid red', p: 2, borderRadius: '8px', mt: 2 }}>
-                <Typography variant="caption" sx={{ color: 'red', fontWeight: 'bold', mb: 1, display: 'block' }}>
-                  DEBUG: GUIDELINE CONTROL AREA
+              <Box>
+                <Typography variant="subtitle2" sx={{ color: colors.textSecondary, mb: 1, fontWeight: '600' }}>
+                  Guideline
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
                   <TextField
@@ -1127,11 +873,6 @@ const QuizManagement = () => {
                     disabled={isViewMode}
                     multiline
                     rows={2}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': { borderColor: colors.border },
-                      },
-                    }}
                   />
                   <FormControlLabel
                     control={
@@ -1143,7 +884,7 @@ const QuizManagement = () => {
                       />
                     }
                     label={
-                      <Typography variant="body2" sx={{ color: colors.textSecondary, fontWeight: 'bold' }}>
+                      <Typography variant="body2" sx={{ color: colors.textSecondary, fontWeight: '600' }}>
                         Show Guideline in Quiz
                       </Typography>
                     }
@@ -1154,172 +895,61 @@ const QuizManagement = () => {
             </Stack>
         </Sheet>
 
-        {/* ─── Swap Position Dialog ─── */}
-        <Dialog
+        {/* Swap position */}
+        <AppDialog
           open={swapDialogOpen}
           onClose={() => setSwapDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{
-            sx: {
-              bgcolor: 'var(--bg)',
-              color: colors.textPrimary,
-              backgroundImage: 'none',
-              borderRadius: '20px',
-              border: `1px solid ${colors.border}`,
-              boxShadow: '0 25px 60px rgba(0,0,0,0.7)'
-            }
-          }}
+          size="sm"
+          title="Swap question order"
+          description={swapSourceIndex !== null ? `Pick the question to swap with #${swapSourceIndex + 1}. Save order afterwards to keep it.` : ''}
+          actions={<Button variant="outlined" onClick={() => setSwapDialogOpen(false)}>Cancel</Button>}
+          bodySx={{ p: 0 }}
         >
-          <DialogTitle sx={{ borderBottom: `1px solid ${colors.border}`, px: 3, py: 2.5 }}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              {/* swap icon */}
-              <Box sx={{ p: 1, borderRadius: '10px', bgcolor: 'rgba(123,104,238,0.15)', color: colors.primary, display: 'flex' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-              </Box>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.textPrimary, lineHeight: 1.2 }}>
-                  Swap Question Order
-                </Typography>
-                <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                  {swapSourceIndex !== null ? `Moving #${swapSourceIndex + 1} — pick the question to swap with` : ''}
-                </Typography>
-              </Box>
-            </Stack>
-          </DialogTitle>
-
-          <DialogContent sx={{ p: 0 }}>
-            {/* Source question preview */}
-            {swapSourceIndex !== null && questions[swapSourceIndex] && (
-              <Box sx={{ px: 3, pt: 2.5, pb: 2, bgcolor: 'rgba(123,104,238,0.06)', borderBottom: `1px solid ${colors.border}` }}>
-                <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Selected (Position #{swapSourceIndex + 1})
-                </Typography>
-                <Typography variant="body2" sx={{
-                  color: colors.textPrimary, mt: 0.5, fontWeight: '500',
-                  direction: /[\u0600-\u06FF]/.test(questions[swapSourceIndex].question) ? 'rtl' : 'ltr',
-                  textAlign: /[\u0600-\u06FF]/.test(questions[swapSourceIndex].question) ? 'right' : 'left',
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                }}>
-                  {questions[swapSourceIndex].question}
-                </Typography>
-              </Box>
-            )}
-
-            {/* Search */}
-            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${colors.border}` }}>
-              <TextField
-                placeholder="Search questions to swap with..."
-                size="small"
-                fullWidth
-                autoFocus
-                value={swapSearchQuery}
-                onChange={(e) => setSwapSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <Box component="span" sx={{ mr: 1, color: colors.textSecondary, display: 'flex' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </Box>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'var(--overlay-subtle)',
-                    '& fieldset': { borderColor: colors.border },
-                    '&:hover fieldset': { borderColor: colors.primary },
-                    '&.Mui-focused fieldset': { borderColor: colors.primary },
-                  },
-                  '& input': { color: colors.textPrimary }
-                }}
-              />
+          {swapSourceIndex !== null && questions[swapSourceIndex] && (
+            <Box sx={{ px: 2.5, py: 1.5, backgroundColor: 'var(--surface-subtle)', borderBottom: '1px solid var(--border)' }}>
+              <Typography sx={{ fontSize: 12, color: 'var(--text-secondary)' }}>Moving #{swapSourceIndex + 1}</Typography>
+              <Typography dir={isArabic(questions[swapSourceIndex].question) ? 'rtl' : 'ltr'} sx={{ fontSize: 13, mt: 0.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {questions[swapSourceIndex].question}
+              </Typography>
             </Box>
+          )}
+          <Box sx={{ px: 2.5, py: 1.5, borderBottom: '1px solid var(--border)' }}>
+            <TextField fullWidth autoFocus placeholder="Search questions…" value={swapSearchQuery} onChange={(e) => setSwapSearchQuery(e.target.value)} slotProps={{ input: { startAdornment: <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)', mr: 0.75 }} /> } }} />
+          </Box>
+          <Box sx={{ maxHeight: 380, overflowY: 'auto', p: 1 }}>
+            {swapCandidates.map(({ q, idx }) => (
+              <Box
+                key={q._id}
+                component="button"
+                type="button"
+                onClick={() => handleSwapConfirm(idx)}
+                sx={{ display: 'flex', gap: 1.25, alignItems: 'flex-start', width: '100%', textAlign: 'left', font: 'inherit', p: 1, borderRadius: '6px', border: 0, background: 'none', cursor: 'pointer', '&:hover': { backgroundColor: 'var(--surface-hover)' } }}
+              >
+                <Box sx={{ flexShrink: 0, width: 30, height: 24, borderRadius: '6px', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{idx + 1}</Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography dir={isArabic(q.question) ? 'rtl' : 'ltr'} sx={{ fontSize: 13, color: 'var(--text)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{q.question}</Typography>
+                  <Typography sx={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{[q.category, q.type === 'essay' ? 'Essay' : 'Multiple choice'].filter(Boolean).join(' · ')}</Typography>
+                </Box>
+              </Box>
+            ))}
+            {swapCandidates.length === 0 && <EmptyState title="No questions match" minHeight={140} />}
+          </Box>
+        </AppDialog>
 
-            {/* Questions list */}
-            <Box sx={{ maxHeight: '380px', overflowY: 'auto', px: 1.5, py: 1 }}>
-              {questions
-                .map((q, idx) => ({ q, idx }))
-                .filter(({ q, idx }) =>
-                  idx !== swapSourceIndex &&
-                  (q.question || '').toLowerCase().includes(swapSearchQuery.toLowerCase())
-                )
-                .map(({ q, idx }) => (
-                  <Box
-                    key={q._id}
-                    onClick={() => handleSwapConfirm(idx)}
-                    sx={{
-                      p: 1.5,
-                      mb: 0.5,
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      border: '1px solid transparent',
-                      display: 'flex',
-                      gap: 1.5,
-                      alignItems: 'flex-start',
-                      transition: 'all 0.15s ease',
-                      '&:hover': {
-                        bgcolor: 'rgba(123,104,238,0.1)',
-                        borderColor: 'rgba(123,104,238,0.4)'
-                      }
-                    }}
-                  >
-                    {/* Position badge */}
-                    <Box sx={{
-                      flexShrink: 0,
-                      width: 34, height: 34,
-                      borderRadius: '8px',
-                      bgcolor: 'rgba(62,166,255,0.12)',
-                      border: '1px solid rgba(62,166,255,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: colors.secondary, fontWeight: 'bold', fontSize: '13px'
-                    }}>
-                      {idx + 1}
-                    </Box>
-                    {/* Question content */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{
-                        color: colors.textPrimary, fontWeight: '500',
-                        direction: /[\u0600-\u06FF]/.test(q.question) ? 'rtl' : 'ltr',
-                        textAlign: /[\u0600-\u06FF]/.test(q.question) ? 'right' : 'left',
-                        display: '-webkit-box', WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                      }}>
-                        {q.question}
-                      </Typography>
-                      <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap">
-                        {q.category && (
-                          <Typography variant="caption" sx={{ color: colors.primary }}>
-                            {q.category}
-                          </Typography>
-                        )}
-                        <Typography variant="caption" sx={{ color: colors.textSecondary }}>
-                          {q.type === 'essay' ? 'Essay' : 'Multiple Choice'}
-                        </Typography>
-                      </Stack>
-                    </Box>
-                    {/* Swap arrow hint */}
-                    <Box sx={{ flexShrink: 0, color: 'rgba(123,104,238,0.4)', display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-                    </Box>
-                  </Box>
-                ))}
-              {questions.filter((q, idx) =>
-                idx !== swapSourceIndex &&
-                (q.question || '').toLowerCase().includes(swapSearchQuery.toLowerCase())
-              ).length === 0 && (
-                  <Box sx={{ py: 6, textAlign: 'center' }}>
-                    <Typography variant="body2" sx={{ color: colors.textSecondary }}>No questions found matching your search.</Typography>
-                  </Box>
-                )}
-            </Box>
-          </DialogContent>
-
-          <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${colors.border}` }}>
-            <Button onClick={() => setSwapDialogOpen(false)} sx={{ color: colors.textSecondary, fontWeight: 'bold' }}>
-              Cancel
-            </Button>
-          </DialogActions>
-        </Dialog>
-
+        <SafeDeleteDialog
+          open={Boolean(deleting)}
+          onClose={() => setDeleting(null)}
+          records={deleting || []}
+          noun={{ one: 'question', many: 'questions' }}
+          nameOf={(q) => `#${questions.findIndex((x) => x._id === q._id) + 1} · ${q.question}`}
+          exportColumns={QUESTION_COLUMNS}
+          exportFilename="quiz-questions"
+          onDelete={(list) => bulkDelete(DELETE_PATHS.quiz, list.map((q) => q._id))}
+          onDeleted={({ deleted }) => {
+            setSelection((s) => s.filter((id) => !deleted.includes(id)));
+            fetchQuestions();
+          }}
+        />
       </Box>
     </DndProvider>
   );
