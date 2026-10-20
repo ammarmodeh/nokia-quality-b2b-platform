@@ -415,7 +415,7 @@ const TablePage = () => {
       )}
 
       {mode === "analysis" ? (
-        <AnalysisPanel rows={shown} fields={fields} lookups={lookups} title={`${group ? `Group “${group.name}”` : "All rows"}${state.filters?.length || q ? " · with the current filters and search" : ""}`}
+        <AnalysisPanel rows={shown} allRows={rows} fields={fields} lookups={lookups} title={`${group ? `Group “${group.name}”` : "All rows"}${state.filters?.length || q ? " · with the current filters and search" : ""}`}
           onFilter={(f, v) => { setState({ filters: [...(state.filters || []).filter((x) => x.field !== f.key), { field: f.key, op: "eq", value: v }] }); setParam("mode", null); }} />
       ) : view?.type === "kanban" ? (
         <KanbanView rows={shown} groupField={kanbanField} primary={primary} cardFields={(state.cardFields || []).map((k) => fields.find((f) => f.key === k)).filter(Boolean)} lookups={lookups} canEdit

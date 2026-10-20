@@ -6,6 +6,7 @@ import SectionCard from "../../components/ui/SectionCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { choiceColor, formatValue } from "./fieldTypes";
 import { rawOf } from "./viewUtils";
+import IssueRanking, { useCheckColumns } from "./IssueRanking";
 
 const BREAKDOWN_TYPES = ["singleSelect", "multiSelect", "checkbox", "user", "fieldTeam", "taxonomy", "rating"];
 const isEmpty = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
@@ -40,7 +41,10 @@ const top = (map, n = 8) => {
  * the team each row counts for, and a breakdown of every choice-like field. Clicking a
  * value filters the table by it.
  */
-const AnalysisPanel = ({ rows, fields, lookups, onFilter, title }) => {
+const AnalysisPanel = ({ rows, allRows, fields, lookups, onFilter, title }) => {
+  // OK / NOK check columns (found on the whole table so filtering doesn't hide them)
+  const checks = useCheckColumns(allRows || rows, fields);
+  const checkKeys = useMemo(() => new Set(checks.map((c) => c.field.key)), [checks]);
   const stats = useMemo(() => {
     const total = rows.length;
     const teams = new Map();
@@ -55,6 +59,7 @@ const AnalysisPanel = ({ rows, fields, lookups, onFilter, title }) => {
       if (!isEmpty(s)) slids.add(String(s));
     }
     const breakdowns = fields
+      .filter((f) => !checkKeys.has(f.key))
       .filter((f) => BREAKDOWN_TYPES.includes(f.type) || (f.type === "text" && f.coreMapping && ["teamCode", "status", "location"].includes(f.coreMapping)))
       .map((f) => {
         const m = new Map();
@@ -91,7 +96,7 @@ const AnalysisPanel = ({ rows, fields, lookups, onFilter, title }) => {
       }
     }
     return { total, teams: top(teams, 10), teamed: rows.filter((r) => r.fieldTeamId).length, slids: slids.size, hasSlid: Boolean(slidField || rows.some((r) => r.slid)), breakdowns, numbers, dateField, months: [...months.values()].sort((a, b) => a.key.localeCompare(b.key)), first, last };
-  }, [rows, fields, lookups]);
+  }, [rows, fields, lookups, checkKeys]);
 
   if (!rows.length) return <EmptyState title="No rows to analyse" description="Clear the search or filters, or add rows to this group." />;
 
@@ -104,6 +109,7 @@ const AnalysisPanel = ({ rows, fields, lookups, onFilter, title }) => {
         {stats.hasSlid ? <StatCard label="Distinct SLIDs" value={stats.slids.toLocaleString()} hint={stats.slids < stats.total ? `${(stats.total - stats.slids).toLocaleString()} repeat rows` : "no repeats"} /> : <StatCard label="Fields" value={fields.length} />}
         <StatCard label={stats.dateField ? stats.dateField.label : "Dates"} value={stats.first ? `${format(stats.first, "MMM yy")} – ${format(stats.last, "MMM yy")}` : "—"} hint={stats.first ? `${format(stats.first, "d MMM yyyy")} to ${format(stats.last, "d MMM yyyy")}` : undefined} />
       </Box>
+      {checks.length > 0 && <IssueRanking rows={rows} checks={checks} lookups={lookups} onFilter={onFilter} />}
       <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
         <SectionCard title="By field team" description="The team that held the row's team code on the row's date.">
           <Bars items={stats.teams} total={stats.total} />
