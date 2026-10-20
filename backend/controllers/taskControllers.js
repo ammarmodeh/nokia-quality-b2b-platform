@@ -764,6 +764,8 @@ export const deleteTask = async (req, res) => {
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     await TaskSchema.deleteOne({ _id: req.params.id });
+    // its tickets and favourites can't outlive it
+    await Promise.all([TaskTicket.deleteMany({ taskId: task._id }), FavouriteSchema.deleteMany({ originalTaskId: task._id })]);
 
     res.status(200).json({ status: 204, message: "Task deleted successfully!" });
   } catch (error) {

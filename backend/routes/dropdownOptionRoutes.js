@@ -8,6 +8,7 @@ import {
   reorderOptions,
   seedOptions,
 } from "../controllers/dropdownOptionControllers.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -16,10 +17,11 @@ router.get("/all", getAllOptions);
 router.get("/category/:category", getOptionsByCategory);
 
 // Admin routes (CRUD + Seed)
-router.post("/add", addOption);
-router.patch("/update/:id", updateOption);
-router.delete("/delete/:id", deleteOption);
-router.put("/reorder", reorderOptions);
-router.post("/seed", seedOptions);
+// adding a value stays open to signed-in users (forms save new supervisor names); the rest is admin-only
+router.post("/add", protect, addOption);
+router.patch("/update/:id", protect, adminOnly, updateOption);
+router.delete("/delete/:id", protect, adminOnly, deleteOption);
+router.put("/reorder", protect, adminOnly, reorderOptions);
+router.post("/seed", protect, adminOnly, seedOptions);
 
 export default router;

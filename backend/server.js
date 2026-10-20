@@ -31,6 +31,7 @@ import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import importRoutes from "./routes/importRoutes.js";
 import { customTableRouter, tableTemplateRouter, storedFileRouter } from "./routes/customTableRoutes.js";
+import { mountBulkDelete } from "./routes/bulkDeleteRoutes.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
 
@@ -110,6 +111,7 @@ connectDB();
 // ------------------------------------------------------------------
 // API routes
 // ------------------------------------------------------------------
+mountBulkDelete(app); // POST /api/<resource>/bulk-delete (admins)
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/favourites", favouriteRoutes);

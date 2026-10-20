@@ -12,7 +12,6 @@ import CalendarMonthOutlined from "@mui/icons-material/CalendarMonthOutlined";
 import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
 import MoreHoriz from "@mui/icons-material/MoreHoriz";
 import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
-import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import PersonAddAltOutlined from "@mui/icons-material/PersonAddAltOutlined";
 import FilterAltOffOutlined from "@mui/icons-material/FilterAltOffOutlined";
 import api from "../../api/api";
@@ -20,7 +19,9 @@ import PageHeader from "../../components/ui/PageHeader";
 import SegmentedControl from "../../components/ui/SegmentedControl";
 import FilterChip from "../../components/ui/FilterChip";
 import ErrorState from "../../components/ui/ErrorState";
-import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import SafeDeleteDialog from "../../components/ui/SafeDeleteDialog";
+import BulkBar from "../../components/ui/BulkBar";
+import { bulkDelete, DELETE_PATHS } from "../../api/bulkDelete";
 import PageLoader from "../../components/ui/PageLoader";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
 import TaskBoard from "./TaskBoard";
@@ -28,7 +29,7 @@ import TaskTable from "./TaskTable";
 import EventCalendar from "../../components/calendar/EventCalendar";
 import TaskSheet from "./TaskSheet";
 import useTaskActions from "./useTaskActions";
-import { exportTasks } from "./exportTasks";
+import { exportTasks, TASK_COLUMNS } from "./exportTasks";
 import { DATE_RANGES, GROUP_BY, PRIORITIES, STATUSES, filterTasks, statusMeta, taskDate, taskTitle } from "./taskUtils";
 
 const AddTask = lazy(() => import("../../components/task/AddTask"));
@@ -72,23 +73,14 @@ const useUrlState = () => {
   return [state, set];
 };
 
-const BulkBar = ({ count, users, onStatus, onPriority, onAssign, onExport, onDelete, onClear }) => {
+const TaskBulkBar = ({ count, users, onStatus, onPriority, onAssign, onExport, onDelete, onClear }) => {
   const [menu, setMenu] = useState(null); // {type, anchor}
   const [assignees, setAssignees] = useState([]);
   return (
-    <Box
-      role="region"
-      aria-label="Bulk actions"
-      sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", px: 1.5, py: 1, mb: 1.5, borderRadius: "10px", border: "1px solid var(--accent)", backgroundColor: "var(--accent-subtle)" }}
-    >
-      <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--accent-text)", mr: 1 }}>{count} selected</Typography>
+    <BulkBar count={count} onExport={onExport} onDelete={onDelete} onClear={onClear}>
       <Button variant="outlined" onClick={(e) => setMenu({ type: "status", anchor: e.currentTarget })}>Change status</Button>
       <Button variant="outlined" onClick={(e) => setMenu({ type: "priority", anchor: e.currentTarget })}>Priority</Button>
       <Button variant="outlined" startIcon={<PersonAddAltOutlined sx={{ fontSize: 16 }} />} onClick={(e) => setMenu({ type: "assign", anchor: e.currentTarget })}>Reassign</Button>
-      <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={onExport}>Export</Button>
-      <Button variant="outlined" color="error" startIcon={<DeleteOutline sx={{ fontSize: 16 }} />} onClick={onDelete} sx={{ color: "var(--danger)" }}>Delete</Button>
-      <Box sx={{ flex: 1 }} />
-      <Button variant="text" onClick={onClear} sx={{ color: "var(--text-secondary)" }}>Clear selection</Button>
 
       <Menu anchorEl={menu?.type !== "assign" ? menu?.anchor : null} open={Boolean(menu && menu.type !== "assign")} onClose={() => setMenu(null)}>
         {(menu?.type === "status" ? STATUSES : PRIORITIES).map((o) => (
@@ -130,7 +122,7 @@ const BulkBar = ({ count, users, onStatus, onPriority, onAssign, onExport, onDel
           </Button>
         </Box>
       </Popover>
-    </Box>
+    </BulkBar>
   );
 };
 
@@ -154,11 +146,12 @@ const TasksPage = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [ticketTask, setTicketTask] = useState(null);
-  const [bulkDelete, setBulkDelete] = useState(false);
+  const [deleting, setDeleting] = useState(null); // tasks to delete permanently
+  const isAdmin = me?.role === "Admin";
   const [moreMenu, setMoreMenu] = useState(null);
   const [searchDraft, setSearchDraft] = useState(f.q);
 
-  const { patchOne, patchMany, removeMany } = useTaskActions(setTasks, users);
+  const { patchOne, patchMany, dropMany } = useTaskActions(setTasks, users);
 
   useEffect(() => {
     let cancelled = false;
@@ -305,14 +298,14 @@ const TasksPage = () => {
       {error && <ErrorState title="Tasks didn't load" message={error} onRetry={() => { setLoading(true); setRefresh((r) => r + 1); }} sx={{ mb: 2 }} />}
 
       {f.view === "table" && selection.length > 0 && (
-        <BulkBar
+        <TaskBulkBar
           count={selection.length}
           users={users}
           onStatus={(v) => bulkPatch({ status: v }, "Status")}
           onPriority={(v) => bulkPatch({ priority: v }, "Priority")}
           onAssign={(list) => bulkPatch({ assignedTo: list }, "Assignees")}
           onExport={() => exportTasks(selectedTasks, { filename: "dvoc-installation-selected" })}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={isAdmin ? () => setDeleting(selectedTasks) : undefined}
           onClear={() => setSelection([])}
         />
       )}
@@ -343,23 +336,24 @@ const TasksPage = () => {
         onPatch={(id, patch) => patchOne(id, patch)}
         onEdit={(t) => setEditTask(t)}
         onRecordTicket={(t) => setTicketTask(t)}
-        onDelete={(t) => {
-          setOpenId(null);
-          removeMany([t]);
-        }}
+        onDelete={(t) => setDeleting([t])}
+        canDelete={isAdmin}
       />
 
-      <ConfirmDialog
-        open={bulkDelete}
-        danger
-        title={`Delete ${selection.length} task${selection.length > 1 ? "s" : ""}?`}
-        description="They will be moved to Trash. You can undo right after."
-        confirmLabel="Delete"
-        onClose={() => setBulkDelete(false)}
-        onConfirm={() => {
-          setBulkDelete(false);
-          removeMany(selectedTasks);
-          setSelection([]);
+      <SafeDeleteDialog
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        records={deleting || []}
+        noun={{ one: "task", many: "tasks" }}
+        nameOf={(t) => [t.slid, t.customerName].filter(Boolean).join(" · ")}
+        exportColumns={TASK_COLUMNS}
+        exportFilename="dvoc-installation-tasks"
+        onDelete={(list) => bulkDelete(DELETE_PATHS.tasks, list.map((t) => t._id))}
+        onDeleted={({ deleted }) => {
+          dropMany(deleted);
+          setSelection((sel) => sel.filter((id) => !deleted.includes(id)));
+          if (deleted.includes(openId)) setOpenId(null);
+          window.dispatchEvent(new CustomEvent("dashboard-refresh"));
         }}
       />
 

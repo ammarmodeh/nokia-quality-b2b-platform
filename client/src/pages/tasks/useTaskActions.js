@@ -51,7 +51,10 @@ export default function useTaskActions(setTasks, users = []) {
 
   const patchOne = useCallback((id, patch, opts) => patchMany({ [id]: patch }, opts), [patchMany]);
 
-  /** Move to Trash (same flow as before), with an Undo toast that restores it. */
+  /** Drop tasks the server has permanently deleted (SafeDeleteDialog → POST /tasks/bulk-delete). */
+  const dropMany = useCallback((ids) => setTasks((prev) => prev.filter((t) => !ids.includes(t._id))), [setTasks]);
+
+  /** Move to Trash (old flow, kept for reference; the Trash page is hidden), with an Undo toast. */
   const removeMany = useCallback(
     async (tasks) => {
       const ids = tasks.map((t) => t._id);
@@ -101,5 +104,5 @@ export default function useTaskActions(setTasks, users = []) {
     [setTasks, me]
   );
 
-  return { patchOne, patchMany, removeMany };
+  return { patchOne, patchMany, removeMany, dropMany };
 }

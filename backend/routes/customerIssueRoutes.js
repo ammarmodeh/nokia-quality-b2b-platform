@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import { createIssue, deleteIssue, getAllIssues, getIssueById, updateIssue, getIssueLogs } from '../controllers/customerIssueController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 
 // Protect all routes with authentication
@@ -24,6 +24,6 @@ router.get('/:id', getIssueById);
 router.put('/:id', updateIssue);
 
 // Delete an issue
-router.delete('/:id', deleteIssue);
+router.delete('/:id', adminOnly, deleteIssue);
 
 export default router;

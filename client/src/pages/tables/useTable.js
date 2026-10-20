@@ -149,9 +149,15 @@ export const useTable = (id) => {
     [id, loadRows]
   );
 
+  /** Rows the server permanently deleted (SafeDeleteDialog → POST rows/purge). */
+  const dropRows = useCallback((ids) => {
+    setRows((list) => list.filter((r) => !ids.includes(r._id)));
+    setTotal((n) => Math.max(0, n - ids.length));
+  }, []);
+
   const replaceRow = useCallback((row) => setRows((list) => list.map((r) => (r._id === row._id ? row : r))), []);
 
-  return { table, setTable, fields, views, setViews, rows, total, loading, error, reload, loadRows, updateCells, addRow, addRows, deleteRows, replaceRow, toast, setToast, notify };
+  return { table, setTable, fields, views, setViews, rows, total, loading, error, reload, loadRows, updateCells, addRow, addRows, deleteRows, dropRows, replaceRow, toast, setToast, notify };
 };
 
 export { errText };

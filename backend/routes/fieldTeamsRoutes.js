@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import { addFieldTeam, getAllFieldTeams, deleteFieldTeam, updateFieldTeam, updateTeamScore, getFieldTeamByQuizCode, getTeamEvaluationHistory, suspendTeam, terminateTeam, reactivateTeam, onLeaveTeam, resignedTeam, addSession, bulkAddSession, getRecentSessions, updateSessionForTeam, deleteSessionForTeam, reportAbsence, getTeamViolations, toggleQuizPermission, validateTeam, loginFieldTeam } from "../controllers/fieldTeamsControllers.js";
 
 const router = express.Router();
@@ -38,7 +38,7 @@ router.post("/resigned-field-team/:teamId", protect, resignedTeam);
 
 
 // Delete Field Team
-router.delete("/delete-field-team/:id", protect, deleteFieldTeam);
+router.delete("/delete-field-team/:id", protect, adminOnly, deleteFieldTeam);
 
 // Update Field Team
 router.put("/update-field-team/:id", protect, updateFieldTeam);

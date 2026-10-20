@@ -7,7 +7,7 @@ import {
   deleteAssessment,
   getAssessmentsByTeam,
 } from "../controllers/labAssessmentControllers.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -17,6 +17,6 @@ router
   .route("/:id")
   .get(protect, getAssessmentById)
   .put(protect, updateAssessment)
-  .delete(protect, deleteAssessment);
+  .delete(protect, adminOnly, deleteAssessment);
 
 export default router;

@@ -34,6 +34,7 @@ r.post("/:id/rows", wrap(c.createRow));
 r.post("/:id/rows/bulk", wrap(c.bulkRows));
 r.post("/:id/rows/delete", wrap(c.deleteRows));
 r.post("/:id/rows/restore", wrap(c.deleteRows));
+r.post("/:id/rows/purge", wrap(c.purgeRows));
 r.patch("/:id/rows/:rowId", wrap(c.updateRow));
 r.get("/:id/rows/:rowId/activity", wrap(c.rowActivity));
 

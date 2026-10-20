@@ -26,7 +26,6 @@ import PushPinOutlined from "@mui/icons-material/PushPinOutlined";
 import EditOutlined from "@mui/icons-material/EditOutlined";
 import ArchiveOutlined from "@mui/icons-material/ArchiveOutlined";
 import Close from "@mui/icons-material/Close";
-import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import EventAvailableOutlined from "@mui/icons-material/EventAvailableOutlined";
 import PageHeader from "../../components/ui/PageHeader";
 import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
@@ -43,6 +42,9 @@ import FieldManagerSheet from "./FieldManagerSheet";
 import RowSheet from "./RowSheet";
 import ImportHistorySheet from "./ImportHistorySheet";
 import CalendarFieldsDialog from "./CalendarFieldsDialog";
+import BulkBar from "../../components/ui/BulkBar";
+import SafeDeleteDialog from "../../components/ui/SafeDeleteDialog";
+import { bulkDelete, DELETE_PATHS } from "../../api/bulkDelete";
 import { FilterButton, SortButton } from "./ViewControls";
 import { choiceColor, formatValue, IMPORTABLE } from "./fieldTypes";
 import { applyView, groupRows, rawOf } from "./viewUtils";
@@ -72,6 +74,26 @@ const exportRows = (table, fields, rows, lookups, fmt = "xlsx") => {
   }));
   downloadWorkbook([{ name: table.name.slice(0, 28), header, rows: body }], table.name.toLowerCase().replace(/[^\w]+/g, "-"), fmt);
 };
+
+/** Every live field plus row metadata — the backup taken before a permanent delete. */
+const backupColumns = (table, lookups) => [
+  ["Row #", (r) => r.autoNumber],
+  ...table.fields
+    .filter((f) => !f.archived)
+    .sort((a, b) => a.order - b.order)
+    .map((f) => [
+      f.label,
+      (r) => {
+        const v = rawOf(f, r);
+        if ((f.type === "date" || f.type === "datetime") && v) return new Date(v);
+        if (f.type === "number" && v !== null && v !== undefined) return Number(v);
+        return formatValue(f, v, r, lookups);
+      },
+    ]),
+  ["Created", (r) => (r.createdAt ? new Date(r.createdAt) : "")],
+  ["Updated", (r) => (r.updatedAt ? new Date(r.updatedAt) : "")],
+  ["Record ID", (r) => r._id],
+];
 
 const downloadTableTemplate = (table) => {
   const fields = table.fields.filter(IMPORTABLE).sort((a, b) => a.order - b.order);
@@ -125,6 +147,7 @@ const TablePage = () => {
   const [confirm, setConfirm] = useState(null);
   const [rename, setRename] = useState(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [deletingRows, setDeletingRows] = useState(null); // rows to delete permanently
 
   // ordered + visible fields for this view
   const ordered = useMemo(() => {
@@ -302,13 +325,13 @@ const TablePage = () => {
         <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{shown.length === rows.length ? `${rows.length} rows` : `${shown.length} of ${rows.length} rows`}</Typography>
       </Box>
 
-      {selected.size > 0 && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, px: 1.5, py: 0.75, borderRadius: "8px", backgroundColor: "var(--accent-subtle)" }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{selected.size} selected</Typography>
-          <Button size="small" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={() => exportRows(table, visible, selectedRows, lookups)}>Export</Button>
-          <Button size="small" color="error" startIcon={<DeleteOutline sx={{ fontSize: 16 }} />} onClick={() => { t.deleteRows([...selected]); setSelected(new Set()); }}>Delete</Button>
-          <IconButton size="small" aria-label="Clear selection" onClick={() => setSelected(new Set())}><Close sx={{ fontSize: 16 }} /></IconButton>
-        </Box>
+      {selectedRows.length > 0 && (
+        <BulkBar
+          count={selectedRows.length}
+          onExport={() => exportRows(table, visible, selectedRows, lookups)}
+          onDelete={() => setDeletingRows(selectedRows)}
+          onClear={() => setSelected(new Set())}
+        />
       )}
 
       {view?.type === "kanban" ? (
@@ -400,7 +423,23 @@ const TablePage = () => {
           onReorder={onReorder} onTableChange={(tb) => { t.setTable(tb); t.loadRows(); }} notify={t.notify} />
       )}
       <RowSheet open={Boolean(openRow)} onClose={() => setOpenRowId(null)} table={table} fields={ordered} row={openRow} lookups={lookups} canEdit onUpdateCells={t.updateCells}
-        onRowChange={t.replaceRow} notify={t.notify} onDelete={(r) => { setOpenRowId(null); t.deleteRows([r._id]); }} />
+        onRowChange={t.replaceRow} notify={t.notify} onDelete={(r) => setDeletingRows([r])} />
+
+      <SafeDeleteDialog
+        open={Boolean(deletingRows)}
+        onClose={() => setDeletingRows(null)}
+        records={deletingRows || []}
+        noun={{ one: "row", many: "rows" }}
+        nameOf={(r) => { const v = primary ? formatValue(primary, rawOf(primary, r), r, lookups) : ""; return `#${r.autoNumber ?? ""}${v ? ` · ${v}` : ""}`; }}
+        exportColumns={backupColumns(table, lookups)}
+        exportFilename={table.name.toLowerCase().replace(/[^\w]+/g, "-")}
+        onDelete={(list) => bulkDelete(DELETE_PATHS.tableRows(id), list.map((r) => r._id))}
+        onDeleted={({ deleted }) => {
+          t.dropRows(deleted);
+          setSelected((s) => new Set([...s].filter((x) => !deleted.includes(x))));
+          if (deleted.includes(openRowId)) setOpenRowId(null);
+        }}
+      />
       {historyOpen && <ImportHistorySheet open onClose={() => setHistoryOpen(false)} table={table} onShowBatch={setBatch} onRolledBack={t.loadRows} notify={t.notify} />}
       <Suspense fallback={null}>
         {importOpen && (

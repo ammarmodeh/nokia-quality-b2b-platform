@@ -36,13 +36,18 @@ const Step = ({ n, done, title, children }) => (
  *
  * noun: { one: "task", many: "tasks" } · nameOf(record) → label · idOf(record) → id
  */
-const SafeDeleteDialog = ({ open, onClose, records = [], noun = { one: "record", many: "records" }, nameOf = (r) => r?.name || r?._id, idOf = (r) => r?._id, exportColumns, exportFilename = "deleted-records", onDelete, onDeleted }) => {
+const SafeDeleteDialog = ({ open, onClose, records: incoming = [], noun = { one: "record", many: "records" }, nameOf = (r) => r?.name || r?._id, idOf = (r) => r?._id, exportColumns, exportFilename = "deleted-records", onDelete, onDeleted }) => {
   const [exported, setExported] = useState(null); // filename
   const [exportError, setExportError] = useState(null);
   const [phrase, setPhrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [failed, setFailed] = useState([]); // [{ id, message }]
+  // keep showing the last records while the dialog fades out (parents clear them on close)
+  const [records, setRecords] = useState(incoming);
+  useEffect(() => {
+    if (open) setRecords(incoming);
+  }, [open, incoming]);
 
   useEffect(() => {
     if (open) {
@@ -87,7 +92,9 @@ const SafeDeleteDialog = ({ open, onClose, records = [], noun = { one: "record",
         onClose?.();
       }
     } catch (e) {
-      setError({ title: "Nothing was deleted", message: `${e?.response?.data?.message || e?.message || "The server didn't respond"}. Your data is unchanged — check your connection or permissions and try again.` });
+      const status = e?.response?.status;
+      const why = e?.response?.data?.message || (status === 403 ? "You don't have permission to delete these records" : status ? `The server returned an error (${status})` : e?.message || "The server didn't respond");
+      setError({ title: "Nothing was deleted", message: `${why}. Your data is unchanged — check your connection or permissions and try again.` });
     } finally {
       setBusy(false);
     }

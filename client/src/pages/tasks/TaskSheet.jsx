@@ -8,7 +8,6 @@ import ContentCopy from "@mui/icons-material/ContentCopy";
 import { toast } from "sonner";
 import Sheet from "../../components/ui/Sheet";
 import Badge from "../../components/ui/Badge";
-import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
 import { taxonomyOfTask } from "../../constants/taxonomy";
 import TaxonomyBadge from "../../components/ui/TaxonomyBadge";
@@ -49,9 +48,8 @@ const TextBlock = ({ text, rtl }) =>
 
 const selectSx = { minWidth: 150, "& .MuiSelect-select": { py: "5px", fontSize: 13 } };
 
-const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket, onDelete }) => {
+const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket, onDelete, canDelete = false }) => {
   const [menu, setMenu] = useState(null);
-  const [confirm, setConfirm] = useState(false);
   if (!task) return null;
   const nps = npsType(task.evaluationScore);
   const tickets = [...(task.tickets || [])].sort((a, b) => new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt));
@@ -91,10 +89,12 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
               <MenuItem onClick={() => { setMenu(null); onRecordTicket(task); }}>
                 <ListItemIcon><ConfirmationNumberOutlined fontSize="small" /></ListItemIcon>Record GAIA ticket
               </MenuItem>
-              <Divider />
-              <MenuItem onClick={() => { setMenu(null); setConfirm(true); }} sx={{ color: "var(--danger)" }}>
-                <ListItemIcon><DeleteOutline fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Delete task
-              </MenuItem>
+              {canDelete && <Divider />}
+              {canDelete && (
+                <MenuItem onClick={() => { setMenu(null); onDelete(task); }} sx={{ color: "var(--danger)" }}>
+                  <ListItemIcon><DeleteOutline fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Delete permanently…
+                </MenuItem>
+              )}
             </Menu>
           </>
         }
@@ -230,19 +230,6 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
           <Field label="Last updated">{fmtDate(task.updatedAt)}</Field>
         </Section>
       </Sheet>
-
-      <ConfirmDialog
-        open={confirm}
-        danger
-        title="Delete this task?"
-        description="It will be moved to Trash. You can undo right after."
-        confirmLabel="Delete"
-        onClose={() => setConfirm(false)}
-        onConfirm={() => {
-          setConfirm(false);
-          onDelete(task);
-        }}
-      />
     </>
   );
 };

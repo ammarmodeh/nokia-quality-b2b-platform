@@ -19,6 +19,9 @@ import SegmentedControl from "../../components/ui/SegmentedControl";
 import ErrorState from "../../components/ui/ErrorState";
 import PageLoader from "../../components/ui/PageLoader";
 import { exportRows } from "../../utils/exportRows";
+import BulkBar from "../../components/ui/BulkBar";
+import SafeDeleteDialog from "../../components/ui/SafeDeleteDialog";
+import { bulkDelete, DELETE_PATHS } from "../../api/bulkDelete";
 import { taxonomyOfIssue } from "../../constants/taxonomy";
 import SnagTable from "./SnagTable";
 import SnagSheet from "./SnagSheet";
@@ -59,6 +62,12 @@ const EXPORT_COLUMNS = [
   ["Resolved by", (s) => s.resolvedBy],
   ["Supervisor", (s) => s.closedBy],
   ["Resolution details", (s) => s.resolutionDetails],
+  ["Assigned to", (s) => s.assignedTo],
+  ["Installing team", (s) => s.installingTeam],
+  ["Caller", (s) => s.callerName],
+  ["Call date", (s) => (s.callDate ? new Date(s.callDate) : "")],
+  ["Created", (s) => (s.createdAt ? new Date(s.createdAt) : "")],
+  ["Record ID", (s) => s._id],
 ];
 
 // One page for every tracker whose records are customer issues (OJO Snags, TCRM, TRC, Internal Audit).
@@ -105,6 +114,8 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
   const [ticketFor, setTicketFor] = useState(null);
   const [more, setMore] = useState(null);
   const [draft, setDraft] = useState(f.q);
+  const [selection, setSelection] = useState([]);
+  const [deleting, setDeleting] = useState(null); // records to delete permanently
 
   useEffect(() => {
     const onRefresh = () => setRefresh((r) => r + 1);
@@ -173,7 +184,7 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
     try {
       if (issueData.solved === "yes" && issueData.closedBy && issueData.closedBy.trim() !== "") {
         try {
-          await api.post("/dropdown-options", { category: "CIN_SUPERVISORS", value: issueData.closedBy.trim(), label: issueData.closedBy.trim(), order: 99 });
+          await api.post("/dropdown-options/add", { category: "CIN_SUPERVISORS", value: issueData.closedBy.trim(), label: issueData.closedBy.trim(), order: 99 });
         } catch {
           /* duplicate supervisor names are fine */
         }
@@ -197,18 +208,9 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
     }
   };
 
-  const remove = async (snag) => {
-    const prev = snags;
-    setOpenId(null);
-    setSnags((list) => list.filter((s) => s._id !== snag._id));
-    try {
-      await api.delete(`/customer-issues/${snag._id}`);
-      toast.success("Snag deleted");
-    } catch {
-      setSnags(prev);
-      toast.error("Couldn't delete the snag");
-    }
-  };
+  const noun = tracker === "OJO Snags" ? { one: "snag", many: "snags" } : { one: "record", many: "records" };
+  // only rows still visible under the current tab / filters count as selected
+  const selectedRows = useMemo(() => rows.filter((s) => selection.includes(s._id)), [rows, selection]);
 
   return (
     <Box>
@@ -287,6 +289,15 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
 
       {error && <ErrorState title="Snags didn't load" message={error} onRetry={() => { setLoading(true); setRefresh((r) => r + 1); }} sx={{ mb: 2 }} />}
 
+      {f.view !== "analytics" && selectedRows.length > 0 && (
+        <BulkBar
+          count={selectedRows.length}
+          onExport={() => exportRows(selectedRows, EXPORT_COLUMNS, { filename: `${fileBase}-selected` })}
+          onDelete={isAdmin ? () => setDeleting(selectedRows) : undefined}
+          onClear={() => setSelection([])}
+        />
+      )}
+
       {loading ? (
         <PageLoader />
       ) : f.view === "analytics" ? (
@@ -294,7 +305,7 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
           <CustomerIssuesAnalytics issues={rows} />
         </Suspense>
       ) : (
-        <SnagTable rows={rows} onOpen={(s) => setOpenId(s._id)} />
+        <SnagTable rows={rows} onOpen={(s) => setOpenId(s._id)} selection={selection} onSelectionChange={setSelection} />
       )}
 
       <SnagSheet
@@ -305,7 +316,24 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
         onPatch={patch}
         onEdit={(s) => setDialog({ mode: "edit", issue: s })}
         onRecordTicket={(s) => setTicketFor(s)}
-        onDelete={remove}
+        onDelete={(s) => setDeleting([s])}
+      />
+
+      <SafeDeleteDialog
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        records={deleting || []}
+        noun={noun}
+        nameOf={(s) => [s.slid, s.customerName || s.ticketId].filter(Boolean).join(" · ")}
+        exportColumns={EXPORT_COLUMNS}
+        exportFilename={fileBase}
+        onDelete={(list) => bulkDelete(DELETE_PATHS.snags, list.map((s) => s._id))}
+        onDeleted={({ deleted }) => {
+          setSnags((list) => list.filter((s) => !deleted.includes(s._id)));
+          setSelection((sel) => sel.filter((id) => !deleted.includes(id)));
+          if (deleted.includes(openId)) setOpenId(null);
+          window.dispatchEvent(new CustomEvent("dashboard-refresh"));
+        }}
       />
 
       <Suspense fallback={null}>

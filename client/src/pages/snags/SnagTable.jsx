@@ -16,7 +16,7 @@ const Toolbar = () => (
   </GridToolbarContainer>
 );
 
-const SnagTable = ({ rows, loading, onOpen }) => {
+const SnagTable = ({ rows, loading, onOpen, selection, onSelectionChange }) => {
   const columns = useMemo(
     () => [
       {
@@ -79,6 +79,9 @@ const SnagTable = ({ rows, loading, onOpen }) => {
       getRowId={(r) => r._id}
       loading={loading}
       onRowClick={({ row }) => onOpen(row)}
+      checkboxSelection={Boolean(onSelectionChange)}
+      rowSelectionModel={selection}
+      onRowSelectionModelChange={onSelectionChange}
       disableRowSelectionOnClick
       initialState={{
         pagination: { paginationModel: { pageSize: 25 } },

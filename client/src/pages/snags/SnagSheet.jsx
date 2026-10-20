@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import api from "../../api/api";
 import Sheet from "../../components/ui/Sheet";
 import Badge from "../../components/ui/Badge";
-import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { fmt, reportedDate, snagTypeOf, sourceOf, statusOf } from "./snagUtils";
 
 const Field = ({ label, children }) => (
@@ -70,7 +69,6 @@ const ActivityLog = ({ issueId }) => {
 
 const SnagSheet = ({ snag, open, onClose, isAdmin, onPatch, onEdit, onRecordTicket, onDelete }) => {
   const [menu, setMenu] = useState(null);
-  const [confirm, setConfirm] = useState(false);
   if (!snag) return null;
   const st = statusOf(snag);
 
@@ -101,8 +99,8 @@ const SnagSheet = ({ snag, open, onClose, isAdmin, onPatch, onEdit, onRecordTick
               </MenuItem>
               {isAdmin && <Divider />}
               {isAdmin && (
-                <MenuItem onClick={() => { setMenu(null); setConfirm(true); }} sx={{ color: "var(--danger)" }}>
-                  <ListItemIcon><DeleteOutline fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Delete snag
+                <MenuItem onClick={() => { setMenu(null); onDelete(snag); }} sx={{ color: "var(--danger)" }}>
+                  <ListItemIcon><DeleteOutline fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Delete permanently…
                 </MenuItem>
               )}
             </Menu>
@@ -190,19 +188,6 @@ const SnagSheet = ({ snag, open, onClose, isAdmin, onPatch, onEdit, onRecordTick
           <ActivityLog issueId={snag._id} />
         </Section>
       </Sheet>
-
-      <ConfirmDialog
-        open={confirm}
-        danger
-        title="Delete this snag?"
-        description="This permanently removes the record. It can't be undone."
-        confirmLabel="Delete"
-        onClose={() => setConfirm(false)}
-        onConfirm={() => {
-          setConfirm(false);
-          onDelete(snag);
-        }}
-      />
     </>
   );
 };

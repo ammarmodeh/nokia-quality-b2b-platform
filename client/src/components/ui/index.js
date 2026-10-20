@@ -1,5 +1,6 @@
 export { default as AppDialog } from "./AppDialog";
 export { default as Badge } from "./Badge";
+export { default as BulkBar } from "./BulkBar";
 export { default as ConfirmDialog } from "./ConfirmDialog";
 export { default as EmptyState } from "./EmptyState";
 export { default as ErrorState } from "./ErrorState";

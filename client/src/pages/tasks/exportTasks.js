@@ -5,7 +5,7 @@ import { npsType, taskDate } from "./taskUtils";
 const list = (v) => (Array.isArray(v) ? v.filter(Boolean).join(", ") : v || "");
 const day = (d) => (d ? new Date(d) : "");
 
-const COLUMNS = [
+export const TASK_COLUMNS = [
   ["SLID", (t) => t.slid],
   ["Request number", (t) => t.requestNumber],
   ["Tracker", (t) => taxonomyOfTask(t).label],
@@ -29,12 +29,17 @@ const COLUMNS = [
   ["Validation", (t) => t.validationStatus],
   ["Customer feedback", (t) => t.customerFeedback],
   ["GAIA tickets", (t) => t.tickets?.length || 0],
+  ["Contract date", (t) => day(t.contractDate)],
+  ["FE date", (t) => day(t.feDate || t.appDate)],
+  ["Close date", (t) => day(t.closeDate)],
+  ["Created", (t) => day(t.createdAt)],
+  ["Record ID", (t) => t._id],
 ];
 
 /** Styled XLSX (bold frozen header, autofilter, widths, date format) or CSV. */
 export function exportTasks(tasks, { format = "xlsx", filename = "tasks" } = {}) {
-  const header = COLUMNS.map((c) => c[0]);
-  const rows = tasks.map((t) => COLUMNS.map(([, get]) => get(t) ?? ""));
+  const header = TASK_COLUMNS.map((c) => c[0]);
+  const rows = tasks.map((t) => TASK_COLUMNS.map(([, get]) => get(t) ?? ""));
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows], { cellDates: true });
   const stamp = new Date().toISOString().slice(0, 10);
 

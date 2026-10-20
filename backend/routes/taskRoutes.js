@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 import {
   getScheduledTickets,
   addTask,
@@ -121,7 +121,7 @@ router.post("/:id/restoreFromArchive", restoreTaskFromArchive);
 router.get("/search-tasks", protect, searchTasks);
 
 // Hard Delete Task (Admin deletes any)
-router.delete("/delete-task/:id", protect, deleteTask);
+router.delete("/delete-task/:id", protect, adminOnly, deleteTask);
 
 // Soft Delete Task (Move to Trash)
 router.delete("/soft-delete-task/:id", protect, softDeleteTask);

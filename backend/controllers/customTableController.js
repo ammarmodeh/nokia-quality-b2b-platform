@@ -7,6 +7,7 @@ import { FIELD_TYPES, READ_ONLY_TYPES, CORE_CONCEPTS, CORE_TYPES, newFieldKey, c
 import { validateTaxonomy } from "../utils/taxonomy.js";
 import { builtInTemplate } from "../utils/builtInTemplates.js";
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
+import { bulkDeleteHandler } from "../utils/bulkDelete.js";
 
 const isAdmin = (req) => req.user?.role === "Admin";
 const oid = (v) => mongoose.Types.ObjectId.isValid(String(v));
@@ -461,6 +462,22 @@ export const deleteRows = async (req, res) => {
   await CustomRow.updateMany({ _id: { $in: rows.map((r) => r._id) } }, { $set: { deleted: !restore, deletedAt: restore ? null : new Date(), updatedBy: req.user._id } });
   if (rows.length) await RowActivity.insertMany(rows.map((r) => ({ tableId: t._id, rowId: r._id, action: restore ? "restore" : "delete", user: req.user._id })));
   res.json({ count: rows.length });
+};
+
+/**
+ * POST /:id/rows/purge { ids, confirm: "permanent delete" } — permanent delete.
+ * Same access as editing rows (anyone who can see the table); rows of other tables are ignored.
+ */
+const purge = bulkDeleteHandler({
+  model: CustomRow,
+  scope: (req) => ({ tableId: req.table._id }),
+  cascade: (docs, req) => RowActivity.deleteMany({ tableId: req.table._id, rowId: { $in: docs.map((d) => d._id) } }),
+});
+export const purgeRows = async (req, res) => {
+  const t = await loadTable(req, res);
+  if (!t) return;
+  req.table = t;
+  return purge(req, res);
 };
 
 export const rowActivity = async (req, res) => {
