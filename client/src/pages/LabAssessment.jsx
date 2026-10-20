@@ -3,8 +3,8 @@ import SectionCard from "../components/ui/SectionCard";
 import Badge from "../components/ui/Badge";
 import PageHeader from "../components/ui/PageHeader";
 import { tok } from "../theme/tokens";
-import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -24,13 +24,6 @@ import {
   Tabs,
   Tab,
   Chip,
-  Card,
-  CardContent,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   IconButton,
   Tooltip,
   Autocomplete,
@@ -38,13 +31,19 @@ import {
   FormControlLabel,
   Radio,
   Alert,
-  AlertTitle,
-  InputAdornment,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
+import InputBase from "@mui/material/InputBase";
+import Menu from "@mui/material/Menu";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import MoreHoriz from "@mui/icons-material/MoreHoriz";
+import FilterChip from "../components/ui/FilterChip";
+import StatCard from "../components/ui/StatCard";
+import EmptyState from "../components/ui/EmptyState";
+import SafeDeleteDialog from "../components/ui/SafeDeleteDialog";
+import { gridSx } from "./tasks/gridSx";
+import { bulkDelete, DELETE_PATHS } from "../api/bulkDelete";
 import {
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
   Assessment as AssessmentIcon,
   ListAlt as ListAltIcon,
   BarChart as BarChartIcon,
@@ -53,33 +52,32 @@ import {
   Visibility as VisibilityIcon,
   Search as SearchIcon,
   Build as BuildIcon,
-  Speed as SpeedIcon,
-  Router as RouterIcon,
-  School as SchoolIcon,
-  AssignmentTurnedIn as AssignmentTurnedInIcon,
-  SettingsInputComponent as SettingsIcon,
-  Info as InfoIcon,
-  RestartAlt as ResetIcon,
-  DoneAll as DoneAllIcon,
   Warning as WarningIcon,
-  PhotoCamera as PhotoCameraIcon,
   Person as PersonIcon,
-  WorkspacePremium as CertificateIcon,
   FileDownload as FileDownloadIcon,
   Business as BusinessIcon,
   TrendingUp as TrendingUpIcon,
   VerifiedUser as VerifiedUserIcon,
-  FilterList as FilterListIcon,
   EmojiEvents as EmojiEventsIcon,
-  Engineering as EngineeringIcon,
   PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import api from "../api/api";
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
 } from "recharts";
 import LabAssessmentDetailModal from "../components/LabAssessmentDetailModal";
 import {
@@ -87,6 +85,30 @@ import {
   exportIndividualLabAssessmentReport,
 } from "../utils/labAssessmentExcelExport";
 import { exportArabicLabAssessmentPDF } from "../utils/labAssessmentArabicPdf";
+
+// Five grading tiers, from the design palette (distinct steps for charts and badges).
+const TIER_COLORS = { excellent: "#16A34A", vgood: "#0D9488", improve: "#CA8A04", suspend: "#EA580C", fail: "#DC2626" };
+
+const scoreOf = (a) => (a?.overallScore !== undefined ? a.overallScore : a?.totalScore) ?? 0;
+
+// Everything in a lab assessment, for the backup taken before a permanent delete.
+const LAB_BACKUP_COLUMNS = [
+  ["Team", (a) => a.fieldTeamName || a.fieldTeamId?.teamName],
+  ["Company", (a) => a.fieldTeamId?.teamCompany || ""],
+  ["Assessment date", (a) => (a.assessmentDate ? new Date(a.assessmentDate) : "")],
+  ["Overall score (%)", (a) => scoreOf(a)],
+  ["Conducted by", (a) => a.conductedBy || a.assessorId?.name || ""],
+  ["Employment type", (a) => a.employmentType || ""],
+  ["Date of birth", (a) => (a.dateOfBirth ? new Date(a.dateOfBirth) : "")],
+  ["Experience (years)", (a) => a.yearsOfExperience ?? ""],
+  ["Certificates", (a) => Object.entries(a.certificates || {}).filter(([, v]) => v).map(([k]) => k.toUpperCase()).join(", ")],
+  ["Section scores", (a) => Object.entries(a.sectionScores || {}).map(([k, v]) => `${k}: ${v}`).join("; ")],
+  ["Equipment", (a) => (a.equipmentChecklist || []).map((e) => `${e.name || e.item}: ${e.status}`).join("; ")],
+  ["Failed checkpoints", (a) => (a.sections || []).flatMap((sec) => (sec.checkpoints || []).filter((c) => c.status === "Fail").map((c) => c.name)).join("; ")],
+  ["Feedback", (a) => a.feedback || a.comments || ""],
+  ["Created", (a) => (a.createdAt ? new Date(a.createdAt) : "")],
+  ["Record ID", (a) => a._id],
+];
 
 // Initial default sections & checkpoints for E2E FTTH Practical Assessment
 export const getInitialSections = () => [
@@ -675,14 +697,12 @@ const LabAssessment = () => {
   const [selectedAssessmentForDetail, setSelectedAssessmentForDetail] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assessmentToDelete, setAssessmentToDelete] = useState(null);
-  const [deletingAssessment, setDeletingAssessment] = useState(false);
+  const [rowMenu, setRowMenu] = useState(null); // { anchor, row }
+  const isAdmin = user?.role === "Admin";
 
   // Tracking Filter & Search
   const [trackingFilter, setTrackingFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Settings
-  const [settings, setSettings] = useState(null);
 
   const colors = {
     background: tok('--bg'),
@@ -700,23 +720,14 @@ const LabAssessment = () => {
   useEffect(() => {
     fetchTeams();
     fetchAssessments();
-    fetchSettings();
   }, []);
 
-  const fetchSettings = async () => {
-    try {
-      const response = await api.get("/settings");
-      setSettings(response.data);
-    } catch (error) {
-      console.error("Failed to fetch settings");
-    }
-  };
 
   const fetchTeams = async () => {
     try {
       const response = await api.get("/field-teams/get-field-teams");
       setFieldTeams(response.data || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch field teams");
     }
   };
@@ -726,7 +737,7 @@ const LabAssessment = () => {
     try {
       const response = await api.get("/lab-assessments");
       setAssessments(response.data || []);
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch lab assessments");
     } finally {
       setLoading(false);
@@ -794,11 +805,11 @@ const LabAssessment = () => {
 
   const getAssessmentStatus = (score) => {
     const s = Number(score) || 0;
-    if (s >= 90) return { label: "Excellent (Pass)", color: "#00e676", isPass: true, tier: "90-100" };
-    if (s >= 80) return { label: "V.Good (Pass)", color: "#4caf50", isPass: true, tier: "80-89" };
-    if (s >= 70) return { label: "Need improvements, and close monitoring (Pass)", color: "#fbc02d", isPass: true, tier: "70-79" };
-    if (s >= 50) return { label: "Suspension, need training, then re-evaluate the team (Fail)", color: "#ff9800", isPass: false, tier: "50-69" };
-    return { label: "Ineligible (Fail)", color: "#f44336", isPass: false, tier: "0-49" };
+    if (s >= 90) return { label: "Excellent (Pass)", color: TIER_COLORS.excellent, isPass: true, tier: "90-100" };
+    if (s >= 80) return { label: "V.Good (Pass)", color: TIER_COLORS.vgood, isPass: true, tier: "80-89" };
+    if (s >= 70) return { label: "Need improvements, and close monitoring (Pass)", color: TIER_COLORS.improve, isPass: true, tier: "70-79" };
+    if (s >= 50) return { label: "Suspension, need training, then re-evaluate the team (Fail)", color: TIER_COLORS.suspend, isPass: false, tier: "50-69" };
+    return { label: "Ineligible (Fail)", color: TIER_COLORS.fail, isPass: false, tier: "0-49" };
   };
 
   // Checkpoint changes: Status & Points (0 to 5 for sec 1-7, 0 to 10 for sec 8)
@@ -1116,22 +1127,6 @@ const LabAssessment = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmPermanentDelete = async () => {
-    if (!assessmentToDelete?._id) return;
-    setDeletingAssessment(true);
-    try {
-      await api.delete(`/lab-assessments/${assessmentToDelete._id}`);
-      toast.success("Practical Assessment permanently deleted successfully");
-      setDeleteDialogOpen(false);
-      setAssessmentToDelete(null);
-      fetchAssessments();
-    } catch (error) {
-      toast.error("Failed to permanently delete assessment");
-    } finally {
-      setDeletingAssessment(false);
-    }
-  };
-
   const handleNewAssessmentForTeam = (teamRow) => {
     resetForm();
     handleTeamSelection(teamRow);
@@ -1222,11 +1217,11 @@ const LabAssessment = () => {
 
     // Distribution matching 5-Tier Classification Scale
     const distribution = [
-      { name: "Excellent (90-100% / Pass)", count: tierCounts.excellent, value: tierCounts.excellent, color: "#00e676" },
-      { name: "V.Good (80-89% / Pass)", count: tierCounts.vgood, value: tierCounts.vgood, color: "#4caf50" },
-      { name: "Need Improvements (70-79% / Pass)", count: tierCounts.needImprovement, value: tierCounts.needImprovement, color: "#fbc02d" },
-      { name: "Suspension & Retrain (50-69% / Fail)", count: tierCounts.suspension, value: tierCounts.suspension, color: "#ff9800" },
-      { name: "Ineligible (0-49% / Fail)", count: tierCounts.ineligible, value: tierCounts.ineligible, color: "#f44336" },
+      { name: "Excellent (90-100% / Pass)", count: tierCounts.excellent, value: tierCounts.excellent, color: TIER_COLORS.excellent },
+      { name: "V.Good (80-89% / Pass)", count: tierCounts.vgood, value: tierCounts.vgood, color: TIER_COLORS.vgood },
+      { name: "Need Improvements (70-79% / Pass)", count: tierCounts.needImprovement, value: tierCounts.needImprovement, color: TIER_COLORS.improve },
+      { name: "Suspension & Retrain (50-69% / Fail)", count: tierCounts.suspension, value: tierCounts.suspension, color: TIER_COLORS.suspend },
+      { name: "Ineligible (0-49% / Fail)", count: tierCounts.ineligible, value: tierCounts.ineligible, color: TIER_COLORS.fail },
     ].filter((d) => d.value > 0);
 
     // Score trend over time
@@ -1382,6 +1377,11 @@ const LabAssessment = () => {
       <PageHeader
         title="Lab Assessment"
         description="E2E FTTH practical lab evaluation: FDB → BEP → OTO → ONT → service verification, customer education, tools, quality awareness and behaviour."
+        actions={
+          <Button variant="outlined" startIcon={<FileDownloadIcon sx={{ fontSize: 16 }} />} onClick={() => exportMasterLabAssessmentReport({ assessments, fieldTeams })} disabled={!assessments.length}>
+            Export master report
+          </Button>
+        }
       />
 
       {/* Navigation Tabs */}
@@ -1397,12 +1397,12 @@ const LabAssessment = () => {
       {activeTab === 0 && (
         <Grid container spacing={4}>
           <Grid item xs={12}>
-            <Paper sx={{ p: { xs: 2, md: 4 }, bgcolor: colors.surface, borderRadius: "20px", border: `1px solid ${colors.border}` }}>
-              <Stack spacing={4}>
+            <Paper sx={{ p: { xs: 2, md: 2.5 }, borderRadius: "10px", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)" }}>
+              <Stack spacing={2.5}>
                 {/* Form Header */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
                   <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: colors.textPrimary }}>
+                    <Typography component="h2" sx={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>
                       {isEditing ? `Edit Practical Assessment – ${selectedTeam?.teamName || ""}` : "Practical Lab Assessment Form"}
                     </Typography>
                     <Typography variant="body2" sx={{ color: colors.textSecondary }}>
@@ -1411,8 +1411,8 @@ const LabAssessment = () => {
                   </Box>
 
                   {isEditing && (
-                    <Button variant="outlined" size="small" color="error" onClick={resetForm} sx={{ borderRadius: "10px" }}>
-                      Cancel Edit
+                    <Button variant="outlined" onClick={resetForm}>
+                      Cancel edit
                     </Button>
                   )}
                 </Box>
@@ -1421,9 +1421,9 @@ const LabAssessment = () => {
                 <Paper
                   sx={{
                     p: 2.5,
-                    bgcolor: "rgba(123, 104, 238, 0.08)",
-                    border: `1px solid ${colors.primary}40`,
-                    borderRadius: "16px",
+                    bgcolor: "var(--accent-subtle)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "10px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -1432,24 +1432,14 @@ const LabAssessment = () => {
                   }}
                 >
                   <Box>
-                    <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>
-                      Current Live Overall Score (Pass Threshold: ≥ 70%)
+                    <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)", fontWeight: 500 }}>
+                      Live overall score · pass at 70% or more
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 0.5, flexWrap: "wrap" }}>
-                      <Typography variant="h3" sx={{ fontWeight: 900, color: getAssessmentStatus(liveScoreStats.percentage).color }}>
+                      <Typography sx={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: getAssessmentStatus(liveScoreStats.percentage).color }}>
                         {liveScoreStats.percentage}%
                       </Typography>
-                      <Chip
-                        label={getAssessmentStatus(liveScoreStats.percentage).label}
-                        sx={{
-                          bgcolor: `${getAssessmentStatus(liveScoreStats.percentage).color}22`,
-                          color: getAssessmentStatus(liveScoreStats.percentage).color,
-                          fontWeight: 800,
-                          fontSize: "0.95rem",
-                          height: 36,
-                          border: `2px solid ${getAssessmentStatus(liveScoreStats.percentage).color}`,
-                        }}
-                      />
+                      <Badge color={getAssessmentStatus(liveScoreStats.percentage).color}>{getAssessmentStatus(liveScoreStats.percentage).label}</Badge>
                     </Box>
                   </Box>
 
@@ -1485,64 +1475,36 @@ const LabAssessment = () => {
 
                 {labStep === 0 && (<>
                 {/* Basic Assessment Meta Inputs */}
-                <Grid container spacing={3}>
-                  <Grid item xs={12} md={7}>
-                    <Autocomplete
-                      options={fieldTeams}
-                      getOptionLabel={(option) => `${option.teamName} (${option.teamCompany || "Company"})`}
-                      value={selectedTeam}
-                      onChange={(event, newValue) => handleTeamSelection(newValue)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Select Field Team *"
-                          required
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              "& fieldset": { borderColor: colors.border },
-                              "&:hover fieldset": { borderColor: colors.primary },
-                              "&.Mui-focused fieldset": { borderColor: colors.primary },
-                            },
-                            "& .MuiInputLabel-root": { color: colors.textSecondary },
-                            input: { color: colors.textPrimary },
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={5}>
-                    <TextField
-                      type="date"
-                      fullWidth
-                      label="Assessment Date"
-                      value={assessmentDate}
-                      onChange={(e) => setAssessmentDate(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        "& .MuiOutlinedInput-root": {
-                          "& fieldset": { borderColor: colors.border },
-                          "&:hover fieldset": { borderColor: colors.primary },
-                          "&.Mui-focused fieldset": { borderColor: colors.primary },
-                        },
-                        "& .MuiInputLabel-root": { color: colors.textSecondary },
-                        input: { color: colors.textPrimary },
-                      }}
-                    />
-                  </Grid>
-                </Grid>
+                <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "7fr 5fr" } }}>
+                  <Autocomplete
+                    options={fieldTeams}
+                    getOptionLabel={(option) => `${option.teamName} (${option.teamCompany || "Company"})`}
+                    value={selectedTeam}
+                    onChange={(event, newValue) => handleTeamSelection(newValue)}
+                    renderInput={(params) => <TextField {...params} label="Field team" required error={labStep > 0 && !selectedTeam} />}
+                  />
+                  <TextField
+                    type="date"
+                    fullWidth
+                    label="Assessment date"
+                    required
+                    value={assessmentDate}
+                    onChange={(e) => setAssessmentDate(e.target.value)}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                </Box>
 
                 {/* Field Team Profile & Safety Compliance Info */}
                 <Paper
                   sx={{
                     p: 3,
-                    bgcolor: "var(--overlay-subtle)",
+                    bgcolor: "var(--surface-subtle)",
                     border: `1px solid ${colors.border}`,
-                    borderRadius: "16px",
+                    borderRadius: "10px",
                   }}
                 >
                   <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
                       <PersonIcon sx={{ color: colors.primary }} /> Field Team Profile & Safety Certifications
                     </Typography>
                     <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -1553,7 +1515,7 @@ const LabAssessment = () => {
                   <Grid container spacing={3} sx={{ mb: 3 }}>
                     {/* Employment Type */}
                     <Grid item xs={12} md={4}>
-                      <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase", display: "block", mb: 1 }}>
+                      <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 600, textTransform: "uppercase", display: "block", mb: 1 }}>
                         Employment Classification
                       </Typography>
                       <RadioGroup
@@ -1570,7 +1532,7 @@ const LabAssessment = () => {
                               <Typography variant="body2" sx={{ color: colors.textPrimary, fontWeight: 600 }}>
                                 Subcontractor
                               </Typography>
-                              <Chip label="Partner" size="small" sx={{ height: 20, fontSize: "0.7rem", bgcolor: "rgba(123, 104, 238, 0.15)", color: colors.primary }} />
+                              <Chip label="Partner" size="small" sx={{ height: 20, fontSize: "0.7rem", bgcolor: "rgba(108, 71, 255, 0.15)", color: colors.primary }} />
                             </Box>
                           }
                         />
@@ -1582,7 +1544,7 @@ const LabAssessment = () => {
                               <Typography variant="body2" sx={{ color: colors.textPrimary, fontWeight: 600 }}>
                                 Employee
                               </Typography>
-                              <Chip label="Direct" size="small" sx={{ height: 20, fontSize: "0.7rem", bgcolor: "rgba(76, 175, 80, 0.15)", color: colors.success }} />
+                              <Chip label="Direct" size="small" sx={{ height: 20, fontSize: "0.7rem", bgcolor: "rgba(22, 163, 74, 0.15)", color: colors.success }} />
                             </Box>
                           }
                         />
@@ -1592,7 +1554,7 @@ const LabAssessment = () => {
                     {/* Date of Birth (DoB) & Technician Age */}
                     <Grid item xs={12} md={4}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>
+                        <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 600, textTransform: "uppercase" }}>
                           Date of Birth (DoB)
                         </Typography>
                         {calculatedAge !== null && (
@@ -1600,12 +1562,12 @@ const LabAssessment = () => {
                             label={`Age: ${calculatedAge} Yrs`}
                             size="small"
                             sx={{
-                              bgcolor: "rgba(233, 30, 99, 0.15)",
-                              color: "#f472b6",
-                              fontWeight: 800,
+                              bgcolor: "rgba(219, 39, 119, 0.15)",
+                              color: "#DB2777",
+                              fontWeight: 600,
                               fontSize: "0.75rem",
                               height: 22,
-                              border: "1px solid rgba(233, 30, 99, 0.4)",
+                              border: "1px solid rgba(219, 39, 119, 0.4)",
                             }}
                           />
                         )}
@@ -1618,21 +1580,12 @@ const LabAssessment = () => {
                         value={dateOfBirth}
                         onChange={(e) => setDateOfBirth(e.target.value)}
                         InputLabelProps={{ shrink: true }}
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            "& fieldset": { borderColor: colors.border },
-                            "&:hover fieldset": { borderColor: colors.primary },
-                            "&.Mui-focused fieldset": { borderColor: colors.primary },
-                          },
-                          "& .MuiInputLabel-root": { color: colors.textSecondary },
-                          input: { color: colors.textPrimary, fontWeight: 600 },
-                        }}
                       />
                     </Grid>
 
                     {/* Experience: Years, Months, Days */}
                     <Grid item xs={12} md={4}>
-                      <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase", display: "block", mb: 1 }}>
+                      <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 600, textTransform: "uppercase", display: "block", mb: 1 }}>
                         Experience (Years / Months / Days)
                       </Typography>
                       <Grid container spacing={1.5}>
@@ -1645,15 +1598,6 @@ const LabAssessment = () => {
                             inputProps={{ min: 0, max: 50 }}
                             value={experienceYears}
                             onChange={(e) => setExperienceYears(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                            sx={{
-                              "& .MuiOutlinedInput-root": {
-                                "& fieldset": { borderColor: colors.border },
-                                "&:hover fieldset": { borderColor: colors.primary },
-                                "&.Mui-focused fieldset": { borderColor: colors.primary },
-                              },
-                              "& .MuiInputLabel-root": { color: colors.textSecondary },
-                              input: { color: colors.textPrimary, fontWeight: 600, textAlign: "center" },
-                            }}
                           />
                         </Grid>
                         <Grid item xs={4}>
@@ -1665,15 +1609,6 @@ const LabAssessment = () => {
                             inputProps={{ min: 0, max: 11 }}
                             value={experienceMonths}
                             onChange={(e) => setExperienceMonths(Math.min(11, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-                            sx={{
-                              "& .MuiOutlinedInput-root": {
-                                "& fieldset": { borderColor: colors.border },
-                                "&:hover fieldset": { borderColor: colors.primary },
-                                "&.Mui-focused fieldset": { borderColor: colors.primary },
-                              },
-                              "& .MuiInputLabel-root": { color: colors.textSecondary },
-                              input: { color: colors.textPrimary, fontWeight: 600, textAlign: "center" },
-                            }}
                           />
                         </Grid>
                         <Grid item xs={4}>
@@ -1685,15 +1620,6 @@ const LabAssessment = () => {
                             inputProps={{ min: 0, max: 30 }}
                             value={experienceDays}
                             onChange={(e) => setExperienceDays(Math.min(30, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-                            sx={{
-                              "& .MuiOutlinedInput-root": {
-                                "& fieldset": { borderColor: colors.border },
-                                "&:hover fieldset": { borderColor: colors.primary },
-                                "&.Mui-focused fieldset": { borderColor: colors.primary },
-                              },
-                              "& .MuiInputLabel-root": { color: colors.textSecondary },
-                              input: { color: colors.textPrimary, fontWeight: 600, textAlign: "center" },
-                            }}
                           />
                         </Grid>
                       </Grid>
@@ -1702,7 +1628,7 @@ const LabAssessment = () => {
 
                   {/* Safety & Compliance Certificates */}
                   <Divider sx={{ borderColor: colors.border, mb: 2.5 }} />
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase", display: "block", mb: 1.5 }}>
+                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 600, textTransform: "uppercase", display: "block", mb: 1.5 }}>
                     Safety & Compliance Certifications (6 Mandatory Areas)
                   </Typography>
 
@@ -1716,12 +1642,12 @@ const LabAssessment = () => {
                             sx={{
                               p: 2,
                               cursor: "pointer",
-                              bgcolor: isChecked ? "rgba(76, 175, 80, 0.08)" : "rgba(255,255,255,0.015)",
+                              bgcolor: isChecked ? "rgba(22, 163, 74, 0.08)" : "rgba(255,255,255,0.015)",
                               border: isChecked ? `1px solid ${colors.success}` : `1px solid ${colors.border}`,
-                              borderRadius: "12px",
+                              borderRadius: "10px",
                               transition: "all 0.2s ease-in-out",
                               "&:hover": {
-                                bgcolor: isChecked ? "rgba(76, 175, 80, 0.12)" : "rgba(255,255,255,0.04)",
+                                bgcolor: isChecked ? "rgba(22, 163, 74, 0.12)" : "rgba(255,255,255,0.04)",
                                 borderColor: isChecked ? colors.success : colors.primary,
                               },
                             }}
@@ -1734,13 +1660,13 @@ const LabAssessment = () => {
                                   sx={{
                                     bgcolor: isChecked ? colors.success : "rgba(255,255,255,0.08)",
                                     color: isChecked ? "#ffffff" : colors.textSecondary,
-                                    fontWeight: 800,
+                                    fontWeight: 600,
                                     fontSize: "0.75rem",
                                     height: 24,
                                     px: 0.5,
                                   }}
                                 />
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: isChecked ? colors.success : colors.textPrimary }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: isChecked ? colors.success : colors.textPrimary }}>
                                   {cert.title}
                                 </Typography>
                               </Box>
@@ -1748,9 +1674,9 @@ const LabAssessment = () => {
                                 label={isChecked ? "Certified" : "Not Certified"}
                                 size="small"
                                 sx={{
-                                  bgcolor: isChecked ? "rgba(76, 175, 80, 0.15)" : "rgba(255,255,255,0.05)",
+                                  bgcolor: isChecked ? "rgba(22, 163, 74, 0.15)" : "rgba(255,255,255,0.05)",
                                   color: isChecked ? colors.success : colors.textSecondary,
-                                  fontWeight: 700,
+                                  fontWeight: 600,
                                   fontSize: "0.7rem",
                                   height: 20,
                                 }}
@@ -1770,10 +1696,10 @@ const LabAssessment = () => {
 
                 {labStep === 1 && (<>
                 {/* SECTION: Tools & Equipment Readiness Check */}
-                <Paper sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
+                <Paper sx={{ p: 3, bgcolor: "var(--surface-subtle)", border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1.5 }}>
                     <Box>
-                      <Typography variant="h6" sx={{ color: colors.info, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="h6" sx={{ color: colors.info, fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
                         <BuildIcon /> Tools & Equipment
                       </Typography>
                       <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -1786,9 +1712,9 @@ const LabAssessment = () => {
                         label={`${equipmentStats.percentage}% (${equipmentStats.validCount}/${equipmentStats.totalCount} Valid/Avail)`}
                         size="small"
                         sx={{
-                          bgcolor: equipmentStats.isPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
+                          bgcolor: equipmentStats.isPass ? "rgba(22, 163, 74,0.18)" : "rgba(220, 38, 38,0.18)",
                           color: equipmentStats.isPass ? colors.success : colors.error,
-                          fontWeight: 800,
+                          fontWeight: 600,
                           border: `1px solid ${equipmentStats.isPass ? colors.success : colors.error}60`,
                         }}
                       />
@@ -1796,9 +1722,9 @@ const LabAssessment = () => {
                         label={equipmentStats.isPass ? "Pass" : "Fail"}
                         size="small"
                         sx={{
-                          bgcolor: equipmentStats.isPass ? "#4caf50" : "#f44336",
+                          bgcolor: equipmentStats.isPass ? "#16A34A" : "#DC2626",
                           color: "var(--text)",
-                          fontWeight: 800,
+                          fontWeight: 600,
                           fontSize: "0.75rem",
                           px: 0.5,
                         }}
@@ -1806,13 +1732,13 @@ const LabAssessment = () => {
                     </Stack>
                   </Box>
 
-                  <TableContainer component={Paper} sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
+                  <TableContainer component={Paper} sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
                     <Table size="small">
                       <TableHead>
-                        <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
-                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "35%" }}>Tool / Equipment Item</TableCell>
-                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, width: "35%" }}>Assessment Status</TableCell>
-                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "30%" }}>Assessor Observations / Notes</TableCell>
+                        <TableRow sx={{ bgcolor: "var(--surface-subtle)" }}>
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, width: "35%" }}>Tool / Equipment Item</TableCell>
+                          <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 600, width: "35%" }}>Assessment Status</TableCell>
+                          <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, width: "30%" }}>Assessor Observations / Notes</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1866,8 +1792,8 @@ const LabAssessment = () => {
                                       />
                                       <FormControlLabel
                                         value="Not Existing"
-                                        control={<Radio size="small" sx={{ color: colors.error, "&.Mui-checked": { color: "#d32f2f" } }} />}
-                                        label={<Typography variant="caption" sx={{ color: "#ef5350", fontWeight: 700 }}>Not Existing</Typography>}
+                                        control={<Radio size="small" sx={{ color: colors.error, "&.Mui-checked": { color: "#DC2626" } }} />}
+                                        label={<Typography variant="caption" sx={{ color: "#DC2626", fontWeight: 600 }}>Not Existing</Typography>}
                                       />
                                     </>
                                   )}
@@ -1880,9 +1806,6 @@ const LabAssessment = () => {
                                   placeholder="Observations..."
                                   value={item.notes}
                                   onChange={(e) => handleEquipmentChange(idx, "notes", e.target.value)}
-                                  sx={{
-                                    "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: colors.border }, input: { color: colors.textPrimary, fontSize: "0.85rem" } },
-                                  }}
                                 />
                               </TableCell>
                             </TableRow>
@@ -1902,18 +1825,18 @@ const LabAssessment = () => {
 
                   // Helper renderer for a set of checkpoints
                   const renderCheckpointsTable = (checkpointsWithIndices) => (
-                    <TableContainer component={Paper} sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }}>
+                    <TableContainer component={Paper} sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
-                            <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "50%" }}>Checkpoint & Criteria</TableCell>
-                            <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 700, width: "25%" }}>Result</TableCell>
-                            <TableCell sx={{ color: colors.textSecondary, fontWeight: 700, width: "25%" }}>Assessor Remarks</TableCell>
+                          <TableRow sx={{ bgcolor: "var(--surface-subtle)" }}>
+                            <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, width: "50%" }}>Checkpoint & Criteria</TableCell>
+                            <TableCell align="center" sx={{ color: colors.textSecondary, fontWeight: 600, width: "25%" }}>Result</TableCell>
+                            <TableCell sx={{ color: colors.textSecondary, fontWeight: 600, width: "25%" }}>Assessor Remarks</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {checkpointsWithIndices.map(({ cp, cpIdx }) => (
-                            <TableRow key={cp.id || cpIdx} sx={{ borderBottom: `1px solid ${colors.border}`, "&:hover": { bgcolor: "var(--overlay-subtle)" } }}>
+                            <TableRow key={cp.id || cpIdx} sx={{ borderBottom: `1px solid ${colors.border}`, "&:hover": { bgcolor: "var(--surface-subtle)" } }}>
                               <TableCell sx={{ color: colors.textPrimary, py: 1.5 }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>{cp.name}</Typography>
                                 {cp.subSection && (
@@ -1943,12 +1866,12 @@ const LabAssessment = () => {
                                           <FormControlLabel
                                             value="Pass"
                                             control={<Radio size="small" sx={{ color: colors.success, "&.Mui-checked": { color: colors.success } }} />}
-                                            label={<Typography variant="caption" sx={{ color: colors.success, fontWeight: 700 }}>Pass</Typography>}
+                                            label={<Typography variant="caption" sx={{ color: colors.success, fontWeight: 600 }}>Pass</Typography>}
                                           />
                                           <FormControlLabel
                                             value="Fail"
                                             control={<Radio size="small" sx={{ color: colors.error, "&.Mui-checked": { color: colors.error } }} />}
-                                            label={<Typography variant="caption" sx={{ color: colors.error, fontWeight: 700 }}>Fail</Typography>}
+                                            label={<Typography variant="caption" sx={{ color: colors.error, fontWeight: 600 }}>Fail</Typography>}
                                           />
                                           <FormControlLabel
                                             value="N/A"
@@ -1972,11 +1895,11 @@ const LabAssessment = () => {
                                                 width: "56px",
                                                 "& .MuiOutlinedInput-root": {
                                                   "& fieldset": { borderColor: currentScore >= passThreshold ? colors.success : colors.error },
-                                                  input: { color: colors.textPrimary, fontWeight: 800, textAlign: "center", py: 0.5, px: 0.5, fontSize: "0.85rem" },
+                                                  input: { color: colors.textPrimary, fontWeight: 600, textAlign: "center", py: 0.5, px: 0.5, fontSize: "0.85rem" },
                                                 },
                                               }}
                                             />
-                                            <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700 }}>
+                                            <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 600 }}>
                                               / {cpMax}
                                             </Typography>
                                           </Box>
@@ -2008,7 +1931,7 @@ const LabAssessment = () => {
                                                   borderRadius: "5px",
                                                   "&:hover": {
                                                     bgcolor: isSelected
-                                                      ? (isGood ? "#43a047" : "#e53935")
+                                                      ? (isGood ? "#16A34A" : "#DC2626")
                                                       : "rgba(255,255,255,0.12)",
                                                   },
                                                 }}
@@ -2030,9 +1953,6 @@ const LabAssessment = () => {
                                   placeholder="Observations..."
                                   value={cp.notes || ""}
                                   onChange={(e) => handleCheckpointNotesChange(sIdx, cpIdx, e.target.value)}
-                                  sx={{
-                                    "& .MuiOutlinedInput-root": { "& fieldset": { borderColor: colors.border }, input: { color: colors.textPrimary, fontSize: "0.85rem" } },
-                                  }}
                                 />
                               </TableCell>
                             </TableRow>
@@ -2087,9 +2007,9 @@ const LabAssessment = () => {
                   ];
 
                   return (
-                    <Paper key={sec.sectionId} sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
+                    <Paper key={sec.sectionId} sx={{ p: 3, bgcolor: "var(--surface-subtle)", border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1.5 }}>
-                        <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 700 }}>
+                        <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 600 }}>
                           {sec.sectionTitle}
                         </Typography>
 
@@ -2097,17 +2017,17 @@ const LabAssessment = () => {
                           <Chip
                             label={`${sec.checkpoints.length} Checkpoints`}
                             size="small"
-                            sx={{ bgcolor: "rgba(123, 104, 238, 0.15)", color: colors.primary, border: `1px solid ${colors.primary}40`, fontWeight: 600 }}
+                            sx={{ bgcolor: "rgba(108, 71, 255, 0.15)", color: colors.primary, border: `1px solid ${colors.primary}40`, fontWeight: 600 }}
                           />
                           {sec.sectionId === "sec-7" ? (
                             <Chip
                               label="Quality Supervisor Awareness (No Pass/Fail)"
                               size="small"
                               sx={{
-                                bgcolor: "rgba(156, 39, 176, 0.18)",
+                                bgcolor: "rgba(108, 71, 255, 0.18)",
                                 color: "#ce93d8",
-                                fontWeight: 700,
-                                border: "1px solid rgba(156, 39, 176, 0.4)",
+                                fontWeight: 600,
+                                border: "1px solid rgba(108, 71, 255, 0.4)",
                               }}
                             />
                           ) : (
@@ -2116,9 +2036,9 @@ const LabAssessment = () => {
                                 label={`${secStats.percentage}%`}
                                 size="small"
                                 sx={{
-                                  bgcolor: secStats.isPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
+                                  bgcolor: secStats.isPass ? "rgba(22, 163, 74,0.18)" : "rgba(220, 38, 38,0.18)",
                                   color: secStats.isPass ? colors.success : colors.error,
-                                  fontWeight: 800,
+                                  fontWeight: 600,
                                   border: `1px solid ${secStats.isPass ? colors.success : colors.error}60`,
                                 }}
                               />
@@ -2126,9 +2046,9 @@ const LabAssessment = () => {
                                 label={secStats.isPass ? "Pass" : "Fail"}
                                 size="small"
                                 sx={{
-                                  bgcolor: secStats.isPass ? "#4caf50" : "#f44336",
+                                  bgcolor: secStats.isPass ? "#16A34A" : "#DC2626",
                                   color: "var(--text)",
-                                  fontWeight: 800,
+                                  fontWeight: 600,
                                   fontSize: "0.75rem",
                                   px: 0.5,
                                 }}
@@ -2139,7 +2059,7 @@ const LabAssessment = () => {
                       </Box>
 
                       {sec.sectionId === "sec-4" && (
-                        <Alert severity="info" sx={{ mb: 2.5, bgcolor: "rgba(0, 188, 212, 0.08)", border: "1px solid rgba(0, 188, 212, 0.3)", color: "#fff" }}>
+                        <Alert severity="info" sx={{ mb: 2.5, bgcolor: "rgba(37, 99, 235, 0.08)", border: "1px solid rgba(37, 99, 235, 0.3)", color: "#fff" }}>
                           <strong>Supported ONT Models:</strong> ZTE F6600P, Nokia G-2426G-P (Wi-Fi 6), and Nokia G-140W-H (Wi-Fi 5). Note that manual firmware v62 upload step applies specifically to the <strong>Nokia G-2426G-P</strong>. Each ONT model is separated into its own square box below.
                         </Alert>
                       )}
@@ -2159,16 +2079,15 @@ const LabAssessment = () => {
                                 key={group.key}
                                 sx={{
                                   p: 2.5,
-                                  bgcolor: "var(--overlay-subtle)",
+                                  bgcolor: "var(--surface-subtle)",
                                   border: `1px solid var(--border)`,
-                                  borderRadius: "14px",
-                                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                                  borderRadius: "10px",
                                 }}
                               >
                                 <Typography
                                   variant="subtitle1"
                                   sx={{
-                                    fontWeight: 700,
+                                    fontWeight: 600,
                                     color: colors.textPrimary,
                                     mb: 1.5,
                                     display: "flex",
@@ -2197,16 +2116,15 @@ const LabAssessment = () => {
                                 key={group.key}
                                 sx={{
                                   p: 2.5,
-                                  bgcolor: "var(--overlay-subtle)",
+                                  bgcolor: "var(--surface-subtle)",
                                   border: `1px solid var(--border)`,
-                                  borderRadius: "14px",
-                                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                                  borderRadius: "10px",
                                 }}
                               >
                                 <Typography
                                   variant="subtitle1"
                                   sx={{
-                                    fontWeight: 700,
+                                    fontWeight: 600,
                                     color: colors.textPrimary,
                                     mb: 1.5,
                                   }}
@@ -2243,8 +2161,8 @@ const LabAssessment = () => {
                   </Box>
                 </SectionCard>
                 {/* Feedback & Recommendations */}
-                <Paper sx={{ p: 3, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "16px" }}>
-                  <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, mb: 1 }}>
+                <Paper sx={{ p: 3, bgcolor: "var(--surface-subtle)", border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
+                  <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 600, mb: 1 }}>
                     Assessor Overall Synthesis & Recommendations
                   </Typography>
                   <TextField
@@ -2254,14 +2172,6 @@ const LabAssessment = () => {
                     placeholder="Provide detailed feedback, observed strengths, areas needing improvement, or re-training recommendations..."
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": { borderColor: colors.border },
-                        "&:hover fieldset": { borderColor: colors.primary },
-                        "&.Mui-focused fieldset": { borderColor: colors.primary },
-                      },
-                      textarea: { color: colors.textPrimary },
-                    }}
                   />
                 </Paper>
 
@@ -2289,471 +2199,172 @@ const LabAssessment = () => {
 
       {/* TAB 1: TRACKING TABLE */}
       {activeTab === 1 && (
-        <Stack spacing={3}>
-          <Paper
-            sx={{
-              p: 2.5,
-              bgcolor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: "16px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 2,
-            }}
-          >
-            <Tabs
-              value={trackingFilter}
-              onChange={(e, v) => setTrackingFilter(v)}
-              textColor="primary"
-              indicatorColor="primary"
-              variant="scrollable"
-              scrollButtons="auto"
-              allowScrollButtonsMobile
-              sx={{ minHeight: "auto", "& .MuiTab-root": { minHeight: 48, fontSize: "0.95rem", textTransform: "none", fontWeight: 600 } }}
-            >
-              <Tab label={`All Teams (${fieldTeams.length})`} value="all" />
-              <Tab label={`Evaluated (${stats.testedTeams})`} value="tested" />
-              <Tab label={`Pending (${stats.pendingTeams})`} value="pending" />
-              <Tab label={`Certified / Passed (${stats.testedTeams - stats.failCount})`} value="passed" />
-              <Tab label={`Failed / Retrain Needed (${stats.failCount})`} value="failed" />
-            </Tabs>
-
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ width: { xs: "100%", md: "auto" } }}>
-              <TextField
-                placeholder="Search team or company..."
-                size="small"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: colors.textSecondary }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  width: { xs: "100%", sm: 260 },
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": { borderColor: colors.border },
-                    "&:hover fieldset": { borderColor: colors.primary },
-                    "&.Mui-focused fieldset": { borderColor: colors.primary },
-                  },
-                  input: { color: colors.textPrimary },
-                }}
-              />
-
-              <Button
-                variant="contained"
-                startIcon={<FileDownloadIcon />}
-                onClick={() => exportMasterLabAssessmentReport({ assessments, fieldTeams })}
-                sx={{
-                  bgcolor: "#2e7d32",
-                  "&:hover": { bgcolor: "#1b5e20" },
-                  color: "var(--text)",
-                  fontWeight: 700,
-                  borderRadius: "10px",
-                  px: 2.5,
-                  py: 1,
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
-                }}
-              >
-                Export Master Report (.xlsx)
-              </Button>
-            </Stack>
-          </Paper>
-
-          <Paper sx={{ width: "100%", height: 620, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", overflow: "auto" }}>
-            <DataGrid
-              rows={trackingData}
-              getRowId={(row) => row._id}
-              columns={[
-                { field: "teamName", headerName: "Team Name", flex: 1.2, minWidth: 160 },
-                { field: "teamCompany", headerName: "Company", flex: 1, minWidth: 130 },
-                {
-                  field: "employmentType",
-                  headerName: "Type",
-                  width: 130,
-                  renderCell: (params) => (
-                    <Chip
-                      label={params.row.employmentType || "Subcontractor"}
-                      size="small"
-                      sx={{
-                        bgcolor: params.row.employmentType === "Direct Employee" ? "rgba(0, 188, 212, 0.15)" : "rgba(156, 39, 176, 0.15)",
-                        color: params.row.employmentType === "Direct Employee" ? "#00bcd4" : "#ba68c8",
-                        border: `1px solid ${params.row.employmentType === "Direct Employee" ? "#00bcd440" : "#ba68c840"}`,
-                        fontWeight: 600,
-                        fontSize: "0.75rem",
-                      }}
-                    />
-                  ),
-                },
-                {
-                  field: "age",
-                  headerName: "DoB & Age",
-                  width: 140,
-                  renderCell: (params) => {
-                    const dob = params.row.dateOfBirth || params.row.lastAssessment?.dateOfBirth;
-                    let ageVal = params.row.age !== undefined && params.row.age !== null ? params.row.age : (params.row.lastAssessment?.age !== undefined && params.row.lastAssessment?.age !== null ? params.row.lastAssessment.age : null);
-                    if (ageVal === null && dob) {
-                      const birth = new Date(dob);
-                      const now = new Date();
-                      let a = now.getFullYear() - birth.getFullYear();
-                      const m = now.getMonth() - birth.getMonth();
-                      if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) a--;
-                      ageVal = a >= 0 ? a : null;
-                    }
-                    if (!dob && ageVal === null) return <Typography variant="caption" sx={{ color: colors.textSecondary }}>-</Typography>;
-
-                    return (
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.2 }}>
-                        {ageVal !== null && (
-                          <Chip
-                            label={`Age: ${ageVal} Yrs`}
-                            size="small"
-                            sx={{
-                              bgcolor: "rgba(233, 30, 99, 0.12)",
-                              color: "#f472b6",
-                              fontWeight: 700,
-                              fontSize: "0.72rem",
-                              height: 20,
-                              width: "fit-content",
-                            }}
-                          />
-                        )}
-                        {dob && (
-                          <Typography variant="caption" sx={{ color: colors.textSecondary, fontSize: "0.7rem" }}>
-                            {new Date(dob).toISOString().split("T")[0]}
-                          </Typography>
-                        )}
-                      </Box>
-                    );
-                  },
-                },
-                {
-                  field: "experience",
-                  headerName: "Experience",
-                  width: 140,
-                  valueGetter: (value, row) =>
-                    formatExperienceDuration(
-                      row.experienceYears !== undefined ? row.experienceYears : (row.lastAssessment?.experienceYears || 0),
-                      row.experienceMonths !== undefined ? row.experienceMonths : (row.lastAssessment?.experienceMonths || 0),
-                      row.experienceDays !== undefined ? row.experienceDays : (row.lastAssessment?.experienceDays || 0),
-                      row.yearsOfExperience
-                    ),
-                  renderCell: (params) => (
-                    <Typography variant="body2" sx={{ color: colors.textSecondary, fontSize: "0.82rem" }}>
-                      {params.value}
-                    </Typography>
-                  ),
-                },
-                {
-                  field: "score",
-                  headerName: "Score",
-                  width: 110,
-                  align: "center",
-                  headerAlign: "center",
-                  valueGetter: (value, row) =>
-                    row.isTested ? (row.lastAssessment.overallScore !== undefined ? row.lastAssessment.overallScore : row.lastAssessment.totalScore) : null,
-                  renderCell: (params) => {
-                    if (params.value === null) return "-";
-                    const status = getAssessmentStatus(params.value);
-                    return (
-                      <Chip
-                        label={`${params.value}%`}
-                        size="small"
-                        sx={{
-                          bgcolor: `${status.color}22`,
-                          color: status.color,
-                          fontWeight: "bold",
-                          border: `1px solid ${status.color}`,
-                        }}
-                      />
-                    );
-                  },
-                },
-                {
-                  field: "statusLabel",
-                  headerName: "Evaluation Result",
-                  width: 200,
-                  valueGetter: (value, row) => {
-                    if (!row.isTested) return "-";
-                    const score = row.lastAssessment.overallScore !== undefined ? row.lastAssessment.overallScore : row.lastAssessment.totalScore;
-                    return getAssessmentStatus(score).label;
-                  },
-                  renderCell: (params) => {
-                    if (!params.row.isTested) return <Typography variant="caption" sx={{ color: colors.textSecondary }}>Pending</Typography>;
-                    const score = params.row.lastAssessment.overallScore !== undefined ? params.row.lastAssessment.overallScore : params.row.lastAssessment.totalScore;
-                    const status = getAssessmentStatus(score);
-                    return <Typography variant="body2" sx={{ color: status.color, fontWeight: 700, fontSize: "0.82rem" }}>{status.label}</Typography>;
-                  },
-                },
-                {
-                  field: "assessmentDate",
-                  headerName: "Assessment Date",
-                  width: 140,
-                  valueGetter: (value, row) => (row.isTested ? row.lastAssessment.assessmentDate || row.lastAssessment.createdAt : null),
-                  valueFormatter: (value) => (value ? new Date(value).toLocaleDateString() : "-"),
-                },
-                {
-                  field: "actions",
-                  headerName: "Actions",
-                  width: 220,
-                  sortable: false,
-                  renderCell: (params) => (
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="Start New Practical Assessment">
-                        <IconButton onClick={() => handleNewAssessmentForTeam(params.row)} sx={{ color: colors.success }}>
-                          <AssessmentIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      {params.row.isTested && (
-                        <>
-                          <Tooltip title="Export Arabic PDF (تقرير الفني بالعربي)">
-                            <IconButton
-                              onClick={() => exportArabicLabAssessmentPDF(params.row.lastAssessment)}
-                              sx={{ color: "#ef4444" }}
-                            >
-                              <PictureAsPdfIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Export Detailed Report (.xlsx)">
-                            <IconButton
-                              onClick={() => exportIndividualLabAssessmentReport(params.row.lastAssessment)}
-                              sx={{ color: "#4caf50" }}
-                            >
-                              <FileDownloadIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="View Detailed Report / Print">
-                            <IconButton
-                              onClick={() => {
-                                setSelectedAssessmentForDetail(params.row.lastAssessment);
-                                setDetailModalOpen(true);
-                              }}
-                              sx={{ color: colors.primary }}
-                            >
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit Assessment">
-                            <IconButton onClick={() => handleEditAssessment(params.row.lastAssessment)} sx={{ color: colors.warning }}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Permanently Delete Assessment">
-                            <IconButton onClick={() => handleDeleteAssessment(params.row.lastAssessment)} sx={{ color: colors.error }}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Stack>
-                  ),
-                },
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap", mb: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, height: 32, px: 1.25, width: { xs: "100%", sm: 260 }, mr: { sm: 0.5 }, borderRadius: "6px", border: "1px solid var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-xs)", "&:focus-within": { borderColor: "var(--accent)", boxShadow: "0 0 0 3px var(--accent-ring)" } }}>
+              <SearchIcon sx={{ fontSize: 17, color: "var(--text-muted)" }} />
+              <InputBase value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search team or company…" inputProps={{ "aria-label": "Search teams" }} sx={{ flex: 1, fontSize: 13 }} />
+            </Box>
+            <FilterChip
+              label="Status"
+              single
+              value={trackingFilter === "all" ? [] : [trackingFilter]}
+              onChange={(v) => setTrackingFilter(v[0] || "all")}
+              options={[
+                { value: "tested", label: "Evaluated", hint: stats.testedTeams },
+                { value: "pending", label: "Pending", hint: stats.pendingTeams },
+                { value: "passed", label: "Passed", hint: stats.testedTeams - stats.failCount },
+                { value: "failed", label: "Failed / retrain", hint: stats.failCount },
               ]}
-              loading={loading}
-              pageSizeOptions={[10, 25, 50]}
-              initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-              sx={{
-                border: "none",
-                color: colors.textPrimary,
-                "& .MuiDataGrid-cell": { borderBottom: `1px solid ${colors.border}` },
-                "& .MuiDataGrid-columnHeaders": { bgcolor: colors.surface, borderBottom: `1px solid ${colors.border}`, color: colors.textSecondary },
-                "& .MuiDataGrid-virtualScroller": { bgcolor: colors.background },
-                "& .MuiDataGrid-footerContainer": { borderTop: `1px solid ${colors.border}`, bgcolor: colors.surface, color: colors.textSecondary },
-                "& .MuiTablePagination-root": { color: colors.textSecondary },
-                "& .MuiButtonBase-root": { color: colors.textSecondary },
-              }}
             />
-          </Paper>
-        </Stack>
+            <Box sx={{ flex: 1 }} />
+            <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)" }}>{loading ? "Loading…" : `${trackingData.length} of ${fieldTeams.length} teams`}</Typography>
+          </Box>
+
+          <DataGrid
+            rows={trackingData}
+            getRowId={(row) => row._id}
+            onRowClick={({ row }) => { if (row.isTested) { setSelectedAssessmentForDetail(row.lastAssessment); setDetailModalOpen(true); } }}
+            disableRowSelectionOnClick
+            autoHeight
+            rowHeight={52}
+            columnHeaderHeight={40}
+            loading={loading}
+            pageSizeOptions={[10, 25, 50]}
+            initialState={{ pagination: { paginationModel: { pageSize: 25 } }, sorting: { sortModel: [{ field: "assessmentDate", sort: "desc" }] } }}
+            slots={{ noRowsOverlay: () => <EmptyState title="No teams match" description="Try another status or clear the search." minHeight={200} /> }}
+            sx={{ ...gridSx, minHeight: 360 }}
+            columns={[
+              {
+                field: "teamName", headerName: "Team", flex: 1.2, minWidth: 170,
+                renderCell: ({ row }) => (
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography noWrap dir="auto" sx={{ fontSize: 13, fontWeight: 500 }}>{row.teamName}</Typography>
+                    <Typography noWrap sx={{ fontSize: 11.5, color: "var(--text-muted)" }}>{row.teamCompany || "—"}</Typography>
+                  </Box>
+                ),
+              },
+              { field: "employmentType", headerName: "Type", width: 140, valueGetter: (v) => v || "Subcontractor", renderCell: ({ value }) => <Badge tone={value === "Direct Employee" || value === "Employee" ? "info" : "accent"}>{value}</Badge> },
+              {
+                field: "age", headerName: "Age", type: "number", width: 90, align: "left", headerAlign: "left",
+                valueGetter: (_v, row) => {
+                  const known = row.age ?? row.lastAssessment?.age;
+                  if (known !== undefined && known !== null) return known;
+                  const dob = row.dateOfBirth || row.lastAssessment?.dateOfBirth;
+                  if (!dob) return null;
+                  const birth = new Date(dob);
+                  const now = new Date();
+                  let a = now.getFullYear() - birth.getFullYear();
+                  const m = now.getMonth() - birth.getMonth();
+                  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) a--;
+                  return a >= 0 ? a : null;
+                },
+                renderCell: ({ value }) => (value === null ? "—" : value),
+              },
+              {
+                field: "experience", headerName: "Experience", width: 140,
+                valueGetter: (_v, row) => formatExperienceDuration(
+                  row.experienceYears !== undefined ? row.experienceYears : (row.lastAssessment?.experienceYears || 0),
+                  row.experienceMonths !== undefined ? row.experienceMonths : (row.lastAssessment?.experienceMonths || 0),
+                  row.experienceDays !== undefined ? row.experienceDays : (row.lastAssessment?.experienceDays || 0),
+                  row.yearsOfExperience
+                ),
+              },
+              {
+                field: "score", headerName: "Score", type: "number", width: 100, align: "left", headerAlign: "left",
+                valueGetter: (_v, row) => (row.isTested ? scoreOf(row.lastAssessment) : null),
+                renderCell: ({ value }) => (value === null ? <Typography sx={{ fontSize: 12.5, color: "var(--text-muted)" }}>—</Typography> : <Badge color={getAssessmentStatus(value).color}>{value}%</Badge>),
+              },
+              {
+                field: "statusLabel", headerName: "Result", flex: 1, minWidth: 200,
+                valueGetter: (_v, row) => (row.isTested ? getAssessmentStatus(scoreOf(row.lastAssessment)).label : "Pending"),
+                renderCell: ({ row, value }) => (row.isTested
+                  ? <Tooltip title={value}><Typography noWrap sx={{ fontSize: 12.5, color: getAssessmentStatus(scoreOf(row.lastAssessment)).color }}>{value}</Typography></Tooltip>
+                  : <Badge>Pending</Badge>),
+              },
+              {
+                field: "assessmentDate", headerName: "Assessed", type: "date", width: 120,
+                valueGetter: (_v, row) => (row.isTested ? new Date(row.lastAssessment.assessmentDate || row.lastAssessment.createdAt) : null),
+                renderCell: ({ value }) => (value ? value.toLocaleDateString() : "—"),
+              },
+              {
+                field: "actions", headerName: "", width: 120, sortable: false, filterable: false, align: "right",
+                renderCell: ({ row }) => (
+                  <Box sx={{ display: "flex", gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                    <Button size="small" variant="outlined" onClick={() => handleNewAssessmentForTeam(row)}>Assess</Button>
+                    {row.isTested && (
+                      <IconButton size="small" aria-label={`More actions for ${row.teamName}`} onClick={(e) => setRowMenu({ anchor: e.currentTarget, row })}>
+                        <MoreHoriz fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                ),
+              },
+            ]}
+          />
+
+          <Menu anchorEl={rowMenu?.anchor} open={Boolean(rowMenu)} onClose={() => setRowMenu(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
+            <MenuItem onClick={() => { setSelectedAssessmentForDetail(rowMenu.row.lastAssessment); setDetailModalOpen(true); setRowMenu(null); }}><ListItemIcon><VisibilityIcon fontSize="small" /></ListItemIcon>View report</MenuItem>
+            <MenuItem onClick={() => { handleEditAssessment(rowMenu.row.lastAssessment); setRowMenu(null); }}><ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>Edit assessment</MenuItem>
+            <MenuItem onClick={() => { exportIndividualLabAssessmentReport(rowMenu.row.lastAssessment); setRowMenu(null); }}><ListItemIcon><FileDownloadIcon fontSize="small" /></ListItemIcon>Export report (.xlsx)</MenuItem>
+            <MenuItem onClick={() => { exportArabicLabAssessmentPDF(rowMenu.row.lastAssessment); setRowMenu(null); }}><ListItemIcon><PictureAsPdfIcon fontSize="small" /></ListItemIcon>Export Arabic PDF</MenuItem>
+            {isAdmin && <Divider />}
+            {isAdmin && (
+              <MenuItem onClick={() => { handleDeleteAssessment(rowMenu.row.lastAssessment); setRowMenu(null); }} sx={{ color: "var(--danger)" }}>
+                <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: "var(--danger)" }} /></ListItemIcon>Delete latest assessment…
+              </MenuItem>
+            )}
+          </Menu>
+        </Box>
       )}
 
       {/* TAB 2: QUALITY & PERFORMANCE INTELLIGENCE */}
       {activeTab === 2 && (
         <Stack spacing={4}>
-          {/* Header Action Bar */}
-          <Paper
-            sx={{
-              p: 3,
-              bgcolor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: "18px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 2,
-              background: "linear-gradient(135deg, rgba(123, 104, 238, 0.08) 0%, rgba(37, 37, 37, 0.95) 100%)",
-            }}
-          >
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: colors.textPrimary, display: "flex", alignItems: "center", gap: 1.5 }}>
-                <TrendingUpIcon sx={{ color: colors.primary }} /> Quality & Practical Lab Performance Intelligence
-              </Typography>
-              <Typography variant="body2" sx={{ color: colors.textSecondary, mt: 0.5 }}>
-                Cross-sectional quality indicators, technician qualification benchmarks, safety compliance, and comprehensive audit reports
-              </Typography>
-            </Box>
+          {/* KPIs */}
+          <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(3, minmax(0, 1fr))", lg: "repeat(6, minmax(0, 1fr))" } }}>
+            <StatCard label="Evaluated teams" value={stats.testedTeams} hint={`of ${stats.totalTeams} (${stats.completionRate}%)`} />
+            <StatCard label="Average score" value={`${stats.avgScore}%`} hint={getAssessmentStatus(stats.avgScore).label.split("(")[0].trim()} />
+            <StatCard label="Pass rate (≥ 70%)" value={`${stats.passRate}%`} hint={`${stats.testedTeams - stats.failCount} passed · ${stats.failCount} failed`} />
+            <StatCard label="Tools readiness" value={`${stats.equipmentReadinessRate}%`} hint="Valid and calibrated equipment" />
+            <StatCard label="Average experience" value={`${stats.avgExpYears} yrs`} hint="Technician tenure" />
+            <StatCard label="All 6 clearances" value={`${assessments.length > 0 ? Math.round((stats.certStats.all6 / assessments.length) * 100) : 0}%`} hint={`${stats.certStats.all6} fully certified`} />
+          </Box>
 
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<FileDownloadIcon />}
-              onClick={() => exportMasterLabAssessmentReport({ assessments, fieldTeams })}
-              sx={{
-                bgcolor: "#2e7d32",
-                "&:hover": { bgcolor: "#1b5e20" },
-                color: "var(--text)",
-                fontWeight: 800,
-                borderRadius: "12px",
-                px: 3.5,
-                py: 1.2,
-                boxShadow: "0 6px 18px rgba(46, 125, 50, 0.4)",
-              }}
-            >
-              Export Comprehensive Master Report (.xlsx)
-            </Button>
-          </Paper>
-
-          {/* 6 Multi-Dimensional Executive KPI Cards */}
-          <Grid container spacing={2.5}>
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", height: "100%" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>Evaluated Teams</Typography>
-                  <Typography variant="h4" sx={{ color: colors.success, fontWeight: 800, mt: 0.5 }}>{stats.testedTeams}</Typography>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                    of {stats.totalTeams} Total Teams ({stats.completionRate}%)
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", height: "100%" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>Global Average</Typography>
-                  <Typography variant="h4" sx={{ color: getAssessmentStatus(stats.avgScore).color, fontWeight: 800, mt: 0.5 }}>{stats.avgScore}%</Typography>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                    {getAssessmentStatus(stats.avgScore).label.split("(")[0].trim()}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", height: "100%" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>Pass Rate (≥ 70%)</Typography>
-                  <Typography variant="h4" sx={{ color: colors.primary, fontWeight: 800, mt: 0.5 }}>{stats.passRate}%</Typography>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                    {stats.testedTeams - stats.failCount} Passed / {stats.failCount} Failed
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", height: "100%" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>Tools Readiness</Typography>
-                  <Typography variant="h4" sx={{ color: stats.equipmentReadinessRate >= 80 ? "#00bcd4" : "#ff9800", fontWeight: 800, mt: 0.5 }}>{stats.equipmentReadinessRate}%</Typography>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                    Valid & Calibrated Equipment
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", height: "100%" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>Avg Experience</Typography>
-                  <Typography variant="h4" sx={{ color: "#e91e63", fontWeight: 800, mt: 0.5 }}>{stats.avgExpYears} Yrs</Typography>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                    Field Technician Tenure
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <Card sx={{ bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "16px", height: "100%" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>All 6 Clearances</Typography>
-                  <Typography variant="h4" sx={{ color: "#4caf50", fontWeight: 800, mt: 0.5 }}>
-                    {assessments.length > 0 ? Math.round((stats.certStats.all6 / assessments.length) * 100) : 0}%
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                    {stats.certStats.all6} Fully Certified Teams
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-
-          {/* 5-Tier Classification Breakdown Banners */}
-          <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px" }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors.textPrimary, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-              <EmojiEventsIcon sx={{ color: "#fbc02d" }} /> 5-Tier Qualification & Assessment Result Breakdown
-            </Typography>
-            <Grid container spacing={2}>
+          {/* 5-tier breakdown */}
+          <SectionCard title="Results by tier" description="Latest qualification tier of every assessment">
+            <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(5, minmax(0, 1fr))" } }}>
               {[
-                { label: "Excellent (Pass)", range: "90 - 100%", count: stats.tierCounts.excellent, color: "#00e676", desc: "Full qualification & autonomous deployment" },
-                { label: "V.Good (Pass)", range: "80 - 89%", count: stats.tierCounts.vgood, color: "#4caf50", desc: "Qualified with high operational confidence" },
-                { label: "Need Improvements (Pass)", range: "70 - 79%", count: stats.tierCounts.needImprovement, color: "#fbc02d", desc: "Conditional pass – close supervisor monitoring" },
-                { label: "Suspension & Retrain (Fail)", range: "50 - 69%", count: stats.tierCounts.suspension, color: "#ff9800", desc: "Suspension & mandatory practical re-training" },
-                { label: "Ineligible (Fail)", range: "0 - 49%", count: stats.tierCounts.ineligible, color: "#f44336", desc: "Field disqualification & full restart" },
-              ].map((tier, idx) => {
-                const pct = assessments.length > 0 ? Math.round((tier.count / assessments.length) * 100) : 0;
-                return (
-                  <Grid item xs={12} sm={6} md={2.4} key={idx}>
-                    <Paper
-                      sx={{
-                        p: 2,
-                        bgcolor: `${tier.color}0a`,
-                        border: `1px solid ${tier.color}35`,
-                        borderRadius: "14px",
-                        height: "100%",
-                      }}
-                    >
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Chip
-                          label={tier.range}
-                          size="small"
-                          sx={{ bgcolor: `${tier.color}22`, color: tier.color, fontWeight: 800, fontSize: "0.75rem" }}
-                        />
-                        <Typography variant="h5" sx={{ fontWeight: 900, color: tier.color }}>
-                          {tier.count}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: colors.textPrimary, fontSize: "0.88rem" }}>
-                        {tier.label}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5 }}>
-                        {pct}% of cohort • {tier.desc}
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Paper>
+                { label: "Excellent", range: "90–100%", count: stats.tierCounts.excellent, color: TIER_COLORS.excellent, desc: "Full qualification, autonomous deployment" },
+                { label: "Very good", range: "80–89%", count: stats.tierCounts.vgood, color: TIER_COLORS.vgood, desc: "Qualified with high confidence" },
+                { label: "Needs improvement", range: "70–79%", count: stats.tierCounts.needImprovement, color: TIER_COLORS.improve, desc: "Pass with close supervision" },
+                { label: "Suspend & retrain", range: "50–69%", count: stats.tierCounts.suspension, color: TIER_COLORS.suspend, desc: "Practical re-training required" },
+                { label: "Ineligible", range: "0–49%", count: stats.tierCounts.ineligible, color: TIER_COLORS.fail, desc: "Disqualified, full restart" },
+              ].map((tier) => (
+                <Box key={tier.label} sx={{ p: 1.75, borderRadius: "8px", border: "1px solid var(--border)", borderTop: `3px solid ${tier.color}`, backgroundColor: "var(--surface)" }}>
+                  <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 1 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{tier.label}</Typography>
+                    <Typography sx={{ fontSize: 20, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{tier.count}</Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 12, color: "var(--text-secondary)", mt: 0.25 }}>
+                    {tier.range} · {assessments.length > 0 ? Math.round((tier.count / assessments.length) * 100) : 0}% of assessments
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: "var(--text-muted)", mt: 0.5 }}>{tier.desc}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </SectionCard>
 
           {/* Charts Row: Score Progression + 5-Tier Distribution Donut */}
           <Grid container spacing={3}>
             {/* Performance Trajectory Area Chart */}
             <Grid item xs={12} lg={8}>
-              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px", height: "100%" }}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px", height: "100%" }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                  <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
                     <TrendingUpIcon sx={{ color: colors.primary }} /> Practical Lab Assessment Score Trajectory
                   </Typography>
-                  <Chip label={`Last ${stats.scoreTrend.length} Tests`} size="small" sx={{ bgcolor: "var(--overlay-subtle)", color: colors.textSecondary }} />
+                  <Chip label={`Last ${stats.scoreTrend.length} Tests`} size="small" sx={{ bgcolor: "var(--surface-subtle)", color: colors.textSecondary }} />
                 </Box>
                 <Box sx={{ height: 320, width: "100%" }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -2764,11 +2375,11 @@ const LabAssessment = () => {
                           <stop offset="95%" stopColor={colors.primary} stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis dataKey="date" stroke={colors.textSecondary} fontSize={12} tickLine={false} />
                       <YAxis domain={[0, 100]} stroke={colors.textSecondary} fontSize={12} tickLine={false} />
                       <RechartsTooltip
-                        contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", color: "var(--text)" }}
+                        contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px", color: "var(--text)" }}
                         formatter={(value, name, item) => [`${value}% (${getAssessmentStatus(value).label.split("(")[0].trim()})`, item?.payload?.team || "Team"]}
                       />
                       <Area type="monotone" dataKey="score" stroke={colors.primary} strokeWidth={3} fill="url(#scoreColor)" />
@@ -2780,8 +2391,8 @@ const LabAssessment = () => {
 
             {/* Score Distribution Donut Chart */}
             <Grid item xs={12} lg={4}>
-              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px", height: "100%", display: "flex", flexDirection: "column" }}>
-                <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, mb: 1 }}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px", height: "100%", display: "flex", flexDirection: "column" }}>
+                <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 600, mb: 1 }}>
                   5-Tier Result Distribution
                 </Typography>
                 <Box sx={{ height: 320, width: "100%" }}>
@@ -2792,7 +2403,7 @@ const LabAssessment = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <RechartsTooltip contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px" }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px" }} />
                       <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -2805,17 +2416,17 @@ const LabAssessment = () => {
           <Grid container spacing={3}>
             {/* Section Mastery Horizontal Bar */}
             <Grid item xs={12} lg={7}>
-              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px", height: "100%" }}>
-                <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 700, mb: 2 }}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px", height: "100%" }}>
+                <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 600, mb: 2 }}>
                   Section Mastery Benchmarks (FDB → BEP → OTO → ONT → Tools → Education → Photos)
                 </Typography>
                 <Box sx={{ height: 300, width: "100%" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.sectionAverages} layout="vertical" margin={{ left: 10, right: 30 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#3d3d3d" horizontal={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                       <XAxis type="number" domain={[0, 100]} stroke={colors.textSecondary} fontSize={12} />
                       <YAxis type="category" dataKey="section" stroke={colors.textSecondary} fontSize={11} width={130} />
-                      <RechartsTooltip contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "12px", color: "var(--text)" }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px", color: "var(--text)" }} />
                       <Bar dataKey="avg" fill="var(--accent-text)" radius={[0, 6, 6, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -2825,29 +2436,29 @@ const LabAssessment = () => {
 
             {/* Subcontractor vs Direct Employee Comparison */}
             <Grid item xs={12} lg={5}>
-              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px", height: "100%" }}>
-                <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 700, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-                  <BusinessIcon sx={{ color: "#00bcd4" }} /> Employment Classification Benchmark
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px", height: "100%" }}>
+                <Typography variant="h6" sx={{ color: colors.textPrimary, fontWeight: 600, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                  <BusinessIcon sx={{ color: "#2563EB" }} /> Employment Classification Benchmark
                 </Typography>
                 <Stack spacing={2.5}>
                   {/* Direct Employee */}
-                  <Paper sx={{ p: 2.5, bgcolor: "rgba(0, 188, 212, 0.05)", border: `1px solid rgba(0, 188, 212, 0.25)`, borderRadius: "14px" }}>
+                  <Paper sx={{ p: 2.5, bgcolor: "rgba(37, 99, 235, 0.05)", border: `1px solid rgba(37, 99, 235, 0.25)`, borderRadius: "10px" }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#00bcd4" }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#2563EB" }}>
                         Direct Employees
                       </Typography>
-                      <Chip label={`${stats.employmentStats.employee.count} Evaluated`} size="small" sx={{ bgcolor: "rgba(0, 188, 212, 0.2)", color: "#00bcd4", fontWeight: 700 }} />
+                      <Chip label={`${stats.employmentStats.employee.count} Evaluated`} size="small" sx={{ bgcolor: "rgba(37, 99, 235, 0.2)", color: "#2563EB", fontWeight: 600 }} />
                     </Box>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Typography variant="caption" sx={{ color: colors.textSecondary }}>Average Mastery Score</Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 900, color: colors.textPrimary }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                           {stats.employmentStats.employee.avgScore}%
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="caption" sx={{ color: colors.textSecondary }}>Cohort Pass Rate</Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 900, color: "#4caf50" }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: "#16A34A" }}>
                           {stats.employmentStats.employee.passRate}%
                         </Typography>
                       </Grid>
@@ -2855,23 +2466,23 @@ const LabAssessment = () => {
                   </Paper>
 
                   {/* Subcontractor */}
-                  <Paper sx={{ p: 2.5, bgcolor: "rgba(156, 39, 176, 0.05)", border: `1px solid rgba(156, 39, 176, 0.25)`, borderRadius: "14px" }}>
+                  <Paper sx={{ p: 2.5, bgcolor: "rgba(108, 71, 255, 0.05)", border: `1px solid rgba(108, 71, 255, 0.25)`, borderRadius: "10px" }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#ba68c8" }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#6C47FF" }}>
                         Subcontractors (Partners)
                       </Typography>
-                      <Chip label={`${stats.employmentStats.subcontractor.count} Evaluated`} size="small" sx={{ bgcolor: "rgba(156, 39, 176, 0.2)", color: "#ba68c8", fontWeight: 700 }} />
+                      <Chip label={`${stats.employmentStats.subcontractor.count} Evaluated`} size="small" sx={{ bgcolor: "rgba(108, 71, 255, 0.2)", color: "#6C47FF", fontWeight: 600 }} />
                     </Box>
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Typography variant="caption" sx={{ color: colors.textSecondary }}>Average Mastery Score</Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 900, color: colors.textPrimary }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                           {stats.employmentStats.subcontractor.avgScore}%
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="caption" sx={{ color: colors.textSecondary }}>Cohort Pass Rate</Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 900, color: "#4caf50" }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: "#16A34A" }}>
                           {stats.employmentStats.subcontractor.passRate}%
                         </Typography>
                       </Grid>
@@ -2883,9 +2494,9 @@ const LabAssessment = () => {
           </Grid>
 
           {/* Safety & Compliance Clearances Matrix Progress */}
-          <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px" }}>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: colors.textPrimary, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-              <VerifiedUserIcon sx={{ color: "#4caf50" }} /> Safety & Compliance Clearances Compliance Rates (DD • ES • FA • FF • RA • WAH)
+          <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: colors.textPrimary, mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+              <VerifiedUserIcon sx={{ color: "#16A34A" }} /> Safety & Compliance Clearances Compliance Rates (DD • ES • FA • FF • RA • WAH)
             </Typography>
             <Grid container spacing={2}>
               {CERTIFICATE_DEFINITIONS.map((cert) => {
@@ -2893,14 +2504,14 @@ const LabAssessment = () => {
                 const pct = assessments.length > 0 ? Math.round((count / assessments.length) * 100) : 0;
                 return (
                   <Grid item xs={12} sm={6} md={2} key={cert.key}>
-                    <Paper sx={{ p: 2, bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors.border}`, borderRadius: "14px" }}>
+                    <Paper sx={{ p: 2, bgcolor: "var(--surface-subtle)", border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Chip label={cert.code} size="small" sx={{ bgcolor: "rgba(123, 104, 238, 0.2)", color: colors.primary, fontWeight: 800 }} />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: pct >= 80 ? "#4caf50" : "#ff9800" }}>
+                        <Chip label={cert.code} size="small" sx={{ bgcolor: "rgba(108, 71, 255, 0.2)", color: colors.primary, fontWeight: 600 }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: pct >= 80 ? "#16A34A" : "#D97706" }}>
                           {pct}%
                         </Typography>
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: colors.textPrimary, fontSize: "0.85rem" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary, fontSize: "0.85rem" }}>
                         {cert.title}
                       </Typography>
                       <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mt: 0.5, fontSize: "0.75rem" }}>
@@ -2916,8 +2527,8 @@ const LabAssessment = () => {
           {/* Leaderboards: Top Performers vs Priority Retraining */}
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px" }}>
-                <Typography variant="subtitle1" sx={{ color: colors.success, mb: 2, fontWeight: 800, display: "flex", alignItems: "center", gap: 1 }}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
+                <Typography variant="subtitle1" sx={{ color: colors.success, mb: 2, fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
                   <EmojiEventsIcon /> Top Performing Field Teams
                 </Typography>
                 <Stack spacing={1.5}>
@@ -2926,16 +2537,16 @@ const LabAssessment = () => {
                       key={i}
                       sx={{
                         p: 2,
-                        bgcolor: "rgba(76, 175, 80, 0.05)",
-                        border: `1px solid #4caf5030`,
-                        borderRadius: "12px",
+                        bgcolor: "rgba(22, 163, 74, 0.05)",
+                        border: `1px solid #16A34A30`,
+                        borderRadius: "10px",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}
                     >
                       <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: colors.textPrimary }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                           {team.teamName}
                         </Typography>
                         <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -2943,14 +2554,14 @@ const LabAssessment = () => {
                         </Typography>
                       </Box>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Chip label={`${team.avg}%`} size="small" sx={{ bgcolor: "#4caf5022", color: "#4caf50", fontWeight: 800, border: "1px solid #4caf50" }} />
+                        <Chip label={`${team.avg}%`} size="small" sx={{ bgcolor: "#16A34A22", color: "#16A34A", fontWeight: 600, border: "1px solid #16A34A" }} />
                         {team.latestAssess && (
                           <>
                             <Tooltip title="Export Arabic PDF (تقرير الفني)">
                               <IconButton
                                 size="small"
                                 onClick={() => exportArabicLabAssessmentPDF(team.latestAssess)}
-                                sx={{ color: "#ef4444" }}
+                                sx={{ color: "#DC2626" }}
                               >
                                 <PictureAsPdfIcon fontSize="small" />
                               </IconButton>
@@ -2959,7 +2570,7 @@ const LabAssessment = () => {
                               <IconButton
                                 size="small"
                                 onClick={() => exportIndividualLabAssessmentReport(team.latestAssess)}
-                                sx={{ color: "#4caf50" }}
+                                sx={{ color: "#16A34A" }}
                               >
                                 <FileDownloadIcon fontSize="small" />
                               </IconButton>
@@ -2975,8 +2586,8 @@ const LabAssessment = () => {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "18px" }}>
-                <Typography variant="subtitle1" sx={{ color: colors.error, mb: 2, fontWeight: 800, display: "flex", alignItems: "center", gap: 1 }}>
+              <Paper sx={{ p: 3, bgcolor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: "10px" }}>
+                <Typography variant="subtitle1" sx={{ color: colors.error, mb: 2, fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
                   <WarningIcon /> Priority Follow-Up / Retraining Required
                 </Typography>
                 <Stack spacing={1.5}>
@@ -2985,16 +2596,16 @@ const LabAssessment = () => {
                       key={i}
                       sx={{
                         p: 2,
-                        bgcolor: "rgba(244, 67, 54, 0.05)",
-                        border: `1px solid #f4433630`,
-                        borderRadius: "12px",
+                        bgcolor: "rgba(220, 38, 38, 0.05)",
+                        border: `1px solid #DC262630`,
+                        borderRadius: "10px",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}
                     >
                       <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: colors.textPrimary }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: colors.textPrimary }}>
                           {team.teamName}
                         </Typography>
                         <Typography variant="caption" sx={{ color: colors.textSecondary }}>
@@ -3002,14 +2613,14 @@ const LabAssessment = () => {
                         </Typography>
                       </Box>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Chip label={`${team.avg}%`} size="small" sx={{ bgcolor: "#f4433622", color: "#f44336", fontWeight: 800, border: "1px solid #f44336" }} />
+                        <Chip label={`${team.avg}%`} size="small" sx={{ bgcolor: "#DC262622", color: "#DC2626", fontWeight: 600, border: "1px solid #DC2626" }} />
                         {team.latestAssess && (
                           <>
                             <Tooltip title="Export Arabic PDF (تقرير الفني)">
                               <IconButton
                                 size="small"
                                 onClick={() => exportArabicLabAssessmentPDF(team.latestAssess)}
-                                sx={{ color: "#ef4444" }}
+                                sx={{ color: "#DC2626" }}
                               >
                                 <PictureAsPdfIcon fontSize="small" />
                               </IconButton>
@@ -3018,7 +2629,7 @@ const LabAssessment = () => {
                               <IconButton
                                 size="small"
                                 onClick={() => exportIndividualLabAssessmentReport(team.latestAssess)}
-                                sx={{ color: "#f44336" }}
+                                sx={{ color: "#DC2626" }}
                               >
                                 <FileDownloadIcon fontSize="small" />
                               </IconButton>
@@ -3045,78 +2656,21 @@ const LabAssessment = () => {
         getAssessmentStatus={getAssessmentStatus}
       />
 
-      {/* Permanent Delete Confirmation Dialog */}
-      <Dialog
+      {/* Permanent delete: backup export + typed confirmation */}
+      <SafeDeleteDialog
         open={deleteDialogOpen}
-        onClose={() => !deletingAssessment && setDeleteDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: colors.surface,
-            color: colors.textPrimary,
-            borderRadius: "20px",
-            border: `1px solid rgba(244, 67, 54, 0.4)`,
-            boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
-            p: 1,
-          },
+        onClose={() => { setDeleteDialogOpen(false); setAssessmentToDelete(null); }}
+        records={assessmentToDelete ? [assessmentToDelete] : []}
+        noun={{ one: "lab assessment", many: "lab assessments" }}
+        nameOf={(a) => `${a.fieldTeamName || a.fieldTeamId?.teamName || "Team"} · ${new Date(a.assessmentDate || a.createdAt).toLocaleDateString()} · ${scoreOf(a)}%`}
+        exportColumns={LAB_BACKUP_COLUMNS}
+        exportFilename="lab-assessment"
+        onDelete={(list) => bulkDelete(DELETE_PATHS.lab, list.map((a) => a._id))}
+        onDeleted={({ deleted }) => {
+          setAssessments((prev) => prev.filter((a) => !deleted.includes(a._id)));
+          if (deleted.includes(editingId)) resetForm();
         }}
-      >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1, color: colors.error, fontWeight: 800 }}>
-          <WarningIcon sx={{ color: colors.error, fontSize: "1.8rem" }} /> Permanent Delete Confirmation
-        </DialogTitle>
-        <DialogContent sx={{ mt: 1 }}>
-          <Alert severity="error" variant="filled" sx={{ mb: 2.5, borderRadius: "12px", fontWeight: 600 }}>
-            Permanent Delete Warning: This action cannot be undone!
-          </Alert>
-          <Typography variant="body1" sx={{ color: colors.textPrimary, mb: 2, lineHeight: 1.6 }}>
-            You are about to permanently delete the <strong>E2E FTTH Practical Assessment</strong> for team{" "}
-            <span style={{ color: colors.primary, fontWeight: 700 }}>
-              {assessmentToDelete?.fieldTeamName || assessmentToDelete?.fieldTeamId?.teamName || "Selected Team"}
-            </span>.
-          </Typography>
-          <Paper sx={{ p: 2, bgcolor: "var(--overlay-subtle)", borderRadius: "12px", border: `1px solid ${colors.border}`, mb: 2 }}>
-            <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mb: 0.5 }}>
-              Assessment Date: <strong>{assessmentToDelete?.assessmentDate ? new Date(assessmentToDelete.assessmentDate).toLocaleDateString() : (assessmentToDelete?.createdAt ? new Date(assessmentToDelete.createdAt).toLocaleDateString() : "-")}</strong>
-            </Typography>
-            <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block", mb: 0.5 }}>
-              Assessor: <strong>{assessmentToDelete?.conductedBy || assessmentToDelete?.assessorId?.name || "Assessor"}</strong>
-            </Typography>
-            <Typography variant="caption" sx={{ color: colors.textSecondary, display: "block" }}>
-              Overall Score: <strong>{assessmentToDelete?.overallScore !== undefined ? assessmentToDelete.overallScore : (assessmentToDelete?.totalScore || 0)}%</strong>
-            </Typography>
-          </Paper>
-          <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-            All checkpoint test results, equipment validation records, technician scores, and notes will be permanently erased from the system and all generated intelligence sheets.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1.5, borderTop: `1px solid ${colors.border}` }}>
-          <Button
-            variant="outlined"
-            onClick={() => setDeleteDialogOpen(false)}
-            disabled={deletingAssessment}
-            sx={{ borderColor: colors.border, color: colors.textPrimary, borderRadius: "10px" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={confirmPermanentDelete}
-            disabled={deletingAssessment}
-            startIcon={deletingAssessment ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
-            sx={{
-              bgcolor: "#dc2626",
-              "&:hover": { bgcolor: "#b91c1c" },
-              borderRadius: "10px",
-              fontWeight: 700,
-              px: 2.5,
-            }}
-          >
-            {deletingAssessment ? "Permanently Deleting..." : "Permanently Delete Assessment"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
     </Box>
   );
 };
