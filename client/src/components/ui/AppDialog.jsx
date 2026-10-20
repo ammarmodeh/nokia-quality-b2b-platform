@@ -80,9 +80,11 @@ const AppDialog = ({
               <Typography component={typeof description === "string" ? "p" : "div"} sx={{ mt: 0.25, fontSize: 13, color: "var(--text-secondary)" }}>{description}</Typography>
             )}
           </Box>
-          <IconButton size="small" aria-label="Close" onClick={(e) => close(e, "closeButton")} disabled={busy} sx={{ color: "var(--text-muted)", mt: -0.25, mr: -0.75 }}>
-            <Close fontSize="small" />
-          </IconButton>
+          {onClose && (
+            <IconButton size="small" aria-label="Close" onClick={(e) => close(e, "closeButton")} disabled={busy} sx={{ color: "var(--text-muted)", mt: -0.25, mr: -0.75 }}>
+              <Close fontSize="small" />
+            </IconButton>
+          )}
         </Box>
         <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 2.5, py: 2, ...bodySx }}>
           {err && <ErrorState title={err.title} message={err.message} sx={{ mb: 2 }} />}

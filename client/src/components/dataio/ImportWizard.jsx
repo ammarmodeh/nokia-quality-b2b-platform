@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem, Tab, Tabs, TextField, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, Tab, Tabs, TextField, Tooltip, Typography } from "@mui/material";
+import ProgressPanel from "../ui/ProgressPanel";
 import UploadFileOutlined from "@mui/icons-material/UploadFileOutlined";
 import Close from "@mui/icons-material/Close";
 import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
@@ -64,7 +65,8 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
   const [key, setKey] = useState("");
   const [validation, setValidation] = useState(null); // { [sheetIdx]: { records, problems, server } }
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState(0);
+  // live progress of the dry run / real import: { kind, steps, current, startedAt, counts }
+  const [live, setLive] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [drag, setDrag] = useState(false);
@@ -72,7 +74,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
 
   useEffect(() => {
     if (!open) {
-      setStep(0); setFile(null); setSheets([]); setActive(0); setMode("create"); setKey(""); setValidation(null); setResult(null); setError(null); setProgress(0);
+      setStep(0); setFile(null); setSheets([]); setActive(0); setMode("create"); setKey(""); setValidation(null); setResult(null); setError(null); setLive(null);
     }
   }, [open]);
 
@@ -141,31 +143,66 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
     async (records, target, dryRun, onChunk, run) => {
       const importer = E[target].importer;
       const results = [];
-      for (let i = 0; i < records.length; i += CHUNK) {
-        const chunk = records.slice(i, i + CHUNK);
+      // ~25 progress updates per sheet, between 25 and CHUNK rows per request
+      const size = Math.max(25, Math.min(CHUNK, Math.ceil(records.length / 25)));
+      for (let i = 0; i < records.length; i += size) {
+        const chunk = records.slice(i, i + size);
         const opts = { mode, key: effectiveKey || undefined, dryRun };
         const data = importer
-          ? await importer.send(chunk, { ...opts, run, final: i + CHUNK >= records.length })
+          ? await importer.send(chunk, { ...opts, run, final: i + size >= records.length })
           : (await api.post(`/import/${target}`, { rows: chunk.map((r) => toApiRow(target, r, context)), ...opts })).data;
         results.push(...data.results);
-        onChunk?.(Math.min(records.length, i + CHUNK));
+        onChunk?.(Math.min(records.length, i + size), data.results || []);
       }
       return results;
     },
     [mode, effectiveKey, context, E]
   );
 
+  // shared progress bookkeeping for the dry run and the import
+  const tally = (counts, results) => {
+    results.forEach((r) => {
+      if (r.status === "error") counts.failed++;
+      else counts[r.action === "update" ? "updated" : r.action === "skip" ? "skipped" : "created"]++;
+    });
+  };
+
   const validate = async () => {
     setBusy(true);
     setError(null);
+    const prepared = included.map((s) => {
+      const { records, problems } = buildRecords(s.rows, s.headerIdx, s.mapping, E[s.target].fields, s.defaults);
+      const badRows = new Set(problems.map((p) => p.row));
+      return { s, records, problems, clean: records.filter((r) => !badRows.has(r.__row)) };
+    });
+    const total = prepared.reduce((n, x) => n + x.clean.length, 0);
+    const state = {
+      kind: "validate",
+      steps: prepared.map((x) => ({ label: `Check “${x.s.name}” (${x.clean.length.toLocaleString()} rows)`, status: "pending" })),
+      current: { done: 0, total, unit: "rows" },
+      startedAt: Date.now(),
+      counts: { created: 0, updated: 0, skipped: 0, failed: prepared.reduce((n, x) => n + new Set(x.problems.map((p) => p.row)).size, 0) },
+    };
+    const push = () => setLive({ ...state, steps: state.steps.map((x) => ({ ...x })), current: { ...state.current }, counts: { ...state.counts } });
+    push();
     try {
       const out = {};
-      for (const s of included) {
-        const { records, problems } = buildRecords(s.rows, s.headerIdx, s.mapping, E[s.target].fields, s.defaults);
-        const badRows = new Set(problems.map((p) => p.row));
-        const clean = records.filter((r) => !badRows.has(r.__row));
-        const server = clean.length ? await runChunks(clean, s.target, true) : [];
-        out[s.idx] = { records, problems, server };
+      for (const [i, x] of prepared.entries()) {
+        state.steps[i].status = "active";
+        push();
+        let sent = 0;
+        const server = x.clean.length
+          ? await runChunks(x.clean, x.s.target, true, (n, res) => {
+              state.current.done += n - sent;
+              sent = n;
+              tally(state.counts, res);
+              push();
+            })
+          : [];
+        state.steps[i].status = "done";
+        state.steps[i].detail = `${server.filter((r) => r.status === "error").length + new Set(x.problems.map((p) => p.row)).size} invalid`;
+        push();
+        out[x.s.idx] = { records: x.records, problems: x.problems, server };
       }
       setValidation(out);
       setStep(3);
@@ -173,6 +210,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       setError(e?.response?.data?.message || e.message);
     } finally {
       setBusy(false);
+      setLive(null);
     }
   };
 
@@ -202,24 +240,38 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
     setStep(4);
     setBusy(true);
     setError(null);
-    setProgress(0);
     const total = Object.values(validation).reduce((n, v) => n + v.server.filter((r) => r.status !== "error").length, 0) || 1;
-    let done = 0;
+    const state = {
+      kind: "import",
+      steps: included.map((s) => ({ label: `${s.name} → ${E[s.target].label}`, status: "pending" })),
+      current: { done: 0, total, unit: "rows" },
+      startedAt: Date.now(),
+      counts: { created: 0, updated: 0, skipped: 0, failed: 0 },
+    };
+    const push = () => setLive({ ...state, steps: state.steps.map((x) => ({ ...x })), current: { ...state.current }, counts: { ...state.counts } });
+    push();
     const out = {};
     try {
-      for (const s of included) {
+      for (const [si, s] of included.entries()) {
+        state.steps[si].status = "active";
+        push();
         const v = validation[s.idx];
         const okRows = new Set(v.server.filter((r) => r.status !== "error").map((r) => r.row));
         const toSend = v.records.filter((r) => okRows.has(r.__row));
         let sent = 0;
         const run = toSend.length && E[s.target].importer?.start ? await E[s.target].importer.start({ file, sheet: s.name, mapping: s.mapping, header: s.rows[s.headerIdx] || [] }) : {};
         const res = toSend.length
-          ? await runChunks(toSend, s.target, false, (n) => {
-              done += n - sent;
+          ? await runChunks(toSend, s.target, false, (n, chunkRes) => {
+              state.current.done += n - sent;
               sent = n;
-              setProgress(Math.round((done / total) * 100));
+              tally(state.counts, chunkRes);
+              state.steps[si].detail = `${sent.toLocaleString()} / ${toSend.length.toLocaleString()}`;
+              push();
             }, run)
           : [];
+        state.steps[si].status = "done";
+        state.steps[si].detail = `${res.filter((r) => r.status !== "error").length.toLocaleString()} rows`;
+        push();
         out[s.idx] = { ...v, final: res };
         if (s.save) storeSaved(s.target, s.rows[s.headerIdx] || [], s.mapping);
       }
@@ -227,7 +279,10 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       setStep(5);
       onImported?.();
     } catch (e) {
-      setError(e?.response?.data?.message || e.message);
+      const activeStep = state.steps.find((x) => x.status === "active");
+      if (activeStep) Object.assign(activeStep, { status: "error", detail: "failed" });
+      push();
+      setError(`${e?.response?.data?.message || e.message}. Rows sent before the error are saved; check the results below.`);
       setResult(out);
       setStep(5);
     } finally {
@@ -275,7 +330,6 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       <DialogContent sx={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
         <StepRail steps={STEPS.map((l, i) => ({ label: l, done: i < step }))} active={step} onChange={(i) => i < step && step < 4 && setStep(i)} ariaLabel="Import steps" />
         {error && <ErrorState title="Something went wrong" message={error} sx={{ mb: 2 }} />}
-        {busy && step !== 4 && <LinearProgress sx={{ mb: 2 }} />}
 
         {step === 0 && (
           <Box
@@ -288,11 +342,19 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
             onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
             sx={{ flex: 1, minHeight: 260, display: "grid", placeItems: "center", textAlign: "center", borderRadius: "12px", cursor: "pointer", border: `2px dashed ${drag ? "var(--accent)" : "var(--border-strong)"}`, backgroundColor: drag ? "var(--accent-subtle)" : "var(--surface-subtle)" }}
           >
+            {busy ? (
+              <Box>
+                <CircularProgress size={24} thickness={5} sx={{ color: "var(--accent)" }} />
+                <Typography sx={{ fontSize: 15, fontWeight: 600, mt: 1 }}>Reading the file…</Typography>
+                <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)", mt: 0.5 }}>Finding sheets, header rows and matching columns.</Typography>
+              </Box>
+            ) : (
             <Box>
               <UploadFileOutlined sx={{ fontSize: 40, color: "var(--text-muted)" }} />
               <Typography sx={{ fontSize: 15, fontWeight: 600, mt: 1 }}>Drop a file here or click to browse</Typography>
               <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)", mt: 0.5 }}>.xlsx, .xls or .csv · into {allowed.map((e) => E[e].short).join(", ")}</Typography>
             </Box>
+            )}
             <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => onFile(e.target.files?.[0])} />
           </Box>
         )}
@@ -347,7 +409,22 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
           </Box>
         )}
 
-        {step === 2 && cur && (
+        {step === 2 && live?.kind === "validate" && (
+          <ProgressPanel
+            title="Checking your data"
+            description="A dry run: every row is validated on the server, nothing is saved yet."
+            steps={live.steps}
+            current={live.current}
+            startedAt={live.startedAt}
+            counts={[
+              { label: "ready to create", value: live.counts.created, tone: "success" },
+              { label: "will update", value: live.counts.updated, tone: live.counts.updated ? "info" : undefined },
+              { label: "invalid", value: live.counts.failed, tone: live.counts.failed ? "danger" : undefined },
+            ]}
+          />
+        )}
+
+        {step === 2 && cur && live?.kind !== "validate" && (
           <Box sx={{ minHeight: 0, display: "flex", flexDirection: "column" }}>
             {sheetTabs}
             {missingRequired.length > 0 && (
@@ -441,12 +518,20 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
           </Box>
         )}
 
-        {step === 4 && (
-          <Box sx={{ py: 6, textAlign: "center" }}>
-            <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 2 }}>Importing… {progress}%</Typography>
-            <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4, maxWidth: 480, mx: "auto" }} />
-            <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)", mt: 1.5 }}>Rows are sent in batches of {CHUNK}. Keep this window open.</Typography>
-          </Box>
+        {step === 4 && live && (
+          <ProgressPanel
+            title="Importing"
+            description="Keep this window open until it finishes."
+            steps={live.steps}
+            current={live.current}
+            startedAt={live.startedAt}
+            counts={[
+              { label: "created", value: live.counts.created, tone: "success" },
+              { label: "updated", value: live.counts.updated, tone: live.counts.updated ? "info" : undefined },
+              { label: "skipped", value: live.counts.skipped },
+              { label: "failed", value: live.counts.failed, tone: live.counts.failed ? "danger" : undefined },
+            ]}
+          />
         )}
 
         {step === 5 && result && (
@@ -479,10 +564,10 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
         {step === 1 && <Button variant="outlined" onClick={() => setStep(0)}>Choose another file</Button>}
         {step === 1 && <Button variant="contained" disabled={!included.length} onClick={() => { setActive(included[0].idx); setStep(2); }}>Map columns</Button>}
         {step === 2 && <Button variant="outlined" onClick={() => setStep(1)}>Back</Button>}
-        {step === 2 && <Button variant="contained" disabled={!allMappedOk || busy} onClick={validate}>Validate (dry run)</Button>}
+        {step === 2 && <Button variant="contained" disabled={!allMappedOk} loading={busy} loadingPosition="start" startIcon={<span />} onClick={validate}>{busy ? "Checking…" : "Validate (dry run)"}</Button>}
         {step === 3 && <Button variant="outlined" onClick={() => setStep(2)}>Back to mapping</Button>}
         {step === 3 && (
-          <Button variant="contained" disabled={busy || !summary || summary.created + summary.updated === 0} onClick={runImport}>
+          <Button variant="contained" loading={busy} loadingPosition="start" startIcon={<span />} disabled={!summary || summary.created + summary.updated === 0} onClick={runImport}>
             Import {summary ? summary.created + summary.updated : 0} row{summary && summary.created + summary.updated === 1 ? "" : "s"}
           </Button>
         )}
