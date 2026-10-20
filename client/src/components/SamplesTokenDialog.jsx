@@ -666,15 +666,11 @@ const SamplesTokenDialog = ({ open, onClose }) => {
       maxWidth="lg"
       fullWidth
       PaperProps={{
-        sx: {
-          backgroundColor: 'var(--surface)',
-          color: 'var(--text)',
-          minHeight: '80vh'
-        }
+        sx: { minHeight: '80vh' }
       }}
     >
       {/* ── Header ── */}
-      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', pb: 1 }}>
+      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h6" component="div">Samples Token</Typography>
           <FormControl size="small" variant="standard" sx={{ minWidth: 80 }}>
@@ -699,11 +695,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
             variant="contained"
             onClick={handleManualSave}
             disabled={saving}
-            sx={{
-              backgroundColor: saveSuccess ? '#16A34A' : '#2563EB',
-              '&:hover': { backgroundColor: saveSuccess ? '#45a049' : '#1565c0' },
-              minWidth: '100px'
-            }}
+            sx={{ '&:hover': { backgroundColor: saveSuccess ? '#45a049' : '#1565c0' }, minWidth: '100px' }}
           >
             {saving ? <CircularProgress size={20} sx={{ color: 'var(--text)' }} /> : saveSuccess ? '✓ Saved' : 'Save'}
           </Button>

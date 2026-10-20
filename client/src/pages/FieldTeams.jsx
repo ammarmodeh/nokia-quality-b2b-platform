@@ -1123,28 +1123,14 @@ const FieldTeamForm = () => {
           fullWidth
           maxWidth="md"
           sx={{
-            "& .MuiDialog-paper": {
-              backgroundColor: '#000',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid var(--border)',
-              width: isMobile ? '100%' : '70%',
-            },
+            "& .MuiDialog-paper": { width: isMobile ? '100%' : '70%' },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
           }}
         >
-          <DialogTitle sx={{
-            bgcolor: 'var(--bg)',
-            borderBottom: '1px solid var(--border)',
-            color: 'var(--text)',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <HistoryIcon sx={{ color: '#0288d1' }} /> Evaluation History
           </DialogTitle>
-          <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
+          <DialogContent sx={{ p: 3 }}>
             {evaluationHistory.length === 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, color: 'var(--text-muted)' }}>
                 <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
@@ -1208,7 +1194,7 @@ const FieldTeamForm = () => {
               </Stack>
             )}
           </DialogContent>
-          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenHistoryDialog(false)} sx={{ color: 'var(--text)' }}>Close</Button>
           </DialogActions>
         </Dialog>
@@ -1221,28 +1207,14 @@ const FieldTeamForm = () => {
           fullWidth
           maxWidth="md"
           sx={{
-            "& .MuiDialog-paper": {
-              backgroundColor: '#000',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid var(--border)',
-              width: isMobile ? '100%' : '70%',
-            },
+            "& .MuiDialog-paper": { width: isMobile ? '100%' : '70%' },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
           }}
         >
-          <DialogTitle sx={{
-            bgcolor: 'var(--bg)',
-            borderBottom: '1px solid var(--border)',
-            color: 'var(--text)',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <HistoryIcon sx={{ color: 'var(--accent-text)' }} /> State Logs
           </DialogTitle>
-          <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
+          <DialogContent sx={{ p: 3 }}>
             {selectedLogs.length === 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, color: 'var(--text-muted)' }}>
                 <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
@@ -1295,7 +1267,7 @@ const FieldTeamForm = () => {
               </Stack>
             )}
           </DialogContent>
-          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={handleCloseLogsDialog} sx={{ color: 'var(--text)' }}>Close</Button>
           </DialogActions>
         </Dialog>
@@ -1308,25 +1280,14 @@ const FieldTeamForm = () => {
           fullWidth
           maxWidth="sm"
           sx={{
-            "& .MuiDialog-paper": {
-              backgroundColor: '#000',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid var(--border)',
-              width: isMobile ? '100%' : '70%',
-            },
+            "& .MuiDialog-paper": { width: isMobile ? '100%' : '70%' },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
           }}
         >
-          <DialogTitle sx={{
-            bgcolor: 'var(--bg)',
-            borderBottom: '1px solid var(--border)',
-            color: 'var(--text)',
-            fontWeight: 600,
-          }}>
+          <DialogTitle>
             Mark Team as On Leave
           </DialogTitle>
-          <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
+          <DialogContent sx={{ p: 3 }}>
             <Stack spacing={2} sx={{ mt: 1 }}>
               <FormControlLabel
                 control={
@@ -1375,9 +1336,9 @@ const FieldTeamForm = () => {
               </Box>
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenOnLeaveDialog(false)} sx={{ color: 'var(--text)' }}>Cancel</Button>
-            <Button onClick={handleConfirmOnLeave} variant="contained" sx={{ bgcolor: '#0288d1', '&:hover': { bgcolor: '#0277bd' } }}>
+            <Button onClick={handleConfirmOnLeave} variant="contained">
               Confirm Leave
             </Button>
           </DialogActions>
@@ -1391,25 +1352,14 @@ const FieldTeamForm = () => {
           fullWidth
           maxWidth="sm"
           sx={{
-            "& .MuiDialog-paper": {
-              backgroundColor: '#000',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid var(--border)',
-              width: isMobile ? '100%' : '70%',
-            },
+            "& .MuiDialog-paper": { width: isMobile ? '100%' : '70%' },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
           }}
         >
-          <DialogTitle sx={{
-            bgcolor: 'var(--bg)',
-            borderBottom: '1px solid var(--border)',
-            color: 'var(--text)',
-            fontWeight: 600,
-          }}>
+          <DialogTitle>
             Mark Team as Resigned
           </DialogTitle>
-          <DialogContent sx={{ bgcolor: '#000', color: '#fff', p: 3 }}>
+          <DialogContent sx={{ p: 3 }}>
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField
                 label="Resignation Reason"
@@ -1419,9 +1369,9 @@ const FieldTeamForm = () => {
               />
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenResignedDialog(false)} sx={{ color: 'var(--text)' }}>Cancel</Button>
-            <Button onClick={handleConfirmResigned} variant="contained" sx={{ bgcolor: '#6C47FF', '&:hover': { bgcolor: '#7b1fa2' } }}>
+            <Button onClick={handleConfirmResigned} variant="contained">
               Confirm Resignation
             </Button>
           </DialogActions>
@@ -1538,17 +1488,9 @@ const FieldTeamForm = () => {
           onClose={() => setOpenEscalationDialog(false)}
           maxWidth="md"
           fullWidth
-          PaperProps={{
-            sx: {
-              bgcolor: 'var(--bg)',
-              color: 'var(--text)',
-              border: '1px solid var(--border)',
-              borderRadius: "10px",
-              boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
-            }
-          }}
+         
         >
-          <DialogTitle sx={{ borderBottom: '1px solid #222', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <DialogTitle sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <GavelIcon sx={{ color: '#DB2777', fontSize: 28 }} />
               <Box>
@@ -1800,7 +1742,7 @@ const FieldTeamForm = () => {
             )}
           </DialogContent>
 
-          <DialogActions sx={{ p: 2.5, borderTop: '1px solid #222', gap: 1.5 }}>
+          <DialogActions sx={{ p: 2.5, gap: 1.5 }}>
             <Button onClick={() => setOpenEscalationDialog(false)} sx={{ color: 'var(--text-secondary)' }}>
               Close
             </Button>
@@ -1809,13 +1751,7 @@ const FieldTeamForm = () => {
                 variant="contained"
                 onClick={handleSaveEscalation}
                 disabled={loading}
-                sx={{
-                  bgcolor: '#DB2777',
-                  color: 'var(--text)',
-                  fontWeight: 600,
-                  px: 3,
-                  '&:hover': { bgcolor: '#db2777' }
-                }}
+                sx={{ px: 3, '&:hover': { bgcolor: '#db2777' } }}
               >
                 Save & Record Warning to History
               </Button>

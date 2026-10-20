@@ -265,23 +265,10 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
       onClose={onClose}
       fullScreen
       PaperProps={{
-        sx: {
-          bgcolor: 'var(--bg)',
-          backgroundImage: 'none',
-          borderRadius: isMobile ? 0 : 4,
-          border: isMobile ? 'none' : `1px solid ${colors.border}`,
-          overflow: 'hidden'
-        }
+        sx: { overflow: 'hidden' }
       }}
     >
-      <DialogTitle sx={{
-        p: 2.5,
-        bgcolor: 'var(--overlay-subtle)',
-        borderBottom: `1px solid ${colors.border}`,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
+      <DialogTitle sx={{ p: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Avatar sx={{ bgcolor: `${colors.primary}20`, color: colors.primary }}>
             <MdOutlineBugReport size={24} />
@@ -312,7 +299,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
         </Stack>
       </DialogTitle>
 
-      <DialogContent sx={{ p: isMobile ? 2 : 4, bgcolor: 'var(--bg)' }}>
+      <DialogContent sx={{ p: isMobile ? 2 : 4 }}>
         <StatusTimeline issue={issue} />
 
         <Grid container spacing={isMobile ? 2 : 4}>
@@ -438,19 +425,13 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, bgcolor: 'var(--overlay-subtle)', borderTop: `1px solid ${colors.border}`, gap: 1 }}>
+      <DialogActions sx={{ p: 2, gap: 1 }}>
         {isAdmin && (
           <Button
             onClick={() => setOpenEditDialog(true)}
             variant="contained"
             startIcon={<MdEdit />}
-            sx={{
-              bgcolor: colors.primary,
-              '&:hover': { bgcolor: 'var(--accent-hover)' },
-              textTransform: 'none',
-              borderRadius: 2,
-              px: 3
-            }}
+            sx={{ px: 3 }}
           >
             Edit Details
           </Button>

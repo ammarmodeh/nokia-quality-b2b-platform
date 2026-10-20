@@ -288,22 +288,9 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                 onClose={onClose}
                 maxWidth="lg"
                 fullWidth
-                PaperProps={{
-                    sx: {
-                        borderRadius: "10px",
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1c1c1c' : '#ffffff',
-                    }
-                }}
+               
             >
-                <DialogTitle sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    pb: 1.5,
-                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.02)
-                }}>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1.5 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <MdHistory size={26} color="var(--accent-text)" />
                         <Typography variant="h6" fontWeight={600} sx={{ letterSpacing: -0.5 }}>
@@ -749,7 +736,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                     )}
                 </DialogContent>
 
-                <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: alpha('#f0f0f0', 0.5) }}>
+                <DialogActions sx={{ p: 2 }}>
                     <Button onClick={editingTicket ? resetForm : onClose} sx={{ fontWeight: 600, color: 'text.secondary', px: 3, borderRadius: 2 }}>
                         {editingTicket ? "DISCARD CHANGES" : "CLOSE LOG"}
                     </Button>
@@ -758,7 +745,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                             variant="contained"
                             onClick={handleSubmit}
                             disabled={loading}
-                            sx={{ borderRadius: 2, fontWeight: 600, bgcolor: 'var(--accent)', px: 4, '&:hover': { bgcolor: '#6854d9' } }}
+                            sx={{ px: 4, '&:hover': { bgcolor: '#6854d9' } }}
                         >
                             {loading ? "TRANSMITTING..." : (editingTicket ? "UPDATE RECORD" : "COMMIT TRANSACTION")}
                         </Button>
@@ -767,7 +754,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
             </Dialog>
 
             {/* Sub-Dialog: Detailed View */}
-            <Dialog open={!!viewingTicket} onClose={() => setViewingTicket(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "10px", p: 1 } }}>
+            <Dialog open={!!viewingTicket} onClose={() => setViewingTicket(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <MdVisibility color="#7bc" size={24} />
@@ -829,7 +816,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
 
             {/* Sub-Dialog: Confirmation Delete */}
             <Dialog open={!!deletingTicket} onClose={() => setDeletingTicket(null)}>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <MdWarning size={28} /> Confirm Irreversible Deletion
                 </DialogTitle>
                 <DialogContent>
@@ -855,7 +842,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
             </Dialog>
 
             {/* Specific Cell Content Viewer */}
-            <Dialog open={cellViewer.open} onClose={() => setCellViewer({ ...cellViewer, open: false })} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: "10px", p: 1 } }}>
+            <Dialog open={cellViewer.open} onClose={() => setCellViewer({ ...cellViewer, open: false })} maxWidth="xs" fullWidth>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
                     <Typography variant="subtitle2" fontWeight={600} color="text.secondary">{cellViewer.title}</Typography>
                     <IconButton onClick={() => setCellViewer({ ...cellViewer, open: false })} size="small"><MdClose /></IconButton>

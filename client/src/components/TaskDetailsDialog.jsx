@@ -354,22 +354,9 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
         open={open}
         onClose={onClose}
         fullScreen
-        PaperProps={{
-          sx: {
-            bgcolor: 'var(--bg)',
-            backgroundImage: 'none'
-          }
-        }}
+       
       >
-        <DialogTitle sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          bgcolor: 'var(--surface)',
-          borderBottom: '1px solid var(--border)',
-          py: 2,
-          px: 3
-        }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, px: 3 }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Box sx={{
               width: 40, height: 40, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.2),
@@ -411,7 +398,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ bgcolor: 'var(--bg)', p: { xs: 2, md: 4 } }}>
+        <DialogContent sx={{ p: { xs: 2, md: 4 } }}>
           <Stack spacing={4}>
             {tasks.map((task, index) => (
               <Paper
@@ -619,7 +606,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                                     </TableRow>
                                   ) : qopsLogs.length > 0 ? (
                                     qopsLogs.map((log, i) => (
-                                      <TableRow key={i} sx={{ '&:hover': { bgcolor: 'var(--surface)' } }}>
+                                      <TableRow key={i}>
                                         <TableCell sx={{ color: 'var(--text)' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
                                         <TableCell sx={{ color: 'var(--text)' }}>
                                           <Typography variant="body2" fontSize="0.75rem">{log.transactionType || log.mainCategory}</Typography>
@@ -656,12 +643,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{
-          bgcolor: 'var(--surface)',
-          borderTop: '1px solid var(--border)',
-          p: 2,
-          justifyContent: 'space-between'
-        }}>
+        <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={onClose} sx={{ color: 'gray' }}>
             Close Preview
           </Button>
@@ -669,10 +651,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
             onClick={exportToExcel}
             variant="contained"
             startIcon={<MdFileDownload />}
-            sx={{
-              bgcolor: theme.palette.primary.main,
-              '&:hover': { bgcolor: theme.palette.primary.dark }
-            }}
+            sx={{ '&:hover': { bgcolor: theme.palette.primary.dark } }}
           >
             Export Details to Excel
           </Button>

@@ -93,22 +93,8 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
             onClose={onClose}
             maxWidth="lg"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: 2,
-                    bgcolor: 'var(--surface)', // Dark theme background
-                    backgroundImage: 'none'
-                }
-            }}
         >
-            <DialogTitle sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                borderBottom: '1px solid var(--border)',
-                bgcolor: 'var(--surface)',
-                color: 'var(--text)'
-            }}>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <MdHistory size={24} color="var(--accent-text)" />
                     <Typography variant="h6" fontWeight={600}>
@@ -127,7 +113,7 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                 </Stack>
             </DialogTitle>
 
-            <DialogContent sx={{ p: 0, bgcolor: 'var(--surface)', display: 'flex', flexDirection: 'column', height: '70vh' }}>
+            <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', height: '70vh' }}>
                 {task && (
                     <Box sx={{ p: 2, bgcolor: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
                         <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 600, letterSpacing: 1 }}>
@@ -198,9 +184,7 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                             ) : tickets.map((ticket, index) => (
                                 <TableRow
                                     key={ticket._id || index}
-                                    sx={{
-                                        '&:hover': { bgcolor: 'var(--surface-hover)' },
-                                        borderBottom: '1px solid var(--border)'
+                                    sx={{ borderBottom: '1px solid var(--border)'
                                     }}
                                 >
                                     <TableCell>
@@ -271,7 +255,7 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
 
             </DialogContent>
 
-            <DialogActions sx={{ p: 2, bgcolor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+            <DialogActions sx={{ p: 2 }}>
                 <Button onClick={onClose} sx={{ color: 'var(--text-secondary)' }}>Close</Button>
             </DialogActions>
         </Dialog>

@@ -488,16 +488,9 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: 'var(--bg)',
-          color: 'var(--text)',
-          borderRadius: "10px",
-          backgroundImage: 'none',
-        },
-      }}
+     
     >
-      <DialogTitle sx={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <EmailIcon sx={{ color: 'primary.main' }} />
           <Typography variant="h6" fontWeight="600">Generate Management Report</Typography>
@@ -565,7 +558,7 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ borderTop: '1px solid var(--border)', p: 2, justifyContent: 'space-between' }}>
+      <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
         <Typography variant="caption" color="grey.500" sx={{ ml: 1 }}>
           * Stats are automatically calculated based on current dashboard data.
         </Typography>

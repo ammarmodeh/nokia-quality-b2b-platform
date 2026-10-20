@@ -53,44 +53,20 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
       fullWidth
       maxWidth="md"
       sx={{
-        "& .MuiDialog-paper": {
-          backgroundColor: 'var(--surface)',
-          boxShadow: 'none',
-          borderRadius: isMobile ? 0 : '8px',
-          border: isMobile ? 'none' : '1px solid #e5e7eb',
-          margin: 0,
-          width: isMobile ? '100%' : '70%',
-          maxWidth: '100%'
-        }
+        "& .MuiDialog-paper": { margin: 0, width: isMobile ? '100%' : '70%', maxWidth: '100%' }
       }}
     >
-      <DialogTitle sx={{
-        backgroundColor: 'var(--surface)',
-        color: 'var(--text)',
-        borderBottom: '1px solid var(--border)',
-        padding: isMobile ? '12px 16px' : '16px 24px',
-        fontWeight: 500,
-        position: 'sticky',
-        top: 0,
-        zIndex: 1
-      }}>
+      <DialogTitle sx={{ padding: isMobile ? '12px 16px' : '16px 24px', position: 'sticky', top: 0, zIndex: 1 }}>
         Suspend Team
       </DialogTitle>
-      <DialogContent sx={{
-        backgroundColor: 'var(--surface)',
-        color: 'var(--text)',
-        padding: isMobile ? '12px 16px' : '20px 24px',
-        '&::-webkit-scrollbar': {
+      <DialogContent sx={{ padding: isMobile ? '12px 16px' : '20px 24px', '&::-webkit-scrollbar': {
           width: '4px',
-        },
-        '&::-webkit-scrollbar-thumb': {
+        }, '&::-webkit-scrollbar-thumb': {
           backgroundColor: '#e5e7eb',
           borderRadius: '2px',
-        },
-        "&.MuiDialogContent-root": {
+        }, "&.MuiDialogContent-root": {
           paddingTop: 3,
-        }
-      }}>
+        } }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Controller
             name="suspensionStartDate"
@@ -158,13 +134,7 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
           />
         </form>
       </DialogContent>
-      <DialogActions sx={{
-        backgroundColor: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: isMobile ? '8px 16px' : '12px 24px',
-        position: 'sticky',
-        bottom: 0
-      }}>
+      <DialogActions sx={{ padding: isMobile ? '8px 16px' : '12px 24px', position: 'sticky', bottom: 0 }}>
         <Button
           onClick={onClose}
           size={isMobile ? "small" : "medium"}
@@ -181,13 +151,9 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
           onClick={handleSubmit(onSubmit)}
           variant="contained"
           size={isMobile ? "small" : "medium"}
-          sx={{
-            backgroundColor: 'var(--accent)',
-            color: '#f9fafb',
-            '&:hover': {
+          sx={{ '&:hover': {
               backgroundColor: '#2563EB'
-            }
-          }}
+            } }}
         >
           Suspend
         </Button>

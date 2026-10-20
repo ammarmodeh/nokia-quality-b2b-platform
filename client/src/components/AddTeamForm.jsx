@@ -316,15 +316,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         disabled={loading || user.role !== 'Admin'}
         startIcon={loading ? null : <Add />}
         disableElevation
-        sx={{
-          mt: 4,
-          bgcolor: 'var(--accent)',
-          color: 'var(--text)',
-          py: 1.2,
-          fontWeight: '600',
-          '&:hover': { bgcolor: '#6652e0' },
-          '&.Mui-disabled': { bgcolor: 'var(--surface-hover)', color: 'var(--text-muted)' }
-        }}
+        sx={{ mt: 4, py: 1.2, '&:hover': { bgcolor: '#6652e0' } }}
       >
         {loading ? 'Adding...' : 'Create Team'}
       </Button>

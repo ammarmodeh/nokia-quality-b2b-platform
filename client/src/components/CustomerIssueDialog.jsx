@@ -504,64 +504,26 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
     },
   };
 
-  const cancelButtonStyles = {
-    color: 'var(--text)',
-    backgroundColor: 'var(--border-strong)',
-    '&:hover': {
-      backgroundColor: 'var(--text-muted)',
-    },
-  };
 
-  const submitButtonStyles = {
-    color: 'var(--text)',
-    backgroundColor: isAdmin ? '#2563EB' : 'var(--border-strong)',
-    '&:hover': {
-      backgroundColor: isAdmin ? '#1565c0' : 'var(--border-strong)',
-    },
-    cursor: isAdmin ? 'pointer' : 'not-allowed',
-  };
 
-  const resetButtonStyle = {
-    color: 'var(--text)',
-    backgroundColor: '#b91c1c', // Deep Red
-    '&:hover': {
-      backgroundColor: '#991b1b', // Darker Red
-    },
-    mr: 'auto' // Push to the left
-  };
 
   return (
     <Dialog
       open={open}
       onClose={handleClose}
-      fullScreen
-      sx={{
-        "& .MuiDialog-paper": {
-          backgroundColor: 'var(--surface)',
-          boxShadow: 'none',
-          borderRadius: fullScreen ? '0px' : '8px',
-        }
-      }}
+      fullScreen={fullScreen}
+      maxWidth="lg"
+      fullWidth
     >
-      <DialogTitle sx={{
-        backgroundColor: 'var(--surface)',
-        color: 'var(--text)',
-        borderBottom: '1px solid var(--border)',
-        padding: '16px 24px',
-      }}>
+      <DialogTitle>
         <Typography variant="h6" component="div">
           {issue ? 'Edit OJO snag' : 'Report OJO snag'}
         </Typography>
       </DialogTitle>
 
-      <DialogContent dividers sx={{
-        backgroundColor: 'var(--surface)',
-        color: 'var(--text)',
-        padding: '20px 24px',
-        '&.MuiDialogContent-root': {
+      <DialogContent dividers sx={{ padding: '20px 24px', '&.MuiDialogContent-root': {
           padding: '20px 24px',
-        },
-      }}>
+        } }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Section 1: Customer & Reported Date */}
           <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, p: 2 }}>
@@ -1208,33 +1170,14 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       </DialogContent >
 
 
-      <DialogActions sx={{
-        backgroundColor: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: '12px 24px',
-        justifyContent: 'space-between' // Ensure space between reset and other buttons
-      }}>
-        <Button
-          onClick={handleReset}
-          sx={resetButtonStyle}
-          disabled={!isAdmin}
-        >
-          Reset Form
+      <DialogActions sx={{ justifyContent: 'space-between' }}>
+        <Button variant="text" onClick={handleReset} disabled={!isAdmin} sx={{ color: 'var(--text-secondary)' }}>
+          Reset form
         </Button>
-        <Box>
-          <Button
-            onClick={handleClose}
-            sx={{ ...cancelButtonStyles, mr: 1 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={!isAdmin}
-            sx={submitButtonStyles}
-          >
-            Submit
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" onClick={handleClose}>Cancel</Button>
+          <Button variant="contained" onClick={handleSubmit} disabled={!isAdmin}>
+            {issue ? 'Save changes' : 'Submit'}
           </Button>
         </Box>
       </DialogActions>
@@ -1245,23 +1188,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         onClose={() => setDuplicateDialogOpen(false)}
         maxWidth="md"
         fullWidth
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: 'var(--surface)', // Darker background for warning
-            color: 'var(--text)',
-            borderRadius: "10px",
-            border: '1px solid #D97706', // Amber warning border
-          }
-        }}
+       
       >
-        <DialogTitle sx={{
-          backgroundColor: 'rgba(217, 119, 6, 0.15)', // Amber tint
-          color: '#D97706',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          borderBottom: '1px solid rgba(217, 119, 6, 0.3)'
-        }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <MdHistory size={24} />
           <Typography variant="h6" fontWeight="600">
             Existing Issue(s) Found
@@ -1321,16 +1250,11 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             ))}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: '1px solid var(--border)' }}>
+        <DialogActions>
           <Button
             onClick={() => setDuplicateDialogOpen(false)}
             variant="contained"
-            sx={{
-              backgroundColor: '#D97706',
-              color: '#000',
-              fontWeight: '600',
-              '&:hover': { backgroundColor: '#d97706' }
-            }}
+            sx={{ '&:hover': { backgroundColor: '#d97706' } }}
           >
             Acknowledge & Continue
           </Button>

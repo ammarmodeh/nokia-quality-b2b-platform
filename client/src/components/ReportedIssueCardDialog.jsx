@@ -185,25 +185,11 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
       open={open}
       onClose={onClose}
       fullScreen
-      sx={{
-        "& .MuiDialog-paper": {
-          backgroundColor: 'var(--surface)',
-          boxShadow: 'none',
-          borderRadius: isMobile ? 0 : '8px',
-        }
-      }}
+     
     >
       {detailView ? (
         <>
-          <DialogTitle component="div" sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            borderBottom: '1px solid var(--border)',
-            padding: isMobile ? '12px 16px' : '16px 24px',
-          }}>
+          <DialogTitle component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '12px 16px' : '16px 24px' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <IconButton
                 onClick={handleBackToList}
@@ -267,18 +253,12 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
             </Box>
           </DialogTitle>
 
-          <DialogContent dividers sx={{
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            padding: isMobile ? '12px 16px' : '20px 24px',
-            '&::-webkit-scrollbar': {
+          <DialogContent dividers sx={{ padding: isMobile ? '12px 16px' : '20px 24px', '&::-webkit-scrollbar': {
               width: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
+            }, '&::-webkit-scrollbar-thumb': {
               backgroundColor: '#e5e7eb',
               borderRadius: '2px',
-            },
-          }}>
+            } }}>
             <Stack spacing={isMobile ? 2 : 3}>
               {/* SLID */}
               <Box>
@@ -464,15 +444,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
         </>
       ) : (
         <>
-          <DialogTitle component="div" sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            borderBottom: '1px solid var(--border)',
-            padding: isMobile ? '12px 16px' : '16px 24px',
-          }}>
+          <DialogTitle component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '12px 16px' : '16px 24px' }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <FaInfoCircle color="var(--accent-text)" size={isMobile ? 16 : 20} />
               <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ ml: 1, fontWeight: 500 }}>
@@ -509,18 +481,12 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
             </Box>
           </DialogTitle>
 
-          <DialogContent dividers sx={{
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            padding: 0,
-            '&::-webkit-scrollbar': {
+          <DialogContent dividers sx={{ padding: 0, '&::-webkit-scrollbar': {
               width: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
+            }, '&::-webkit-scrollbar-thumb': {
               backgroundColor: '#e5e7eb',
               borderRadius: '2px',
-            },
-          }}>
+            } }}>
             <List>
               {teamIssues.map((issue, index) => (
                 <ListItem
@@ -585,11 +551,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
         </>
       )}
 
-      <DialogActions sx={{
-        backgroundColor: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: isMobile ? '8px 16px' : '12px 24px',
-      }}>
+      <DialogActions sx={{ padding: isMobile ? '8px 16px' : '12px 24px' }}>
         <Button
           onClick={onClose}
           size={isMobile ? "small" : "medium"}

@@ -104,15 +104,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
       fullWidth={!isMobile}
       fullScreen={isMobile}
       maxWidth="md"
-      PaperProps={{
-        sx: {
-          bgcolor: '#000',
-          backgroundImage: 'linear-gradient(180deg, #1a1a1a 0%, #000 100%)',
-          border: '1px solid var(--border)',
-          borderRadius: isMobile ? 0 : 3,
-          boxShadow: '0 24px 48px rgba(0,0,0,0.8)',
-        }
-      }}
+     
     >
       {/* Header */}
       <DialogTitle sx={{ p: 0 }}>
@@ -485,24 +477,12 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{
-        bgcolor: '#000',
-        borderTop: '1px solid var(--border)',
-        p: 3,
-        justifyContent: 'center'
-      }}>
+      <DialogActions sx={{ p: 3, justifyContent: 'center' }}>
         <Button
           onClick={onClose}
           variant="contained"
           size="large"
-          sx={{
-            bgcolor: 'var(--surface)',
-            color: 'var(--text)',
-            minWidth: 200,
-            textTransform: 'none',
-            fontWeight: 600,
-            '&:hover': { bgcolor: 'var(--surface-hover)' }
-          }}
+          sx={{ minWidth: 200, '&:hover': { bgcolor: 'var(--surface-hover)' } }}
         >
           Close View
         </Button>

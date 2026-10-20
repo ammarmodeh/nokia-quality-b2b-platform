@@ -9,22 +9,9 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
             onClose={onClose}
             maxWidth="sm"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: "10px",
-                    bgcolor: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-                }
-            }}
+           
         >
-            <DialogTitle sx={{
-                borderBottom: '1px solid var(--border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                bgcolor: alpha('#6C47FF', 0.05)
-            }}>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <MdSearch color="var(--accent-text)" size={24} />
                     <Typography variant="h6" fontWeight={600}>Advanced Audit Engine</Typography>
@@ -108,7 +95,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                     </Grid>
                 </Stack>
             </DialogContent>
-            <DialogActions sx={{ p: 3, borderTop: '1px solid var(--border)', bgcolor: alpha('#000', 0.2) }}>
+            <DialogActions sx={{ p: 3 }}>
                 <Button
                     onClick={onClear}
                     sx={{ color: 'var(--text-secondary)', fontWeight: 600 }}
@@ -119,12 +106,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                 <Button
                     variant="contained"
                     onClick={onInitiate}
-                    sx={{
-                        bgcolor: 'var(--accent)',
-                        fontWeight: 600,
-                        px: 4,
-                        '&:hover': { bgcolor: '#6854d9' }
-                    }}
+                    sx={{ px: 4, '&:hover': { bgcolor: '#6854d9' } }}
                 >
                     INITIATE SEARCH
                 </Button>

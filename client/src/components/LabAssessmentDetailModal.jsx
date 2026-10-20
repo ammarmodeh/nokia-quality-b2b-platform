@@ -316,15 +316,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: colors?.surface || "var(--border)",
-          color: colors?.textPrimary || "#fff",
-          borderRadius: "10px",
-          border: `1px solid ${colors?.border || "var(--border)"}`,
-          boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
-        },
-      }}
+     
     >
       {/* Header Bar */}
       <Box
@@ -368,14 +360,6 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             size="small"
             startIcon={<FileDownloadIcon />}
             onClick={handleExportArabicExcel}
-            sx={{
-              bgcolor: "#16A34A",
-              "&:hover": { bgcolor: "#1b5e20" },
-              color: "var(--text)",
-              fontWeight: 600,
-              borderRadius: "10px",
-              boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
-            }}
           >
             Arabic Excel (تقرير Excel)
           </Button>
@@ -384,14 +368,6 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             size="small"
             startIcon={<FileDownloadIcon />}
             onClick={() => exportIndividualLabAssessmentReport(assessment)}
-            sx={{
-              bgcolor: "#16A34A",
-              "&:hover": { bgcolor: "#1b5e20" },
-              color: "var(--text)",
-              fontWeight: 600,
-              borderRadius: "10px",
-              boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
-            }}
           >
             Excel Report (.xlsx)
           </Button>
@@ -898,8 +874,8 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, borderTop: `1px solid ${colors?.border || "var(--border)"}` }}>
-        <Button onClick={onClose} variant="contained" sx={{ bgcolor: "var(--accent)", "&:hover": { bgcolor: "var(--accent-hover)" }, borderRadius: "10px", px: 4 }}>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={onClose} variant="contained" sx={{ px: 4 }}>
           Close Report
         </Button>
       </DialogActions>

@@ -10655,14 +10655,7 @@ const AllTasksList = () => {
                 onClick={() => {
                   setDateFilter({ start: tempStartDate, end: tempEndDate, type: 'custom' });
                 }}
-                sx={{
-                  borderRadius: "10px",
-                  textTransform: 'none',
-                  flexShrink: 0,
-                  fontSize: '0.75rem',
-                  backgroundColor: 'var(--accent)',
-                  '&:hover': { backgroundColor: 'var(--accent-hover)' }
-                }}
+                sx={{ flexShrink: 0, fontSize: '0.75rem', '&:hover': { backgroundColor: 'var(--accent-hover)' } }}
               >
                 Apply
               </Button>
@@ -10799,14 +10792,7 @@ const AllTasksList = () => {
                 onClick={() => {
                   setCumulativeDateFilter({ start: tempAccStartDate, end: tempAccEndDate, type: 'custom' });
                 }}
-                sx={{
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  flexShrink: 0,
-                  fontSize: '0.75rem',
-                  backgroundColor: 'var(--accent)',
-                  '&:hover': { backgroundColor: 'var(--accent-hover)' }
-                }}
+                sx={{ flexShrink: 0, fontSize: '0.75rem', '&:hover': { backgroundColor: 'var(--accent-hover)' } }}
               >
                 Apply Acc.
               </Button>
@@ -12035,7 +12021,7 @@ const AllTasksList = () => {
               </TableHead>
               <TableBody>
                 {drillDownState.tasks.map((task) => (
-                  <TableRow key={task._id} sx={{ '&:hover': { bgcolor: 'var(--overlay-subtle)' } }}>
+                  <TableRow key={task._id}>
                     <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
                       {task.interviewDate ? format(new Date(task.interviewDate), 'dd/MM/yyyy') : '-'}
                     </TableCell>

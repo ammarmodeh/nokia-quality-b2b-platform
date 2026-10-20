@@ -97,51 +97,22 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
       fullWidth
       maxWidth="md"
       sx={{
-        "& .MuiDialog-paper": {
-          backgroundColor: '#000000',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-          borderRadius: isMobile ? 0 : '16px',
-          border: '1px solid var(--border)',
-          margin: 0,
-          width: isMobile ? '100%' : '70%',
-          maxWidth: '100%'
-        }
+        "& .MuiDialog-paper": { margin: 0, width: isMobile ? '100%' : '70%', maxWidth: '100%' }
       }}
     >
       <form onSubmit={handleSubmit(handleFormSubmit)}>
-        <DialogTitle sx={{
-          backgroundColor: 'var(--bg)',
-          color: 'var(--text)',
-          borderBottom: '1px solid var(--border)',
-          padding: isMobile ? '16px 20px' : '20px 32px',
-          fontWeight: 600,
-          letterSpacing: '-0.5px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2
-        }}>
+        <DialogTitle sx={{ padding: isMobile ? '16px 20px' : '20px 32px', position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
           <AccountCircle sx={{ color: 'var(--accent-text)' }} />
           Edit Team Information
         </DialogTitle>
-        <DialogContent sx={{
-          backgroundColor: 'var(--bg)',
-          color: 'var(--text)',
-          padding: isMobile ? '20px' : '32px',
-          '&::-webkit-scrollbar': {
+        <DialogContent sx={{ padding: isMobile ? '20px' : '32px', '&::-webkit-scrollbar': {
             width: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
+          }, '&::-webkit-scrollbar-thumb': {
             backgroundColor: 'var(--surface-hover)',
             borderRadius: '2px',
-          },
-          height: '100%',
-          "&.MuiDialogContent-root": {
+          }, height: '100%', "&.MuiDialogContent-root": {
             paddingTop: 4,
-          }
-        }}>
+          } }}>
           {/* Section: Personal Info */}
           <Typography variant="overline" sx={{ color: 'var(--text-muted)', fontWeight: '600', mb: 2, display: 'block' }}>
             Personal Details
@@ -525,14 +496,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
           )}
 
         </DialogContent>
-        <DialogActions sx={{
-          backgroundColor: 'var(--bg)',
-          borderTop: '1px solid var(--border)',
-          padding: isMobile ? '16px' : '20px 32px',
-          position: 'sticky',
-          bottom: 0,
-          gap: 2
-        }}>
+        <DialogActions sx={{ padding: isMobile ? '16px' : '20px 32px', position: 'sticky', bottom: 0, gap: 2 }}>
           <Button
             onClick={onClose}
             sx={{
@@ -547,14 +511,7 @@ const EditTeamDialog = ({ open, onClose, team, onSubmit, loading, errorMessage }
             variant="contained"
             disableElevation
             disabled={loading}
-            sx={{
-              backgroundColor: 'var(--accent)',
-              color: 'var(--text)',
-              px: 4,
-              py: 1,
-              '&:hover': { backgroundColor: '#6652e0' },
-              '&.Mui-disabled': { backgroundColor: 'var(--surface-hover)', color: 'var(--text-muted)' }
-            }}
+            sx={{ px: 4, py: 1, '&:hover': { backgroundColor: '#6652e0' } }}
           >
             {loading ? 'Saving Changes...' : 'Save Changes'}
           </Button>
