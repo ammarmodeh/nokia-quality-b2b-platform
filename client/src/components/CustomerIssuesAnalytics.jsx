@@ -1,34 +1,8 @@
-import { alpha } from "../theme/colorFns";
 import { tok } from "../theme/tokens";
 import { useMemo, useState } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  useTheme,
-  useMediaQuery,
-  Paper,
-  Stack,
-  TextField,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Divider,
-  IconButton,
-  TablePagination,
-  Avatar,
-  Tooltip,
-  Checkbox,
-} from '@mui/material';
+import { utils, writeFile } from 'xlsx';
+import { Box, Button, Checkbox, IconButton, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,16 +16,25 @@ import {
   LineElement,
   TimeScale
 } from 'chart.js';
-import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
-import { FaCheckCircle, FaExclamationCircle, FaClipboardList, FaChartLine, FaFilter, FaSearch, FaTimes, FaCalendarAlt, FaUserTie, FaFileExcel, FaFileExport, FaInfoCircle } from 'react-icons/fa';
-import { utils, writeFile } from 'xlsx';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import SearchIcon from '@mui/icons-material/Search';
+import EmailOutlined from '@mui/icons-material/EmailOutlined';
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
+import FilterAltOffOutlined from '@mui/icons-material/FilterAltOffOutlined';
 import ViewIssueDetailsDialog from './ViewIssueDetailsDialog';
 import ManagementEmailDialog from './ManagementEmailDialog';
-import { FaEnvelope, FaLanguage } from 'react-icons/fa';
-
 import { ReportedIssueCardDialog } from './ReportedIssueCardDialog';
-import { Email as EmailIconUI } from '@mui/icons-material';
+import AppDialog from './ui/AppDialog';
+import SectionCard from './ui/SectionCard';
+import StatCard from './ui/StatCard';
+import Badge from './ui/Badge';
+import EmptyState from './ui/EmptyState';
+import SegmentedControl from './ui/SegmentedControl';
+import { UserAvatar } from './ui/AvatarGroup';
+import { gridSx } from '../pages/tasks/gridSx';
+import { exportRows } from '../utils/exportRows';
 import api from '../api/api';
 import { toast } from 'sonner';
 import { FaWhatsapp } from 'react-icons/fa6';
@@ -71,26 +54,7 @@ ChartJS.register(
 );
 
 const CustomerIssuesAnalytics = ({ issues = [] }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const [assigneeSearch, setAssigneeSearch] = useState('');
-  const [assigneeSort, setAssigneeSort] = useState({ field: 'total', direction: 'desc' });
   const [selectedTeam, setSelectedTeam] = useState(null);
-
-  const [filters, setFilters] = useState({
-    status: 'all',
-    category: 'all',
-    minIssues: 0
-  });
-
-  const [installingTeamFilters, setInstallingTeamFilters] = useState({
-    status: 'all',
-    category: 'all',
-    minIssues: 0
-  });
-  const [installingTeamSearch, setInstallingTeamSearch] = useState('');
-  const [installingTeamSort, setInstallingTeamSort] = useState({ field: 'total', direction: 'desc' });
 
   const [selectedDetailedIssue, setSelectedDetailedIssue] = useState(null);
   const [isIssueViewOpen, setIsIssueViewOpen] = useState(false);
@@ -100,15 +64,11 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
 
   const [negligenceSupervisorFilter, setNegligenceSupervisorFilter] = useState('all');
   const [negligenceSearch, setNegligenceSearch] = useState('');
-  const [negligencePage, setNegligencePage] = useState(0);
-  const [negligenceRowsPerPage, setNegligenceRowsPerPage] = useState(10);
 
   // --- Team Leaderboard (Ranking) State ---
   const [leaderboardSearch, setLeaderboardSearch] = useState('');
   const [leaderboardStatusFilter, setLeaderboardStatusFilter] = useState('all');
-  const [leaderboardPage, setLeaderboardPage] = useState(0);
-  const [leaderboardRowsPerPage, setLeaderboardRowsPerPage] = useState(10);
-  const [leaderboardSort, setLeaderboardSort] = useState({ field: 'total', direction: 'desc' });
+  const [leaderboardSort] = useState({ field: 'total', direction: 'desc' });
 
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
@@ -129,7 +89,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     }
   };
 
-
   const handleViewIssue = (issue) => {
     setSelectedDetailedIssue(issue);
     setIsIssueViewOpen(true);
@@ -149,7 +108,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
         // Dispatch refresh event to update parent state
         window.dispatchEvent(new CustomEvent('cin-refresh'));
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update status");
     }
   };
@@ -336,36 +295,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     writeFile(workbook, `Team_Leaderboard_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const handleExportSelectedAssignee = (team) => {
-    if (!team || !team.relatedIssues) return;
-
-    const data = team.relatedIssues.map(issue => ({
-      'Date': new Date(issue.date).toLocaleDateString(),
-      'SLID': issue.slid,
-      'Category': issue.issues?.[0]?.category || 'N/A',
-      'Sub-category': issue.issues?.[0]?.subCategory || 'N/A',
-      'Status': issue.solved === 'yes' ? 'Closed' : (issue.dispatched === 'yes' ? 'In Progress' : 'Pending'),
-      'Reporter': issue.reporter,
-      'From (Main)': issue.fromMain || issue.from || 'N/A',
-      'From (Sub)': issue.fromSub || 'N/A'
-    }));
-
-    const worksheet = utils.json_to_sheet(data);
-    const workbook = utils.book_new();
-    utils.book_append_sheet(workbook, worksheet, "Issue History");
-
-    const maxWidths = {};
-    data.forEach(row => {
-      Object.keys(row).forEach(key => {
-        const val = row[key] ? row[key].toString() : '';
-        maxWidths[key] = Math.max(maxWidths[key] || 10, val.length + 2);
-      });
-    });
-    worksheet['!cols'] = Object.keys(maxWidths).map(key => ({ wch: maxWidths[key] }));
-
-    writeFile(workbook, `${team.name.replace(/\s+/g, '_')}_Issues_Report.xlsx`);
-  };
-
   // --- Data Hookups ---
 
   const teamNameStats = useMemo(() => {
@@ -499,28 +428,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     };
   }, [filteredIssuesByDate]);
 
-  const subTeamData = useMemo(() => {
-    const counts = {};
-    filteredIssuesByDate.forEach(issue => {
-      if (issue.fromSub) {
-        const team = issue.fromSub;
-        counts[team] = (counts[team] || 0) + 1;
-      }
-    });
-    const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    const data = labels.map(label => counts[label]);
-    return {
-      labels,
-      datasets: [{
-        label: 'Issues Reported (Sub)',
-        data,
-        backgroundColor: 'rgba(153, 102, 255, 0.6)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        borderWidth: 1,
-      }],
-    };
-  }, [filteredIssuesByDate]);
-
   const installingTeamChartData = useMemo(() => {
     // Top 10 teams by total involvement
     const sortedTeams = [...teamNameStats].sort((a, b) => b.total - a.total).slice(0, 10);
@@ -594,145 +501,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       }],
     };
   }, [stats]);
-
-  const closureData = useMemo(() => {
-    const counts = {};
-    filteredIssuesByDate.forEach(issue => {
-      if (issue.solved === 'yes' && issue.closedBy) {
-        counts[issue.closedBy] = (counts[issue.closedBy] || 0) + 1;
-      }
-    });
-    const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    return {
-      labels,
-      datasets: [{
-        label: 'Issues Closed',
-        data: labels.map(label => counts[label]),
-        backgroundColor: 'rgba(76, 175, 80, 0.6)',
-        borderColor: 'rgba(76, 175, 80, 1)',
-        borderWidth: 1,
-      }],
-    };
-  }, [filteredIssuesByDate]);
-
-  const assigneeStats = useMemo(() => {
-    const statsMap = {};
-    filteredIssuesByDate.forEach(issue => {
-      const assignee = issue.assignedTo || 'Unassigned';
-      if (!statsMap[assignee]) {
-        statsMap[assignee] = {
-          total: 0,
-          resolved: 0,
-          unresolved: 0,
-          dispatched: 0,
-          openDispatched: 0,
-          openUndispatched: 0,
-          categories: {},
-          subCategories: {},
-          issuesTotal: [],
-          issuesResolved: [],
-          issuesUnresolved: [],
-          issuesDispatched: [],
-          issuesOpenDispatched: [],
-          issuesOpenUndispatched: []
-        };
-      }
-      statsMap[assignee].total += 1;
-      statsMap[assignee].issuesTotal.push(issue);
-
-      if (issue.solved === 'yes') {
-        statsMap[assignee].resolved += 1;
-        statsMap[assignee].issuesResolved.push(issue);
-      } else {
-        statsMap[assignee].unresolved += 1;
-        statsMap[assignee].issuesUnresolved.push(issue);
-
-        // Breakdown Open Issues
-        if (issue.dispatched === 'yes') {
-          statsMap[assignee].openDispatched += 1;
-          statsMap[assignee].issuesOpenDispatched.push(issue);
-        } else {
-          statsMap[assignee].openUndispatched += 1;
-          statsMap[assignee].issuesOpenUndispatched.push(issue);
-        }
-      }
-
-      if (issue.dispatched === 'yes') {
-        statsMap[assignee].dispatched += 1;
-        statsMap[assignee].issuesDispatched.push(issue);
-      }
-
-      if (issue.issues) {
-        issue.issues.forEach(i => {
-          if (i.category) statsMap[assignee].categories[i.category] = (statsMap[assignee].categories[i.category] || 0) + 1;
-          if (i.subCategory) statsMap[assignee].subCategories[i.subCategory] = (statsMap[assignee].subCategories[i.subCategory] || 0) + 1;
-        });
-      }
-    });
-
-    const sortedAssignees = Object.keys(statsMap).sort((a, b) => statsMap[b].total - statsMap[a].total);
-    let detailedList = sortedAssignees.map(name => {
-      const topCat = Object.entries(statsMap[name].categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
-      const topSub = Object.entries(statsMap[name].subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
-
-      // Calculate Resolution Speed for this assignee
-      // Calculate Resolution Speed for this assignee using collected issues
-      const issuesForAssignee = statsMap[name].issuesTotal;
-      let totalResTime = 0;
-      let countRes = 0;
-      const now = new Date();
-
-      issuesForAssignee.forEach(i => {
-        // ... (existing logic works on 'i')
-        if (i.dispatchedAt || i.dispatched === 'yes') {
-          let start = null;
-          let end = null;
-          if (i.resolveDate) {
-            start = new Date(i.dispatchedAt || i.date || i.createdAt);
-            end = new Date(i.resolveDate);
-          } else if (i.solved === 'no') {
-            start = new Date(i.date || i.createdAt);
-            end = now;
-          }
-          if (start && end && end >= start) {
-            totalResTime += (end - start) / (1000 * 60 * 60 * 24);
-            countRes++;
-          }
-        }
-      });
-      const avgResSpeed = countRes > 0 ? (totalResTime / countRes).toFixed(1) : 'N/A';
-
-      return {
-        name,
-        ...statsMap[name],
-        topCategory: topCat,
-        topSubCategory: topSub,
-        rate: ((statsMap[name].resolved / statsMap[name].total) * 100).toFixed(1),
-        relatedIssues: issuesForAssignee,
-        avgResolutionSpeed: avgResSpeed,
-        type: 'Assignee'
-      };
-    });
-
-    return {
-      totals: {
-        total: detailedList.reduce((acc, curr) => acc + curr.total, 0),
-        resolved: detailedList.reduce((acc, curr) => acc + curr.resolved, 0),
-        unresolved: detailedList.reduce((acc, curr) => acc + curr.unresolved, 0)
-      },
-      chartData: {
-        labels: sortedAssignees.slice(0, 10),
-        datasets: [{
-          label: 'Issues Assigned',
-          data: sortedAssignees.slice(0, 10).map(n => statsMap[n].total),
-          backgroundColor: 'rgba(78, 115, 223, 0.6)',
-          borderColor: 'rgba(78, 115, 223, 1)',
-          borderWidth: 1
-        }]
-      },
-      detailedList
-    };
-  }, [filteredIssuesByDate]);
 
   const supervisorStats = useMemo(() => {
     const statsMap = {};
@@ -843,104 +611,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       .sort((a, b) => b.total - a.total);
   }, [filteredIssuesByDate]);
 
-  const installingTeamStats = useMemo(() => {
-    const statsMap = {};
-    const now = new Date();
-    filteredIssuesByDate.forEach(issue => {
-      const team = issue.installingTeam || 'Unknown';
-      if (!statsMap[team]) {
-        statsMap[team] = {
-          total: 0,
-          resolved: 0,
-          unresolved: 0,
-          categories: {},
-          subCategories: {},
-          dispatchSum: 0,
-          dispatchCount: 0,
-          resSum: 0,
-          resCount: 0,
-          lifecycleSum: 0,
-          lifecycleCount: 0
-        };
-      }
-      statsMap[team].total += 1;
-      issue.solved === 'yes' ? statsMap[team].resolved += 1 : statsMap[team].unresolved += 1;
-      if (issue.issues) {
-        issue.issues.forEach(i => {
-          if (i.category) statsMap[team].categories[i.category] = (statsMap[team].categories[i.category] || 0) + 1;
-          if (i.subCategory) statsMap[team].subCategories[i.subCategory] = (statsMap[team].subCategories[i.subCategory] || 0) + 1;
-        });
-      }
-
-      const reportDate = new Date(issue.date || issue.createdAt);
-
-      // Speed Metrics for Team
-      // 1. Dispatch
-      let dEnd = issue.dispatchedAt ? new Date(issue.dispatchedAt) : (issue.dispatched === 'no' ? now : null);
-      if (!dEnd && issue.dispatched === 'yes') dEnd = reportDate;
-      if (dEnd && dEnd >= reportDate) {
-        statsMap[team].dispatchSum += (dEnd - reportDate) / (1000 * 60 * 60 * 24);
-        statsMap[team].dispatchCount += 1;
-      }
-
-      // 2. Resolution (Field)
-      if (issue.dispatchedAt || issue.dispatched === 'yes') {
-        let rStart = issue.dispatchedAt ? new Date(issue.dispatchedAt) : reportDate;
-        let rEnd = issue.resolveDate ? new Date(issue.resolveDate) : (issue.solved === 'no' ? now : null);
-        if (rStart && rEnd && rEnd >= rStart) {
-          statsMap[team].resSum += (rEnd - rStart) / (1000 * 60 * 60 * 24);
-          statsMap[team].resCount += 1;
-        }
-      }
-
-      // 3. End-to-End Lifecycle
-      let lEnd = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? now : null);
-      if (lEnd && lEnd >= reportDate) {
-        statsMap[team].lifecycleSum += (lEnd - reportDate) / (1000 * 60 * 60 * 24);
-        statsMap[team].lifecycleCount += 1;
-      }
-    });
-
-    let detailedList = Object.keys(statsMap).map(name => {
-      const stats = statsMap[name];
-      const topCat = Object.entries(stats.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
-      const topSub = Object.entries(stats.subCategories).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
-      return {
-        name,
-        ...stats,
-        topCategory: topCat,
-        topSubCategory: topSub,
-        rate: ((stats.resolved / stats.total) * 100).toFixed(1),
-        avgDispatchSpeed: stats.dispatchCount > 0 ? (stats.dispatchSum / stats.dispatchCount).toFixed(1) : 'N/A',
-        avgResolutionSpeed: stats.resCount > 0 ? (stats.resSum / stats.resCount).toFixed(1) : 'N/A',
-        avgLifecycleTime: stats.lifecycleCount > 0 ? (stats.lifecycleSum / stats.lifecycleCount).toFixed(1) : 'N/A',
-        relatedIssues: filteredIssuesByDate.filter(i => (i.installingTeam || 'Unknown') === name),
-        type: 'Installing Team'
-      };
-    });
-
-    if (installingTeamSearch.trim()) {
-      detailedList = detailedList.filter(item => item.name.toLowerCase().includes(installingTeamSearch.toLowerCase()));
-    }
-    if (installingTeamFilters.status !== 'all') {
-      detailedList = detailedList.filter(item => installingTeamFilters.status === 'resolved' ? item.resolved > 0 : item.unresolved > 0);
-    }
-    if (installingTeamSort.field) {
-      detailedList.sort((a, b) => {
-        let valA = a[installingTeamSort.field], valB = b[installingTeamSort.field];
-        if (['rate', 'avgDispatchSpeed', 'avgResolutionSpeed', 'avgLifecycleTime'].includes(installingTeamSort.field)) {
-          valA = valA === 'N/A' ? 999 : parseFloat(valA);
-          valB = valB === 'N/A' ? 999 : parseFloat(valB);
-        }
-        return installingTeamSort.direction === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-      });
-    }
-
-    return detailedList;
-  }, [filteredIssuesByDate, installingTeamSearch, installingTeamSort, installingTeamFilters]);
-
-
-
   const reporterData = useMemo(() => {
     const counts = {};
     filteredIssuesByDate.forEach(issue => {
@@ -1022,7 +692,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
     maintainAspectRatio: false,
     plugins: { legend: { position: 'bottom', labels: { color: tok('--text') } } },
     scales: {
-      x: { ticks: { color: tok('--text-secondary') }, grid: { color: '#3d3d3d' } },
+      x: { ticks: { color: tok('--text-secondary') }, grid: { color: tok('--border') } },
       y: {
         beginAtZero: true,
         ticks: {
@@ -1030,7 +700,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           stepSize: 1,
           precision: 0
         },
-        grid: { color: '#3d3d3d' }
+        grid: { color: tok('--border') }
       }
     }
   };
@@ -1052,21 +722,6 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       }
     }
   };
-
-  const StatCard = ({ title, value, icon, color, subtext }) => (
-    <Card sx={{ bgcolor: tok('--surface'), color: tok('--text'), height: '100%', border: '1px solid #3d3d3d' }}>
-      <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3 }}>
-        <Box>
-          <Typography variant="body2" color={tok('--text-secondary')} gutterBottom>{title}</Typography>
-          <Typography variant="h4" fontWeight="bold">{value}</Typography>
-          {subtext && <Typography variant="caption" color={color}>{subtext}</Typography>}
-        </Box>
-        <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: `${color}20`, color: color, fontSize: '1.5rem', display: 'flex' }}>
-          {icon}
-        </Box>
-      </CardContent>
-    </Card>
-  );
 
   const handleWhatsAppContact = async (issue) => {
     // Build comprehensive message
@@ -1158,996 +813,276 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
       toast.error('Failed to fetch team contact information');
     }
   };
+  const days = (v) => (v === undefined || v === null || v === 'N/A' ? '—' : `${v} days`);
+  const rateTone = (r) => (parseFloat(r) >= 80 ? 'success' : parseFloat(r) >= 50 ? 'warning' : 'danger');
+  const fmtDay = (d) => (d ? new Date(d).toLocaleDateString() : '—');
+  const lifeOf = (issue) => {
+    const r = new Date(issue.date || issue.createdAt);
+    const c = issue.closedAt ? new Date(issue.closedAt) : issue.solved === 'no' ? new Date() : null;
+    return c ? (c - r) / 864e5 : null;
+  };
+  const CountLink = ({ value, onClick, tone }) => (
+    <Box
+      component="button"
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      disabled={!value}
+      sx={{ border: 0, background: 'none', font: 'inherit', fontSize: 13, fontWeight: 600, cursor: value ? 'pointer' : 'default', color: tone ? `var(--${tone})` : 'var(--text)', px: 0.75, py: 0.25, borderRadius: '5px', '&:hover': value ? { backgroundColor: 'var(--surface-hover)', textDecoration: 'underline' } : undefined }}
+    >
+      {value}
+    </Box>
+  );
+  const Hint = ({ title }) => (
+    <Tooltip title={title}><InfoOutlined sx={{ fontSize: 14, color: 'var(--text-muted)', ml: 0.5 }} /></Tooltip>
+  );
+  const header = (label, hint) => function HeaderWithHint() { return <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>{label}<Hint title={hint} /></Box>; };
+
+  const supervisorColumns = [
+    { field: 'name', headerName: 'Supervisor', flex: 1, minWidth: 170, renderCell: ({ value }) => <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><UserAvatar user={{ name: value }} size={24} /><Typography noWrap sx={{ fontSize: 13, fontWeight: 500 }}>{value}</Typography></Box> },
+    { field: 'total', headerName: 'Total', type: 'number', width: 80, renderCell: ({ row }) => <CountLink value={row.total} onClick={() => handleStatusClick(row.issuesTotal, `${row.name} - All Issues`)} /> },
+    { field: 'resolved', headerName: 'Closed', type: 'number', width: 80, renderCell: ({ row }) => <CountLink tone="success" value={row.resolved} onClick={() => handleStatusClick(row.issuesResolved, `${row.name} - Closed Issues`)} /> },
+    { field: 'unresolved', headerName: 'Open', type: 'number', width: 80, renderCell: ({ row }) => <CountLink tone="danger" value={row.unresolved} onClick={() => handleStatusClick(row.issuesUnresolved, `${row.name} - Open Issues`)} /> },
+    { field: 'openDispatched', headerName: 'Dispatched', type: 'number', width: 100, renderCell: ({ row }) => <CountLink tone="info" value={row.openDispatched} onClick={() => handleStatusClick(row.issuesOpenDispatched, `${row.name} - Open Dispatched (In Progress)`)} /> },
+    { field: 'openUndispatched', headerName: 'Undispatched', type: 'number', width: 110, renderCell: ({ row }) => <CountLink tone="warning" value={row.openUndispatched} onClick={() => handleStatusClick(row.issuesOpenUndispatched, `${row.name} - Open Undispatched (Pending)`)} /> },
+    { field: 'rate', headerName: 'Rate', type: 'number', width: 90, valueGetter: (v) => parseFloat(v) || 0, renderHeader: header('Rate', 'Resolution rate: closed issues out of all assigned.'), renderCell: ({ row }) => <Badge tone={rateTone(row.rate)}>{row.rate}%</Badge> },
+    { field: 'avgDispatchSpeed', headerName: 'Dispatch', type: 'number', width: 100, valueGetter: (v) => (v === 'N/A' ? null : Number(v)), renderHeader: header('Dispatch', 'Average days from report to dispatch.'), renderCell: ({ value }) => <Typography sx={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: value > 1 ? 'var(--warning)' : 'var(--text-secondary)' }}>{value === null ? '—' : `${value}d`}</Typography> },
+    { field: 'avgResolutionSpeed', headerName: 'Resolution', type: 'number', width: 100, valueGetter: (v) => (v === 'N/A' ? null : Number(v)), renderHeader: header('Resolution', 'Average days from dispatch to field resolution.'), renderCell: ({ value }) => <Typography sx={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{value === null ? '—' : `${value}d`}</Typography> },
+    { field: 'avgLifecycleTime', headerName: 'Lifecycle', type: 'number', width: 100, valueGetter: (v) => (v === 'N/A' ? null : Number(v)), renderHeader: header('Lifecycle', 'Average days from report to closure (or now if open).'), renderCell: ({ value }) => <Typography sx={{ fontSize: 12.5, fontFamily: 'var(--font-mono)' }}>{value === null ? '—' : `${value}d`}</Typography> },
+    { field: 'agingCount', headerName: 'Aging', type: 'number', width: 90, renderHeader: header('Aging', 'Undispatched issues pending for more than 1 day.'), renderCell: ({ value }) => (value > 0 ? <Badge tone="danger">{value}</Badge> : <Typography sx={{ color: 'var(--text-muted)', fontSize: 12.5 }}>—</Typography>) },
+  ];
+
+  const supervisorsOfPending = Array.from(new Set(stats.oldestPending.map((item) => item.supervisor))).sort();
+  const pendingRows = stats.oldestPending.filter((item) => {
+    const q = negligenceSearch.toLowerCase();
+    const matchesSearch = item.slid.toLowerCase().includes(q) || item.assignedTo.toLowerCase().includes(q) || item.supervisor.toLowerCase().includes(q);
+    return matchesSearch && (negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter);
+  });
+  const pendingColumns = [
+    { field: 'createdAt', headerName: 'Created', type: 'date', width: 110, valueGetter: (_v, row) => new Date(row.originalIssue.createdAt), renderCell: ({ value }) => fmtDay(value) },
+    { field: 'reportDate', headerName: 'Reported', type: 'date', width: 110, valueGetter: (v) => (v ? new Date(v) : null), renderCell: ({ value }) => fmtDay(value) },
+    { field: 'slid', headerName: 'SLID', width: 140, renderCell: ({ value }) => <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{value}</Typography> },
+    { field: 'age', headerName: 'Age', type: 'number', width: 80, renderCell: ({ value }) => <Badge tone="danger">{value}d</Badge> },
+    { field: 'stage', headerName: 'Stage', width: 150 },
+    { field: 'assignedTo', headerName: 'Technician', flex: 1, minWidth: 140 },
+    { field: 'supervisor', headerName: 'Supervisor', flex: 1, minWidth: 140 },
+    {
+      field: 'actions', headerName: '', width: 150, sortable: false, filterable: false, align: 'right',
+      renderCell: ({ row }) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+          <Tooltip title={row.originalIssue.isChecked ? 'Marked as followed up' : 'Mark as followed up'}>
+            <Checkbox size="small" checked={row.originalIssue.isChecked || false} onChange={() => handleToggleCheck(row.originalIssue)} slotProps={{ input: { 'aria-label': `Followed up ${row.slid}` } }} />
+          </Tooltip>
+          <Button size="small" variant="outlined" onClick={() => handleViewIssue(row.originalIssue)}>View</Button>
+          {row.originalIssue?.installingTeam && (
+            <Tooltip title="Contact the team on WhatsApp">
+              <IconButton size="small" aria-label="WhatsApp" onClick={() => handleWhatsAppContact(row.originalIssue)}><FaWhatsapp size={15} /></IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      ),
+    },
+  ];
+
+  const leaderboardColumns = [
+    { field: 'name', headerName: 'Team', flex: 1, minWidth: 180, renderCell: ({ value }) => <Typography noWrap dir="auto" sx={{ fontSize: 13, fontWeight: 500 }}>{value}</Typography> },
+    { field: 'total', headerName: 'Involved', type: 'number', width: 100 },
+    { field: 'resolved', headerName: 'Resolved', type: 'number', width: 100, renderCell: ({ value }) => <Typography sx={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>{value}</Typography> },
+    { field: 'unresolved', headerName: 'Active', type: 'number', width: 90, renderCell: ({ value }) => <Typography sx={{ fontSize: 13, color: value ? 'var(--danger)' : 'var(--text-muted)', fontWeight: 600 }}>{value}</Typography> },
+    { field: 'rate', headerName: 'Success rate', type: 'number', width: 120, valueGetter: (v) => parseFloat(v) || 0, renderCell: ({ row }) => <Badge tone={rateTone(row.rate)}>{row.rate}%</Badge> },
+    { field: 'avgResolutionSpeed', headerName: 'Avg speed', type: 'number', width: 110, valueGetter: (v) => (v === 'N/A' ? null : Number(v)), renderCell: ({ value }) => <Typography sx={{ fontSize: 12.5, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{value === null ? '—' : `${value}d`}</Typography> },
+    { field: 'topCategory', headerName: 'Top issue', flex: 1, minWidth: 150 },
+  ];
+
+  const teamIssueColumns = [
+    { field: 'createdAt', headerName: 'Created', type: 'date', width: 110, valueGetter: (v) => (v ? new Date(v) : null), renderCell: ({ value }) => fmtDay(value) },
+    { field: 'date', headerName: 'Reported', type: 'date', width: 110, valueGetter: (v) => (v ? new Date(v) : null), renderCell: ({ value }) => fmtDay(value) },
+    { field: 'slid', headerName: 'SLID', width: 140, renderCell: ({ value }) => <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{value}</Typography> },
+    { field: 'category', headerName: 'Category', flex: 1, minWidth: 140, valueGetter: (_v, row) => row.issues?.[0]?.category || '—' },
+    { field: 'subCategory', headerName: 'Sub-category', flex: 1, minWidth: 140, valueGetter: (_v, row) => row.issues?.[0]?.subCategory || '—' },
+    { field: 'status', headerName: 'Status', width: 110, valueGetter: (_v, row) => (row.solved === 'yes' ? 'Closed' : 'Active'), renderCell: ({ value }) => <Badge tone={value === 'Closed' ? 'success' : 'warning'} dot>{value}</Badge> },
+    { field: 'life', headerName: 'Life (days)', type: 'number', width: 110, valueGetter: (_v, row) => lifeOf(row), renderCell: ({ value }) => <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: value === null ? 'var(--text-muted)' : value > 3 ? 'var(--danger)' : value > 1 ? 'var(--warning)' : 'var(--success)' }}>{value === null ? '—' : value.toFixed(1)}</Typography> },
+    {
+      field: 'actions', headerName: '', width: 60, sortable: false, filterable: false,
+      renderCell: ({ row }) => (row.teamName || row.installingTeam ? (
+        <Tooltip title="Contact the team on WhatsApp">
+          <IconButton size="small" aria-label="WhatsApp" onClick={(e) => { e.stopPropagation(); handleWhatsAppContact(row); }}><FaWhatsapp size={15} /></IconButton>
+        </Tooltip>
+      ) : null),
+    },
+  ];
+
+  const exportTeam = () => {
+    exportRows(selectedTeam.relatedIssues, [
+      ['Created', (i) => (i.createdAt ? new Date(i.createdAt) : '')],
+      ['Reported', (i) => (i.date ? new Date(i.date) : '')],
+      ['SLID', (i) => i.slid],
+      ['Category', (i) => i.issues?.[0]?.category || ''],
+      ['Sub-category', (i) => i.issues?.[0]?.subCategory || ''],
+      ['Status', (i) => (i.solved === 'yes' ? 'Closed' : i.dispatched === 'yes' ? 'In Progress' : 'Pending')],
+      ['Time to close (days)', (i) => (lifeOf(i) === null ? '' : Number(lifeOf(i).toFixed(1)))],
+    ], { filename: `${selectedTeam.name}-performance` });
+  };
+
+  const chartCard = (title, children, actions, sx) => (
+    <SectionCard title={title} actions={actions} sx={{ height: '100%', ...sx }} bodySx={{ p: 2 }}>{children}</SectionCard>
+  );
+  const donutCenter = (value, label) => (
+    <Box sx={{ position: 'absolute', textAlign: 'center', pointerEvents: 'none', top: '42%', transform: 'translateY(-50%)' }}>
+      <Typography sx={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em' }}>{value}</Typography>
+      <Typography sx={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</Typography>
+    </Box>
+  );
+  const grid = (props) => (
+    <DataGrid
+      autoHeight
+      disableRowSelectionOnClick
+      rowHeight={44}
+      columnHeaderHeight={38}
+      pageSizeOptions={[10, 25, 50]}
+      initialState={{ pagination: { paginationModel: { pageSize: 10 } }, ...props.initialState }}
+      slots={{ noRowsOverlay: () => <EmptyState title={props.empty || 'Nothing to show'} minHeight={160} /> }}
+      sx={{ ...gridSx, border: 0, borderRadius: 0, boxShadow: 'none', minHeight: 220 }}
+      {...props}
+    />
+  );
 
   return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      {/* Top Controls: Period Filter & Email Report */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <Typography variant="h5" fontWeight="bold">OJO Snags analytics</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: tok('--surface'), px: 2, py: 1, borderRadius: 2, border: '1px solid #3d3d3d', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>From:</Typography>
-              <TextField
-                type="date"
-                size="small"
-                value={dateFilter.start}
-                onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
-                sx={{
-                  bgcolor: tok('--bg'),
-                  borderRadius: 1,
-                  '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-                }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: tok('--text-secondary'), fontSize: '0.8rem' }}>To:</Typography>
-              <TextField
-                type="date"
-                size="small"
-                value={dateFilter.end}
-                onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
-                sx={{
-                  bgcolor: tok('--bg'),
-                  borderRadius: 1,
-                  '& input': { color: tok('--text'), fontSize: '0.8rem', p: '6px 8px' },
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-                }}
-              />
-            </Box>
-            {(dateFilter.start || dateFilter.end) && (
-              <Button size="small" onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: '#f44336', minWidth: 0, p: 0.5 }}>
-                Clear
-              </Button>
-            )}
-          </Box>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<FaFileExport />}
-          onClick={() => setShowEmailDialog(true)}
-          sx={{
-            bgcolor: '#4e73df',
-            '&:hover': { bgcolor: '#2e59d9' },
-            borderRadius: 2,
-            textTransform: 'none',
-            px: 3
-          }}
-        >
-          Email Report
-        </Button>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Period + report */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <TextField type="date" label="From" value={dateFilter.start} onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 160 }} />
+        <TextField type="date" label="To" value={dateFilter.end} onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 160 }} />
+        {(dateFilter.start || dateFilter.end) && (
+          <Button variant="text" startIcon={<FilterAltOffOutlined sx={{ fontSize: 16 }} />} onClick={() => setDateFilter({ start: '', end: '' })} sx={{ color: 'var(--text-secondary)' }}>Clear</Button>
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Button variant="outlined" startIcon={<EmailOutlined sx={{ fontSize: 16 }} />} onClick={() => setShowEmailDialog(true)}>Email report</Button>
       </Box>
-      {/* KPI Section */}
-      <Grid container spacing={2} mb={4}>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Total Transactions" value={stats.totalTransactions} icon={<FaClipboardList />} color="#2196f3" subtext="Total records" /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Issues Highlighted" value={stats.totalIssuesHighlighted} icon={<FaExclamationCircle />} color="#ffc107" subtext={`Avg: ${stats.issueDensity} per txn`} /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Closed" value={stats.closed} icon={<FaCheckCircle />} color="#4caf50" subtext={`${stats.resolutionRate}% Rate`} /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Open" value={stats.open} icon={<FaExclamationCircle />} color="#f44336" subtext="Require attention" /></Grid>
-        <Grid item xs={12} sm={6} md={2.4}><StatCard title="Avg. Daily Issues" value={stats.avgDailyIssues} icon={<FaChartLine />} color="#ff9800" subtext="Issues / Day" /></Grid>
-      </Grid>
 
-      {/* Process Efficiency Spotlight */}
-      <Box mb={4}>
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
-              <Typography variant="subtitle2" color="grey.500" mb={1}>SUPERVISOR DISPATCH SPEED (Incl. Aging)</Typography>
-              <Typography variant="h3" fontWeight="800" color={Number(stats.avgDispatchTime) > 1 ? "warning.main" : "info.main"}>
-                {stats.avgDispatchTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Avg time from <b>Reported</b> → <b>Dispatched</b> (Or <b>Reported</b> → <b>Now</b> if pending)
-              </Typography>
-              <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
-                  * Calculation: (Dispatched Date - Reported Date) OR (Now - Reported Date) if undispatched.
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
-              <Typography variant="subtitle2" color="grey.500" mb={1}>FIELD RESOLUTION SPEED (Incl. Aging)</Typography>
-              <Typography variant="h3" fontWeight="800" color="success.main">
-                {stats.avgResolutionTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Avg time from <b>Dispatched</b> → <b>Resolved</b> (Or <b>Reported</b> → <b>Now</b> if pending)
-              </Typography>
-              <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
-                  * Calculation: Resolved cases use (Resolved - Dispatched). Pending cases use (Now - Reported) to reflect negligence.
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, borderRadius: 4, bgcolor: tok('--bg'), height: '100%', border: '1px solid #3d3d3d' }}>
-              <Typography variant="subtitle2" color="grey.500" mb={1}>TOTAL LIFECYCLE (Accountability)</Typography>
-              <Typography variant="h3" fontWeight="800" color={tok('--text')}>
-                {stats.avgLifecycleTime}<span style={{ fontSize: '1rem', color: tok('--text-muted') }}> days</span>
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Total time from <b>Initial Report</b> → <b>Closed/Now</b>
-              </Typography>
-              <Box sx={{ p: 1, bgcolor: tok('--overlay-subtle'), borderRadius: 1, border: '1px dashed #444' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: tok('--text-muted'), fontStyle: 'italic', lineHeight: 1.2 }}>
-                  * Calculation: Full duration from (Report Date) to (Closed Date) OR (Now) if the case is still open.
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
+      {/* KPIs */}
+      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, minmax(0, 1fr))' } }}>
+        <StatCard label="Records" value={stats.totalTransactions} hint="In the selected period" />
+        <StatCard label="Issues highlighted" value={stats.totalIssuesHighlighted} hint={`${stats.issueDensity} per record`} />
+        <StatCard label="Closed" value={stats.closed} hint={`${stats.resolutionRate}% resolution rate`} />
+        <StatCard label="Open" value={stats.open} hint="Need attention" />
+        <StatCard label="Issues per day" value={stats.avgDailyIssues} hint="Daily average" />
+      </Box>
 
-          {/* Supervisor Performance Table - Vertical Stack */}
-          {/* Supervisor Performance Table - Vertical Stack */}
-          <Grid item xs={12}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 0,
-                bgcolor: tok('--surface'),
-                borderRadius: 3,
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                overflow: 'hidden',
-                background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              }}
-            >
-              <Box sx={{
-                p: 3,
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: tok('--overlay-subtle')
-              }}>
-                <Box>
-                  <Typography variant="h6" fontWeight="700" color={tok('--text')}>
-                    Supervisor Performance
-                  </Typography>
-                  <Typography variant="body2" color={tok('--text-secondary')} sx={{ mt: 0.5 }}>
-                    Aging impact and workload distribution
-                  </Typography>
-                </Box>
-                <Chip
-                  label={`${supervisorStats.length} Supervisors`}
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(59, 130, 246, 0.1)',
-                    color: '#60a5fa',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
-                    fontWeight: 600
-                  }}
-                />
-              </Box>
-              <Box sx={{ width: '100%', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-                  <thead>
-                    <tr style={{ background: tok('--bg') }}>
-                      <th style={{ padding: '16px 24px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Supervisor</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Closed</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Open</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          Dispatched
-                          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#3b82f6' }} />
-                        </Box>
-                      </th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          Undispatched
-                          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b' }} />
-                        </Box>
-                      </th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          Rate
-                          <Tooltip title="Resolution Rate (%): Percentage of closed issues out of total assigned." arrow>
-                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
-                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
-                            </Box>
-                          </Tooltip>
-                        </Box>
-                      </th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
-                          Dispatch
-                          <Tooltip title="Avg. Dispatch Speed (Days): Average time taken from report date to issue dispatch." arrow>
-                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
-                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
-                            </Box>
-                          </Tooltip>
-                        </Box>
-                      </th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
-                          Resol.
-                          <Tooltip title="Avg. Field Resolution Speed (Days): Average time taken from dispatch to field resolution." arrow>
-                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
-                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
-                            </Box>
-                          </Tooltip>
-                        </Box>
-                      </th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
-                          Life
-                          <Tooltip title="Avg. Total Lifecycle (Days): Total duration from report date to final closure (or now if open)." arrow>
-                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
-                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
-                            </Box>
-                          </Tooltip>
-                        </Box>
-                      </th>
-                      <th style={{ padding: '16px 24px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                          Aging
-                          <Tooltip title="Aging Bottlenecks: Count of undispatched issues pending for more than 1 day." arrow>
-                            <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
-                              <FaInfoCircle size={10} style={{ opacity: 0.6 }} />
-                            </Box>
-                          </Tooltip>
-                        </Box>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {supervisorStats.map((sup, idx) => (
-                      <tr
-                        key={idx}
-                        style={{
-                          borderBottom: '1px solid rgba(255,255,255,0.05)',
-                          transition: 'background-color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tok('--overlay-subtle')}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <td style={{ padding: '16px 24px' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar
-                              sx={{
-                                width: 32,
-                                height: 32,
-                                bgcolor: tok('--overlay-subtle'),
-                                color: tok('--text'),
-                                fontSize: '0.85rem',
-                                border: '1px solid rgba(255,255,255,0.1)'
-                              }}
-                            >
-                              {sup.name.charAt(0)}
-                            </Avatar>
-                            <Typography variant="body2" fontWeight="600" color={tok('--text')}>
-                              {sup.name}
-                            </Typography>
-                          </Box>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <Typography
-                            variant="body2"
-                            fontWeight="600"
-                            color={tok('--text-secondary')}
-                            sx={{
-                              cursor: 'pointer',
-                              transition: 'color 0.2s',
-                              '&:hover': { color: tok('--text'), textDecoration: 'underline' }
-                            }}
-                            onClick={() => handleStatusClick(sup.issuesTotal, `${sup.name} - All Issues`)}
-                          >
-                            {sup.total}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <Typography
-                            variant="body2"
-                            fontWeight="600"
-                            color="#22c55e"
-                            sx={{
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              px: 1, py: 0.5, borderRadius: 1,
-                              '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.1)' }
-                            }}
-                            onClick={() => handleStatusClick(sup.issuesResolved, `${sup.name} - Closed Issues`)}
-                          >
-                            {sup.resolved}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <Typography
-                            variant="body2"
-                            fontWeight="600"
-                            color="#ef4444"
-                            sx={{
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              px: 1, py: 0.5, borderRadius: 1,
-                              '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' }
-                            }}
-                            onClick={() => handleStatusClick(sup.issuesUnresolved, `${sup.name} - Open Issues`)}
-                          >
-                            {sup.unresolved}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <Typography
-                            variant="body2"
-                            fontWeight="600"
-                            color="#3b82f6"
-                            sx={{
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              px: 1, py: 0.5, borderRadius: 1,
-                              '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.1)' }
-                            }}
-                            onClick={() => handleStatusClick(sup.issuesOpenDispatched, `${sup.name} - Open Dispatched (In Progress)`)}
-                          >
-                            {sup.openDispatched}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <Typography
-                            variant="body2"
-                            fontWeight="600"
-                            color="#f59e0b"
-                            sx={{
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              px: 1, py: 0.5, borderRadius: 1,
-                              '&:hover': { bgcolor: 'rgba(245, 158, 11, 0.1)' }
-                            }}
-                            onClick={() => handleStatusClick(sup.issuesOpenUndispatched, `${sup.name} - Open Undispatched (Pending)`)}
-                          >
-                            {sup.openUndispatched}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                            <Chip
-                              label={`${sup.rate}%`}
-                              size="small"
-                              sx={{
-                                height: 24,
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                bgcolor: tok('--overlay-subtle'),
-                                color: parseFloat(sup.rate) >= 80 ? '#22c55e' : parseFloat(sup.rate) >= 50 ? '#f59e0b' : '#ef4444',
-                                border: `1px solid ${parseFloat(sup.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(sup.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                              }}
-                            />
-                          </Box>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <Typography variant="body2" fontFamily="monospace" color={Number(sup.avgDispatchSpeed) > 1 ? '#f59e0b' : '#94a3b8'}>
-                            {sup.avgDispatchSpeed !== 'N/A' ? `${sup.avgDispatchSpeed}d` : '-'}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <Typography variant="body2" fontFamily="monospace" color={tok('--text-secondary')}>
-                            {sup.avgResolutionSpeed !== 'N/A' ? `${sup.avgResolutionSpeed}d` : '-'}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <Typography variant="body2" fontFamily="monospace" color={tok('--text')}>
-                            {sup.avgLifecycleTime !== 'N/A' ? `${sup.avgLifecycleTime}d` : '-'}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                          {sup.agingCount > 0 ? (
-                            <Chip
-                              label={sup.agingCount}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                minWidth: 24,
-                                bgcolor: 'rgba(239, 68, 68, 0.2)',
-                                color: '#ef4444'
-                              }}
-                            />
-                          ) : <Typography variant="caption" color={tok('--overlay-subtle')}>-</Typography>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Box>
-            </Paper>
-          </Grid>
+      {/* Process speed */}
+      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
+        <Tooltip title="(Dispatched − Reported), or (Now − Reported) while undispatched.">
+          <Box sx={{ height: '100%' }}><StatCard sx={{ height: '100%' }} label="Supervisor dispatch speed" value={days(stats.avgDispatchTime)} hint="Reported → dispatched (incl. aging)" /></Box>
+        </Tooltip>
+        <Tooltip title="Resolved cases use (Resolved − Dispatched); pending cases use (Now − Reported).">
+          <Box sx={{ height: '100%' }}><StatCard sx={{ height: '100%' }} label="Field resolution speed" value={days(stats.avgResolutionTime)} hint="Dispatched → resolved (incl. aging)" /></Box>
+        </Tooltip>
+        <Tooltip title="From the report date to closure, or to now while open.">
+          <Box sx={{ height: '100%' }}><StatCard sx={{ height: '100%' }} label="Total lifecycle" value={days(stats.avgLifecycleTime)} hint="Reported → closed / now" /></Box>
+        </Tooltip>
+      </Box>
 
-          {/* Aging Bottlenecks List - Table Format with Search & Actions */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, bgcolor: tok('--bg'), color: tok('--text'), borderRadius: 2, border: '1px solid #f44336', height: '100%' }}>
-              <Stack direction={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "flex-start" : "center"} mb={2} spacing={2}>
-                <Typography variant="h6" fontWeight="bold" color="error">Open Cases (Dispatched + Awaiting Dispatch)</Typography>
-                <Stack direction={isMobile ? "column" : "row"} spacing={1} sx={{ width: isMobile ? '100%' : 'auto' }}>
-                  <FormControl size="small" sx={{ width: isMobile ? '100%' : 200 }}>
-                    <Select
-                      value={negligenceSupervisorFilter}
-                      onChange={(e) => {
-                        setNegligenceSupervisorFilter(e.target.value);
-                        setNegligencePage(0);
-                      }}
-                      displayEmpty
-                      sx={{
-                        bgcolor: tok('--surface'),
-                        color: tok('--text'),
-                        borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') },
-                        fontSize: '0.85rem'
-                      }}
-                    >
-                      <MenuItem value="all">All Supervisors</MenuItem>
-                      {Array.from(new Set(stats.oldestPending.map(item => item.supervisor))).sort().map(sup => (
-                        <MenuItem key={sup} value={sup}>{sup}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <TextField
-                    size="small"
-                    placeholder="Search SLID or Technician..."
-                    variant="outlined"
-                    value={negligenceSearch}
-                    onChange={(e) => {
-                      setNegligenceSearch(e.target.value);
-                      setNegligencePage(0);
-                    }}
-                    InputProps={{
-                      startAdornment: <FaSearch style={{ marginRight: 8, color: tok('--text-muted') }} />,
-                      sx: { bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, '& fieldset': { borderColor: tok('--border') } }
-                    }}
-                    sx={{ width: isMobile ? '100%' : 250 }}
-                  />
-                </Stack>
-              </Stack>
-              <Box sx={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ color: tok('--text-secondary'), fontSize: '0.75rem', borderBottom: '1px solid #3d3d3d' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Created At</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Report Date</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>SLID</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Age</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Stage</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Personnel</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const filtered = stats.oldestPending.filter(item => {
-                        const matchesSearch = item.slid.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                          item.assignedTo.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                          item.supervisor.toLowerCase().includes(negligenceSearch.toLowerCase());
+      <SectionCard title="Supervisor performance" description="Aging impact and workload. Click a count to see those records." actions={<Badge>{supervisorStats.length} supervisor{supervisorStats.length === 1 ? '' : 's'}</Badge>} padding={0} bodySx={{ p: 0 }}>
+        {grid({ rows: supervisorStats, columns: supervisorColumns, getRowId: (r) => r.name, initialState: { sorting: { sortModel: [{ field: 'total', sort: 'desc' }] } }, empty: 'No supervisors in this period' })}
+      </SectionCard>
 
-                        const matchesSupervisor = negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter;
+      <SectionCard
+        title="Open cases"
+        description="Dispatched and awaiting dispatch, oldest first."
+        padding={0}
+        bodySx={{ p: 0 }}
+        actions={
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <TextField select value={negligenceSupervisorFilter} onChange={(e) => setNegligenceSupervisorFilter(e.target.value)} sx={{ width: 180 }} slotProps={{ htmlInput: { 'aria-label': 'Supervisor' } }}>
+              <MenuItem value="all">All supervisors</MenuItem>
+              {supervisorsOfPending.map((sup) => <MenuItem key={sup} value={sup}>{sup}</MenuItem>)}
+            </TextField>
+            <TextField placeholder="Search SLID or technician…" value={negligenceSearch} onChange={(e) => setNegligenceSearch(e.target.value)} sx={{ width: { xs: '100%', sm: 220 } }} slotProps={{ input: { startAdornment: <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)', mr: 0.75 }} /> } }} />
+          </Box>
+        }
+      >
+        {grid({ rows: pendingRows, columns: pendingColumns, getRowId: (r) => r.originalIssue._id, onRowClick: ({ row }) => handleViewIssue(row.originalIssue), initialState: { sorting: { sortModel: [{ field: 'age', sort: 'desc' }] } }, empty: 'All caught up — no open cases' })}
+      </SectionCard>
 
-                        return matchesSearch && matchesSupervisor;
-                      });
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' } }}>
+        {chartCard(
+          'Reporting trend',
+          <Box sx={{ height: 300 }}><Bar data={trendData} options={commonOptions} /></Box>,
+          <>
+            <SegmentedControl size="sm" ariaLabel="Trend period" value={trendTimeframe} onChange={setTrendTimeframe} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
+            <SegmentedControl size="sm" ariaLabel="Chart type" value={trendChartType} onChange={setTrendChartType} options={[{ value: 'mixed', label: 'Mixed' }, { value: 'bar', label: 'Bar' }, { value: 'line', label: 'Line' }]} />
+          </>
+        )}
+        {chartCard('Resolution status', <Box sx={{ height: 300, position: 'relative', display: 'flex', justifyContent: 'center' }}><Doughnut data={statusData} options={doughnutOptions} />{donutCenter(`${stats.resolutionRate}%`, 'Resolved')}</Box>)}
+      </Box>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+        {chartCard('Top reporters', <Box sx={{ height: 300 }}><Bar data={reporterData} options={commonOptions} /></Box>)}
+        {chartCard('Issue categories', <Box sx={{ height: 300, position: 'relative', display: 'flex', justifyContent: 'center' }}><Doughnut data={categoryData} options={doughnutOptions} />{donutCenter(categoryData.totalCount, 'Issues')}</Box>)}
+        {chartCard('Teams involved (top 10)', <Box sx={{ height: 300 }}><Bar data={installingTeamChartData} options={commonOptions} /></Box>)}
+        {chartCard('Issues by source', <Box sx={{ height: 300 }}><Bar data={teamData} options={commonOptions} /></Box>)}
+      </Box>
 
-                      return filtered.length > 0 ? filtered
-                        .slice(negligencePage * negligenceRowsPerPage, negligencePage * negligenceRowsPerPage + negligenceRowsPerPage)
-                        .map((item, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #333' }}>
-                            <td style={{ padding: '8px', color: tok('--text-secondary'), fontSize: '0.75rem' }}>{new Date(item.originalIssue.createdAt).toLocaleDateString()}</td>
-                            <td style={{ padding: '8px', color: tok('--text-secondary'), fontSize: '0.75rem' }}>{new Date(item.reportDate).toLocaleDateString()}</td>
-                            <td style={{ padding: '8px', color: '#4e73df', fontWeight: 'bold', fontSize: '0.85rem' }}>{item.slid}</td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>
-                              <Chip label={`${item.age}d`} size="small" color="error" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
-                            </td>
-                            <td style={{ padding: '8px', fontSize: '0.8rem', color: tok('--text-secondary') }}>{item.stage}</td>
-                            <td style={{ padding: '8px', fontSize: '0.75rem', color: tok('--text-muted') }}>
-                              T: {item.assignedTo}<br />S: {item.supervisor}
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>
-                              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                                <Checkbox
-                                  size="small"
-                                  checked={item.originalIssue.isChecked || false}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleCheck(item.originalIssue);
-                                  }}
-                                  sx={{
-                                    p: 0,
-                                    color: '#3d3d3d',
-                                    '&.Mui-checked': {
-                                      color: tok('--accent-text'),
-                                    },
-                                    '&:hover': {
-                                      backgroundColor: 'rgba(123, 104, 238, 0.05)',
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  color="primary"
-                                  onClick={() => handleViewIssue(item.originalIssue)}
-                                  sx={{ fontSize: '0.7rem', textTransform: 'none', py: 0.2 }}
-                                >
-                                  View
-                                </Button>
-                                {item.originalIssue?.installingTeam && (
-                                  <Tooltip title="Contact Team via WhatsApp">
-                                    <IconButton
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleWhatsAppContact(item.originalIssue);
-                                      }}
-                                      sx={{ color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
-                                    >
-                                      <FaWhatsapp size={16} />
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-                              </Stack>
-                            </td>
-                          </tr>
-                        )) : (
-                        <tr style={{ borderBottom: "1px solid #333" }}>
-                          <td colSpan={7} style={{ padding: "20px", textAlign: "center", color: "#4caf50" }}>
-                            All caught up! No active bottlenecks detected.
-                          </td>
-                        </tr>
-                      );
-                    })()}
-                  </tbody>
-                </table>
-              </Box>
-              <TablePagination
-                component="div"
-                count={stats.oldestPending.filter(item => {
-                  const matchesSearch = item.slid.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                    item.assignedTo.toLowerCase().includes(negligenceSearch.toLowerCase()) ||
-                    item.supervisor.toLowerCase().includes(negligenceSearch.toLowerCase());
+      <SectionCard
+        title="Team ranking"
+        description="Every team involved in reporting, installation or resolution. Click a team for its dashboard."
+        padding={0}
+        bodySx={{ p: 0 }}
+        actions={
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <TextField placeholder="Search team or category…" value={leaderboardSearch} onChange={(e) => setLeaderboardSearch(e.target.value)} sx={{ width: { xs: '100%', sm: 220 } }} slotProps={{ input: { startAdornment: <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)', mr: 0.75 }} /> } }} />
+            <TextField select value={leaderboardStatusFilter} onChange={(e) => setLeaderboardStatusFilter(e.target.value)} sx={{ width: 150 }} slotProps={{ htmlInput: { 'aria-label': 'Status' } }}>
+              <MenuItem value="all">All teams</MenuItem>
+              <MenuItem value="resolved">Has resolved</MenuItem>
+              <MenuItem value="active">Has active</MenuItem>
+            </TextField>
+            <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={handleExportLeaderboard}>Export</Button>
+          </Box>
+        }
+      >
+        {grid({ rows: teamNameStats, columns: leaderboardColumns, getRowId: (r) => r.name, onRowClick: ({ row }) => setSelectedTeam(row), initialState: { sorting: { sortModel: [{ field: 'total', sort: 'desc' }] } }, empty: 'No teams match' })}
+      </SectionCard>
 
-                  const matchesSupervisor = negligenceSupervisorFilter === 'all' || item.supervisor === negligenceSupervisorFilter;
-
-                  return matchesSearch && matchesSupervisor;
-                }).length}
-                page={negligencePage}
-                onPageChange={(e, newPage) => setNegligencePage(newPage)}
-                rowsPerPage={negligenceRowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setNegligenceRowsPerPage(parseInt(e.target.value, 10));
-                  setNegligencePage(0);
-                }}
-                rowsPerPageOptions={[5, 10, 25]}
-                sx={{ color: tok('--text') }}
-              />
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box >
-
-      <Grid container spacing={3}>
-        {/* Trend & Resolution Row */}
-        <Grid item xs={12} lg={8}>
-          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" fontWeight="bold">Issue Reporting Trend</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <FormControl size="small" variant="outlined">
-                  <Select
-                    value={trendTimeframe}
-                    onChange={(e) => setTrendTimeframe(e.target.value)}
-                    sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
-                  >
-                    <MenuItem value="day">Daily</MenuItem>
-                    <MenuItem value="week">Weekly</MenuItem>
-                    <MenuItem value="month">Monthly</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl size="small" variant="outlined">
-                  <Select
-                    value={trendChartType}
-                    onChange={(e) => setTrendChartType(e.target.value)}
-                    sx={{ color: tok('--text'), '.MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') }, fontSize: '0.8rem', height: 32 }}
-                  >
-                    <MenuItem value="mixed">Mixed</MenuItem>
-                    <MenuItem value="bar">Bar</MenuItem>
-                    <MenuItem value="line">Line</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-            <Box sx={{ height: 300 }}><Bar data={trendData} options={commonOptions} /></Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Resolution Status</Typography>
-            <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Doughnut data={statusData} options={doughnutOptions} />
-              <Box sx={{ position: 'absolute', textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ color: '#1cc88a' }}>{stats.resolutionRate}%</Typography>
-                <Typography variant="caption" color={tok('--text-secondary')}>Resolved</Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Breakdown Row */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Top Reporters</Typography>
-            <Box sx={{ height: 300 }}><Bar data={reporterData} options={commonOptions} /></Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Issue Breakdown (Categories)</Typography>
-            <Box sx={{ height: 260, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Doughnut data={categoryData} options={doughnutOptions} />
-              <Box sx={{ position: 'absolute', textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight="bold" sx={{ color: '#4e73df' }}>{categoryData.totalCount}</Typography>
-                <Typography variant="caption" color={tok('--text-secondary')}>Total Issues</Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-
-
-
-
-
-        {/* Side-by-Side Teams Distribution Row */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Team Performance Distribution (Holistic - Top 10)</Typography>
-            <Box sx={{ height: 300 }}><Bar data={installingTeamChartData} options={commonOptions} /></Box>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, bgcolor: tok('--surface'), color: tok('--text'), borderRadius: 2, border: '1px solid #3d3d3d', height: '100%' }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Issues by From (Main)</Typography>
-            <Box sx={{ height: 300 }}><Bar data={teamData} options={commonOptions} /></Box>
-          </Paper>
-        </Grid>
-
-        {/* Team Performance Ranking (Leaderboard) - Full Row Moving to End */}
-        <Grid item xs={12}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 0,
-              bgcolor: tok('--surface'),
-              borderRadius: 3,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              overflow: 'hidden',
-              background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-            }}
-          >
-            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', bgcolor: tok('--overlay-subtle'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="h6" fontWeight="700" color={tok('--text')}>
-                  Team Performance Ranking (Leaderboard)
-                </Typography>
-                <Typography variant="body2" color={tok('--text-secondary')} sx={{ mt: 0.5 }}>
-                  Holistic view of all teams involved in reporting, installation, or resolution
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                <TextField
-                  placeholder="Search team or category..."
-                  size="small"
-                  value={leaderboardSearch}
-                  onChange={(e) => {
-                    setLeaderboardSearch(e.target.value);
-                    setLeaderboardPage(0);
-                  }}
-                  InputProps={{
-                    startAdornment: <FaSearch style={{ marginRight: 8, color: tok('--text-secondary') }} />,
-                    sx: { bgcolor: tok('--overlay-subtle'), color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') } }
-                  }}
-                />
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <Select
-                    value={leaderboardStatusFilter}
-                    onChange={(e) => {
-                      setLeaderboardStatusFilter(e.target.value);
-                      setLeaderboardPage(0);
-                    }}
-                    sx={{ bgcolor: tok('--overlay-subtle'), color: '#fff', borderRadius: 2, '& .MuiOutlinedInput-notchedOutline': { borderColor: tok('--border') } }}
-                  >
-                    <MenuItem value="all">All Status</MenuItem>
-                    <MenuItem value="resolved">Has Resolved</MenuItem>
-                    <MenuItem value="active">Has Active</MenuItem>
-                  </Select>
-                </FormControl>
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<FaFileExcel />}
-                  onClick={handleExportLeaderboard}
-                  sx={{ bgcolor: '#059669', '&:hover': { bgcolor: '#047857' }, textTransform: 'none', borderRadius: 2 }}
-                >
-                  Export Ranking
-                </Button>
-              </Box>
-            </Box>
-            <Box sx={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-                <thead>
-                  <tr style={{ background: tok('--bg') }}>
-                    <th style={{ padding: '16px 24px', textAlign: 'left', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Team Name</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Total Involv.</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Resolved</th>
-                    <th style={{ padding: '16px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Active</th>
-                    <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Success Rate</th>
-                    <th style={{ padding: '16px', textAlign: 'right', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Avg Speed</th>
-                    <th style={{ padding: '16px 24px', textAlign: 'center', color: tok('--text-secondary'), fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>Top Issue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamNameStats.slice(leaderboardPage * leaderboardRowsPerPage, leaderboardPage * leaderboardRowsPerPage + leaderboardRowsPerPage).map((team, idx) => (
-                    <tr
-                      key={idx}
-                      style={{
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        transition: 'background-color 0.2s ease',
-                        cursor: 'pointer'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = tok('--overlay-subtle')}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      onClick={() => setSelectedTeam(team)}
-                    >
-                      <td style={{ padding: '16px 24px' }}>
-                        <Typography variant="body2" fontWeight="600" color="#60a5fa">
-                          {team.name}
-                        </Typography>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography variant="body2" fontWeight="600" color={tok('--text-secondary')}>{team.total}</Typography>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography variant="body2" fontWeight="600" color="#22c55e">{team.resolved}</Typography>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <Typography variant="body2" fontWeight="600" color="#ef4444">{team.unresolved}</Typography>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right' }}>
-                        <Chip
-                          label={`${team.rate}%`}
-                          size="small"
-                          sx={{
-                            height: 22,
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            bgcolor: tok('--overlay-subtle'),
-                            color: parseFloat(team.rate) >= 80 ? '#22c55e' : parseFloat(team.rate) >= 50 ? '#f59e0b' : '#ef4444',
-                            border: `1px solid ${parseFloat(team.rate) >= 80 ? 'rgba(34, 197, 94, 0.3)' : parseFloat(team.rate) >= 50 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                          }}
-                        />
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right' }}>
-                        <Typography variant="body2" fontFamily="monospace" color={tok('--text-secondary')}>
-                          {team.avgResolutionSpeed !== 'N/A' ? `${team.avgResolutionSpeed}d` : '-'}
-                        </Typography>
-                      </td>
-                      <td style={{ padding: '16px 24px', textAlign: 'center' }}>
-                        <Typography variant="caption" color={tok('--text-secondary')}>{team.topCategory}</Typography>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Box>
-            <TablePagination
-              component="div"
-              count={teamNameStats.length}
-              page={leaderboardPage}
-              onPageChange={(e, newPage) => setLeaderboardPage(newPage)}
-              rowsPerPage={leaderboardRowsPerPage}
-              onRowsPerPageChange={(e) => {
-                setLeaderboardRowsPerPage(parseInt(e.target.value, 10));
-                setLeaderboardPage(0);
-              }}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              sx={{ color: tok('--text-secondary'), borderTop: '1px solid rgba(255,255,255,0.05)' }}
-            />
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Team/Assignee Drill-down Dashboard */}
-      <Dialog
+      {/* Team drill-down */}
+      <AppDialog
         open={Boolean(selectedTeam)}
         onClose={() => setSelectedTeam(null)}
-        // maxWidth="lg"
-        fullScreen
-        PaperProps={{ sx: { bgcolor: tok('--bg'), color: tok('--text'), border: '1px solid #333' } }}
+        size="xl"
+        title={selectedTeam?.name || ''}
+        description={selectedTeam ? `${selectedTeam.type || 'Team'} dashboard` : ''}
+        extraActions={<Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={exportTeam}>Export records</Button>}
+        actions={<Button variant="outlined" onClick={() => setSelectedTeam(null)}>Close</Button>}
       >
         {selectedTeam && (
           <>
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', p: 3, borderBottom: '1px solid #333' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <FaUserTie color={tok('--accent-text')} size={24} />
-                <Box>
-                  <Typography variant="h6">{selectedTeam.name}</Typography>
-                  <Typography variant="caption" color={tok('--text-secondary')}>{selectedTeam.type} Dashboard</Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FaFileExcel />}
-                  onClick={() => {
-                    const data = selectedTeam.relatedIssues.map(issue => {
-                      const reportDate = new Date(issue.date || issue.createdAt);
-                      const closeDate = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? new Date() : null);
-                      const lifecycle = closeDate ? ((closeDate - reportDate) / (1000 * 60 * 60 * 24)).toFixed(1) : 'N/A';
-
-                      return {
-                        'Created At': new Date(issue.createdAt).toLocaleString(),
-                        'Report Date': new Date(issue.date).toLocaleDateString(),
-                        'SLID': issue.slid,
-                        'Category': issue.issues?.[0]?.category || 'N/A',
-                        'Sub-category': issue.issues?.[0]?.subCategory || '-',
-                        'Status': issue.solved === 'yes' ? 'Closed' : (issue.dispatched === 'yes' ? 'In Progress' : 'Pending'),
-                        'Time to Close (Days)': lifecycle
-                      };
-                    });
-                    const ws = utils.json_to_sheet(data);
-                    const wb = utils.book_new();
-                    utils.book_append_sheet(wb, ws, "TeamData");
-                    writeFile(wb, `${selectedTeam.name}_Performance.xlsx`);
-                  }}
-                  sx={{ color: '#4caf50', borderColor: '#4caf50', textTransform: 'none', mr: 2 }}
-                >
-                  Export Data
-                </Button>
-                <IconButton onClick={() => setSelectedTeam(null)} sx={{ color: '#f44336' }}><FaTimes /></IconButton>
-              </Box>
-            </DialogTitle>
-            <DialogContent sx={{ p: 3 }}>
-              <Grid container spacing={2} mb={4} mt={1}>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #7b68ee' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Total Capacity</Typography>
-                    <Typography variant="h5" fontWeight="bold">{selectedTeam.total}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #4caf50' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Resolved</Typography>
-                    <Typography variant="h5" fontWeight="bold" color="#4caf50">{selectedTeam.resolved}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center', borderBottom: '4px solid #f44336' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Success Rate</Typography>
-                    <Typography variant="h5" fontWeight="bold" color={tok('--accent-text')}>{selectedTeam.rate}%</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Avg. Dispatch</Typography>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#ff9800' }}>{selectedTeam.avgDispatchSpeed || 'N/A'}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Avg. Resolution</Typography>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#4caf50' }}>{selectedTeam.avgResolutionSpeed || 'N/A'}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Avg. Lifecycle</Typography>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: tok('--text') }}>{selectedTeam.avgLifecycleTime || 'N/A'}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Top Category</Typography>
-                    <Typography variant="body1" fontWeight="bold" sx={{ color: '#ff9933', fontSize: '0.85rem' }}>{selectedTeam.topCategory}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ p: 2, bgcolor: tok('--surface'), borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="caption" color={tok('--text-secondary')}>Top Sub-Category</Typography>
-                    <Typography variant="body1" fontWeight="bold" sx={{ color: '#03a9f4', fontSize: '0.85rem' }}>{selectedTeam.topSubCategory || 'N/A'}</Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 2, mt: 4 }}>Recent Issue History (Click to view full details)</Typography>
-              <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left', color: tok('--text-secondary'), borderBottom: '1px solid #333' }}>
-                      <th style={{ padding: '12px' }}>Created At</th>
-                      <th style={{ padding: '12px' }}>Report Date</th>
-                      <th style={{ padding: '12px' }}>SLID</th>
-                      <th style={{ padding: '12px' }}>Category</th>
-                      <th style={{ padding: '12px' }}>Sub-category</th>
-                      <th style={{ padding: '12px' }}>Status</th>
-                      <th style={{ padding: '12px' }}>Life (D)</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedTeam.relatedIssues.map((issue, i) => (
-                      <tr
-                        key={i}
-                        onClick={() => handleViewIssue(issue)}
-                        style={{ borderBottom: '1px solid #252525', cursor: 'pointer' }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = tok('--surface')}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <td style={{ padding: '12px', color: tok('--text-secondary') }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
-                        <td style={{ padding: '12px' }}>{new Date(issue.date).toLocaleDateString()}</td>
-                        <td style={{ padding: '12px', fontWeight: 'bold' }}>{issue.slid}</td>
-                        <td style={{ padding: '12px' }}>{issue.issues?.[0]?.category || 'N/A'}</td>
-                        <td style={{ padding: '12px' }}>{issue.issues?.[0]?.subCategory || '-'}</td>
-                        <td style={{ padding: '12px' }}>
-                          <Chip label={issue.solved === 'yes' ? 'Success' : 'Active'} size="small" sx={{ bgcolor: issue.solved === 'yes' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 193, 7, 0.1)', color: issue.solved === 'yes' ? '#4caf50' : '#ffc107' }} />
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <Typography sx={{
-                            fontWeight: 'bold',
-                            color: (() => {
-                              const rDate = new Date(issue.date || issue.createdAt);
-                              const cDate = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? new Date() : null);
-                              if (!cDate) return '#b3b3b3';
-                              const life = (cDate - rDate) / (1000 * 60 * 60 * 24);
-                              return life > 3 ? '#f44336' : life > 1 ? '#ff9800' : '#4caf50';
-                            })()
-                          }}>
-                            {(() => {
-                              const rDate = new Date(issue.date || issue.createdAt);
-                              const cDate = issue.closedAt ? new Date(issue.closedAt) : (issue.solved === 'no' ? new Date() : null);
-                              return cDate ? ((cDate - rDate) / (1000 * 60 * 60 * 24)).toFixed(1) : '-';
-                            })()}
-                          </Typography>
-                        </td>
-                        <td style={{ padding: '12px', textAlign: 'center' }}>
-                          {(issue.teamName || issue.installingTeam) && (
-                            <Tooltip title="Contact Team via WhatsApp">
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleWhatsAppContact(issue);
-                                }}
-                                sx={{ color: '#25D366', '&:hover': { backgroundColor: 'rgba(37, 211, 102, 0.1)' } }}
-                              >
-                                <FaWhatsapp size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Box>
-            </DialogContent>
+            <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' }, mb: 2 }}>
+              <StatCard label="Involved" value={selectedTeam.total} />
+              <StatCard label="Resolved" value={selectedTeam.resolved} />
+              <StatCard label="Success rate" value={`${selectedTeam.rate}%`} />
+              <StatCard label="Avg dispatch" value={selectedTeam.avgDispatchSpeed || '—'} />
+              <StatCard label="Avg resolution" value={selectedTeam.avgResolutionSpeed || '—'} />
+              <StatCard label="Avg lifecycle" value={selectedTeam.avgLifecycleTime || '—'} />
+              <StatCard label="Top category" value={<Typography component="span" dir="auto" sx={{ fontSize: 15, fontWeight: 600 }}>{selectedTeam.topCategory || '—'}</Typography>} />
+              <StatCard label="Top sub-category" value={<Typography component="span" dir="auto" sx={{ fontSize: 15, fontWeight: 600 }}>{selectedTeam.topSubCategory || '—'}</Typography>} />
+            </Box>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, mb: 1 }}>Issue history <Box component="span" sx={{ color: 'var(--text-muted)', fontWeight: 400 }}>· click a row for details</Box></Typography>
+            <DataGrid
+              rows={selectedTeam.relatedIssues}
+              columns={teamIssueColumns}
+              getRowId={(r) => r._id}
+              onRowClick={({ row }) => handleViewIssue(row)}
+              autoHeight
+              disableRowSelectionOnClick
+              rowHeight={44}
+              columnHeaderHeight={38}
+              pageSizeOptions={[10, 25, 50]}
+              initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'date', sort: 'desc' }] } }}
+              sx={{ ...gridSx, minHeight: 220 }}
+            />
           </>
         )}
-      </Dialog>
+      </AppDialog>
 
-      {/* Detailed Issue Diagnostics Dialog */}
-      <ViewIssueDetailsDialog
-        open={isIssueViewOpen}
-        onClose={() => setIsIssueViewOpen(false)}
-        issue={selectedDetailedIssue}
-        onUpdate={handleIssueUpdate}
-      />
-      <ReportedIssueCardDialog
-        open={reportDialogOpen}
-        onClose={() => setReportDialogOpen(false)}
-        teamIssues={reportDialogIssues}
-        teamName={reportDialogTitle}
-      />
+      <ViewIssueDetailsDialog open={isIssueViewOpen} onClose={() => setIsIssueViewOpen(false)} issue={selectedDetailedIssue} onUpdate={handleIssueUpdate} />
+      <ReportedIssueCardDialog open={reportDialogOpen} onClose={() => setReportDialogOpen(false)} teamIssues={reportDialogIssues} teamName={reportDialogTitle} />
       <ManagementEmailDialog
         open={showEmailDialog}
         onClose={() => setShowEmailDialog(false)}
@@ -2171,7 +1106,7 @@ const CustomerIssuesAnalytics = ({ issues = [] }) => {
           }, {})
         }}
       />
-    </Box >
+    </Box>
   );
 };
 
