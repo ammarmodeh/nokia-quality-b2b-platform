@@ -30,22 +30,9 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
         maxWidth="md"
         fullWidth
         fullScreen={isMobile}
-        PaperProps={{
-          sx: {
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            borderRadius: isMobile ? 0 : '8px',
-            border: '1px solid var(--border)',
-          },
-        }}
+       
       >
-        <DialogTitle component="div" sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid var(--border)',
-          padding: isMobile ? '12px 16px' : '16px 24px',
-        }}>
+        <DialogTitle component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '12px 16px' : '16px 24px' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FaBalanceScale color="var(--accent-text)" size={isMobile ? 16 : 20} />
             <Typography variant={isMobile ? "subtitle1" : "h6"} component="div" sx={{ fontSize: isMobile ? 13 : 20 }}>
@@ -66,16 +53,12 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers sx={{
-          padding: isMobile ? '12px 16px' : '20px 24px',
-          '&::-webkit-scrollbar': {
+        <DialogContent dividers sx={{ padding: isMobile ? '12px 16px' : '20px 24px', '&::-webkit-scrollbar': {
             width: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
+          }, '&::-webkit-scrollbar-thumb': {
             backgroundColor: '#e5e7eb',
             borderRadius: '2px',
-          },
-        }}>
+          } }}>
           <Box sx={{ mb: 3 }}>
             <Typography variant="body1" sx={{ color: 'var(--text)', mb: 2 }}>
               Our violation evaluation system ensures fair and consistent consequences for teams based on customer feedback scores. The system categorizes violations and applies progressive consequences.
@@ -86,7 +69,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Detractor Customers (Score 1-6)" sx={{
-                backgroundColor: '#f44336',
+                backgroundColor: '#DC2626',
                 color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
@@ -123,7 +106,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Passive Customers (Score 7-8)" sx={{
-                backgroundColor: '#ff9800',
+                backgroundColor: '#D97706',
                 color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
@@ -160,7 +143,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           <Box sx={{ mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Chip label="Fairness Measures" sx={{
-                backgroundColor: '#4caf50',
+                backgroundColor: '#16A34A',
                 color: 'var(--text)',
                 fontSize: isMobile ? '0.8rem' : '0.9rem',
                 height: 'auto',
@@ -189,10 +172,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{
-          borderTop: '1px solid var(--border)',
-          padding: isMobile ? '8px 16px' : '12px 24px',
-        }}>
+        <DialogActions sx={{ padding: isMobile ? '8px 16px' : '12px 24px' }}>
           <Button
             onClick={onClose}
             size={isMobile ? "small" : "medium"}

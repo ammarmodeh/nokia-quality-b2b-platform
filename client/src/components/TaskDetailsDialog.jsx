@@ -1,669 +1,385 @@
-import { alpha } from "../theme/colorFns";
-import { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Paper, Typography, Box, Divider, Chip, Stack, IconButton, Tooltip, Grid, useTheme, useMediaQuery, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress } from '@mui/material';
-import * as XLSX from 'xlsx';
-import {
-  MdClose,
-  MdContentCopy,
-  MdFileDownload,
-  MdPerson,
-  MdTimer,
-  MdInfoOutline,
-  MdBusiness,
-  MdLocationOn,
-  MdAssignment,
-  MdHistory,
-  MdEdit
-} from 'react-icons/md';
+import { useEffect, useMemo, useState } from 'react';
+import { Box, Button, IconButton, InputBase, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
+import ArrowBack from '@mui/icons-material/ArrowBack';
+import ContentCopy from '@mui/icons-material/ContentCopy';
+import EditOutlined from '@mui/icons-material/EditOutlined';
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
+import SearchIcon from '@mui/icons-material/Search';
+import Close from '@mui/icons-material/Close';
 import { FaWhatsapp } from 'react-icons/fa6';
 import moment from 'moment';
+import { toast } from 'sonner';
 import api from '../api/api';
 import { getWeekNumber } from '../utils/helpers';
+import { exportRows } from '../utils/exportRows';
 import EditTaskDialog from './task/EditTaskDialog';
+import AppDialog from './ui/AppDialog';
+import SectionCard from './ui/SectionCard';
+import StatCard from './ui/StatCard';
+import Badge from './ui/Badge';
+import EmptyState from './ui/EmptyState';
+import { gridSx } from '../pages/tasks/gridSx';
 
-// Reusable Detail Item
-const DetailItem = ({ label, value, icon, fullWidth = false }) => (
-  <Box sx={{
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 0.5,
-    p: 1.5,
-    borderRadius: '8px',
-    bgcolor: (theme) => alpha(theme.palette.background.default, 0.05),
-    border: '1px solid',
-    borderColor: (theme) => alpha(theme.palette.divider, 0.1),
-    height: '100%',
-    gridColumn: fullWidth ? '1 / -1' : 'auto'
-  }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', mb: 0.5 }}>
-      {icon && <Box sx={{ display: 'flex', color: 'primary.main', opacity: 0.8 }}>{icon}</Box>}
-      <Typography variant="caption" fontWeight="600" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-        {label}
-      </Typography>
-    </Box>
-    <Box>
-      {Array.isArray(value) ? (
-        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary', wordBreak: 'break-word' }}>
-          {value.length > 0 ? value.join(", ") : 'N/A'}
-        </Typography>
-      ) : (typeof value === 'string' || typeof value === 'number' ? (
-        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary', wordBreak: 'break-word' }}>
-          {value || 'N/A'}
-        </Typography>
-      ) : (
-        value
-      ))}
+const fmt = (d) => (d ? moment(d).format('D MMM YYYY') : '—');
+const list = (v) => (Array.isArray(v) ? v.filter(Boolean).join(', ') : v) || '';
+const npsOf = (score) => {
+  const n = Number(score);
+  if (!Number.isFinite(n) || score === null || score === undefined || score === '') return null;
+  return n >= 9 ? { label: 'Promoter', tone: 'success' } : n >= 7 ? { label: 'Neutral', tone: 'warning' } : { label: 'Detractor', tone: 'danger' };
+};
+
+// Every column the old Excel export had, now through the shared styled exporter.
+const EXPORT_COLUMNS = [
+  ['Request number', (t) => t.requestNumber],
+  ['Operation', (t) => t.operation],
+  ['SLID', (t) => t.slid],
+  ['PIS date', (t) => (t.pisDate ? new Date(t.pisDate) : '')],
+  ['Request date', (t) => (t.contractDate ? new Date(t.contractDate) : '')],
+  ['FE date', (t) => (t.feDate || t.appDate ? new Date(t.feDate || t.appDate) : '')],
+  ['UN date', (t) => (t.unDate ? new Date(t.unDate) : '')],
+  ['In date', (t) => (t.inDate ? new Date(t.inDate) : '')],
+  ['Close date', (t) => (t.closeDate ? new Date(t.closeDate) : '')],
+  ['Interview date', (t) => (t.interviewDate ? new Date(t.interviewDate) : '')],
+  ['Customer', (t) => t.customerName],
+  ['Contact', (t) => t.contactNumber],
+  ['Customer type', (t) => t.customerType],
+  ['Governorate', (t) => t.governorate],
+  ['District', (t) => t.district],
+  ['Tariff', (t) => t.tarrifName],
+  ['Satisfaction score', (t) => t.evaluationScore],
+  ['NPS type', (t) => npsOf(t.evaluationScore)?.label || ''],
+  ['Feedback severity', (t) => t.priority || ''],
+  ['Customer feedback', (t) => t.customerFeedback],
+  ['Reason', (t) => list(t.reason)],
+  ['Sub reason', (t) => list(t.subReason)],
+  ['Root cause', (t) => list(t.rootCause)],
+  ['Owner', (t) => list(t.responsible)],
+  ['Scoring factors', (t) => list(t.scoringKeys)],
+  ['ITN related', (t) => list(t.itnRelated)],
+  ['Related to current subscription', (t) => list(t.relatedToSubscription)],
+  ['Validation', (t) => t.validationStatus || 'Not validated'],
+  ['GAIA check', (t) => t.gaiaCheck],
+  ['GAIA content', (t) => t.gaiaContent],
+  ['Latest QOps type', (t) => t.latestGaia?.transactionType],
+  ['Latest QOps state', (t) => t.latestGaia?.transactionState],
+  ['Latest QOps reason', (t) => t.latestGaia?.unfReasonCode],
+  ['Field team', (t) => t.teamName],
+  ['Team company', (t) => t.teamCompany],
+  ['Actions taken', (t) => (t.subTasks || []).map((s, i) => `Step ${i + 1}: ${s.note || ''}`).join('\n')],
+];
+
+/** Label / value row used in the detail sections. */
+const Field = ({ label, children, wide }) => (
+  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: wide ? '1fr' : '150px minmax(0, 1fr)' }, gap: { xs: 0.25, sm: wide ? 0.5 : 1.5 }, py: 0.875, borderBottom: '1px solid var(--border)', '&:last-of-type': { borderBottom: 0 } }}>
+    <Typography sx={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{label}</Typography>
+    <Box sx={{ fontSize: 13, color: 'var(--text)', minWidth: 0, wordBreak: 'break-word' }} dir="auto">
+      {children === undefined || children === null || children === '' ? <Box component="span" sx={{ color: 'var(--text-muted)' }}>—</Box> : children}
     </Box>
   </Box>
 );
 
-// Section Header
-const SectionHeader = ({ title, icon }) => (
-  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-    <Box sx={{ p: 0.5, borderRadius: 1, bgcolor: 'primary.main', color: 'white', display: 'flex' }}>
-      {icon}
-    </Box>
-    <Typography variant="subtitle2" fontWeight="600" color="text.primary">
-      {title}
-    </Typography>
-  </Stack>
-);
-
-// Expandable Note for Table Cells
-const ExpandableNote = ({ text }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const shouldTruncate = text && text.length > 80;
-
-  if (!text) return '-';
-
-  return (
-    <Box sx={{ direction: 'rtl', textAlign: 'right' }}>
-      <Typography variant="body2" sx={{
-        color: 'var(--text-secondary)',
-        whiteSpace: isExpanded ? 'pre-wrap' : 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        maxWidth: 250,
-        fontSize: '0.75rem',
-        lineHeight: 1.4
-      }}>
-        {text}
-      </Typography>
-      {shouldTruncate && (
-        <Button
-          size="small"
-          onClick={() => setIsExpanded(!isExpanded)}
-          sx={{
-            p: 0,
-            minWidth: 0,
-            color: 'primary.main',
-            fontSize: '0.7rem',
-            mt: 0.2,
-            textTransform: 'none',
-            '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
-          }}
-        >
-          {isExpanded ? 'Read Less' : 'Read More'}
-        </Button>
-      )}
-    </Box>
-  );
-};
-
-export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTaskUpdated }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [qopsLogs, setQopsLogs] = useState([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
+/**
+ * Tasks behind a number (team, reason, owner, …). Several tasks: KPIs, search and a
+ * sortable table; click a row for its details. One task: details straight away.
+ * Props unchanged: { open, onClose, tasks, title, teamName, onTaskUpdated }.
+ */
+export const TaskDetailsDialog = ({ open, onClose, tasks = [], title, teamName, onTaskUpdated }) => {
   const [settings, setSettings] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [query, setQuery] = useState('');
+  const [logs, setLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [editTask, setEditTask] = useState(null);
 
-  // Edit states
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedTaskToEdit, setSelectedTaskToEdit] = useState(null);
+  const displayTitle = title || `Tasks for ${teamName || 'this team'}`;
+  const single = tasks.length === 1;
+  const selected = single ? tasks[0] : tasks.find((t) => t._id === selectedId) || null;
 
-  // Fetch Settings
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await api.get("/settings");
-        setSettings(response.data);
-      } catch (err) {
-        console.error("Error fetching settings:", err);
-      }
-    };
-    fetchSettings();
+    api.get('/settings').then((r) => setSettings(r.data)).catch(() => setSettings(null));
   }, []);
 
-  // Use title prop if provided, else fall back to teamName logic
-  const displayTitle = title || `All Tasks for Team: ${teamName || 'Unknown'}`;
-
-  // Fetch QOps logs when dialog opens and there is a single task (usual case for drill-down)
   useEffect(() => {
-    if (open && tasks.length === 1 && tasks[0]._id) {
-      fetchTickets(tasks[0]._id);
-    } else {
-      setQopsLogs([]);
+    if (!open) {
+      setSelectedId(null);
+      setQuery('');
     }
-  }, [open, tasks]);
+  }, [open]);
 
-  const fetchTickets = async (taskId) => {
+  // Q-Ops log of the task being viewed
+  useEffect(() => {
+    if (!open || !selected?._id) {
+      setLogs([]);
+      return;
+    }
+    let cancel = false;
     setLoadingLogs(true);
+    api.get(`/tasks/tickets/${selected._id}`)
+      .then(({ data }) => {
+        if (cancel) return;
+        setLogs((data || []).sort((a, b) => (new Date(a.eventDate || 0) - new Date(b.eventDate || 0)) || (new Date(a.createdAt) - new Date(b.createdAt))));
+      })
+      .catch(() => !cancel && setLogs([]))
+      .finally(() => !cancel && setLoadingLogs(false));
+    return () => { cancel = true; };
+  }, [open, selected?._id]);
+
+  const weekOf = (d) => (d ? getWeekNumber(d, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week : null);
+
+  const stats = useMemo(() => {
+    const scored = tasks.filter((t) => npsOf(t.evaluationScore));
+    const det = scored.filter((t) => npsOf(t.evaluationScore).label === 'Detractor').length;
+    const neu = scored.filter((t) => npsOf(t.evaluationScore).label === 'Neutral').length;
+    const avg = scored.length ? (scored.reduce((s, t) => s + Number(t.evaluationScore), 0) / scored.length).toFixed(1) : '—';
+    return { det, neu, avg };
+  }, [tasks]);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tasks;
+    return tasks.filter((t) => [t.slid, t.requestNumber, t.customerName, list(t.reason), list(t.subReason), list(t.rootCause), list(t.responsible)].some((v) => String(v || '').toLowerCase().includes(q)));
+  }, [tasks, query]);
+
+  const fileBase = (title || `tasks-${teamName || 'team'}`).replace(/[^\w؀-ۿ]+/g, '-').toLowerCase();
+  const exportAll = () => {
     try {
-      const { data } = await api.get(`/tasks/tickets/${taskId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-      });
-      // Sort: Event Date (asc) -> Created At (asc)
-      const sorted = (data || []).sort((a, b) => {
-        const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
-        const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
-        if (dateA !== dateB) return dateA - dateB;
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
-      setQopsLogs(sorted);
-    } catch (error) {
-      console.error('Error fetching QOps tickets:', error);
-      setQopsLogs([]);
-    } finally {
-      setLoadingLogs(false);
+      exportRows(selected && !single ? [selected] : tasks, EXPORT_COLUMNS, { filename: selected && !single ? `task-${selected.slid || selected.requestNumber}` : fileBase });
+    } catch (e) {
+      toast.error(`Export failed: ${e.message}`);
     }
   };
 
-  const handleEditClick = (task) => {
-    setSelectedTaskToEdit(task);
-    setEditDialogOpen(true);
-  };
-
-  const handleTaskUpdateSuccess = (updatedTask) => {
-    setEditDialogOpen(false);
-    setSelectedTaskToEdit(null);
-    if (onTaskUpdated) onTaskUpdated(updatedTask);
-    // Refresh logs if it's a single task view
-    if (tasks.length === 1) {
-      fetchTickets(tasks[0]._id);
+  const copyDetails = async () => {
+    const source = selected ? [selected] : tasks;
+    const text = [
+      displayTitle,
+      '',
+      ...source.map((t, i) => [
+        `=== Task ${i + 1} ===`,
+        ...EXPORT_COLUMNS.map(([h, get]) => {
+          const v = get(t);
+          return `${h}: ${v instanceof Date ? moment(v).format('YYYY-MM-DD') : v ?? ''}`;
+        }),
+        ...(selected && logs.length ? ['--- Q-Ops log ---', ...logs.map((l, j) => `${j + 1}. ${l.eventDate ? moment(l.eventDate).format('DD/MM/YYYY') : '-'} | ${l.transactionType || l.mainCategory || ''} | ${l.transactionState || ''} | ${l.agentName || ''} | ${l.note || ''}`)] : []),
+        '',
+      ].join('\n')),
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Details copied');
+    } catch {
+      toast.error('Couldn’t copy to the clipboard');
     }
   };
 
-  const copyToClipboard = () => {
-    let textToCopy = `${displayTitle}\n\n`;
-
-    tasks.forEach((task, index) => {
-      textToCopy += `=== Task ${index + 1} ===\n`;
-      textToCopy += `Request Number: ${task.requestNumber}\n`;
-      textToCopy += `Operation: ${task.operation || 'N/A'}\n`;
-      textToCopy += `SLID: ${task.slid}\n`;
-      textToCopy += `Customer Name: ${task.customerName}\n`;
-      textToCopy += `Contact Number: ${task.contactNumber}\n`;
-      textToCopy += `PIS Date: ${moment(task.pisDate).format("YYYY-MM-DD")}\n`;
-      textToCopy += `Request Date: ${moment(task.contractDate).format("YYYY-MM-DD")}\n`;
-      textToCopy += `UN Date: ${task.unDate ? moment(task.unDate).format("YYYY-MM-DD") : 'N/A'}\n`;
-      textToCopy += `FE Date: ${task.feDate ? moment(task.feDate).format("YYYY-MM-DD") : (task.appDate ? moment(task.appDate).format("YYYY-MM-DD") : 'N/A')}\n`;
-      textToCopy += `In Date: ${moment(task.inDate).format("YYYY-MM-DD")}\n`;
-      textToCopy += `Close Date: ${moment(task.closeDate).format("YYYY-MM-DD")}\n`;
-      textToCopy += `Tariff Name: ${task.tarrifName}\n`;
-      textToCopy += `Customer Type: ${task.customerType}\n`;
-      textToCopy += `Interview Date: ${moment(task.interviewDate).format("YYYY-MM-DD")}\n`;
-      textToCopy += `Governorate: ${task.governorate}\n`;
-      textToCopy += `District: ${task.district}\n`;
-      textToCopy += `Team Name: ${task.teamName}\n`;
-      textToCopy += `Team Company: ${task.teamCompany}\n`;
-      textToCopy += `Satisfaction Score: ${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
-        task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})\n`;
-      textToCopy += `Feedback Severity: ${task.priority || 'Not specified'}\n`;
-      textToCopy += `Customer Feedback: ${task.customerFeedback}\n`;
-      textToCopy += `Reason: ${task.reason}\n`;
-      textToCopy += `Sub Reason: ${task.subReason || 'N/A'}\n`;
-      textToCopy += `Root Cause: ${task.rootCause || 'N/A'}\n`;
-      textToCopy += `GAIA Check: ${task.gaiaCheck || 'N/A'}\n`;
-      textToCopy += `GAIA Content: ${task.gaiaContent || 'N/A'}\n`;
-      textToCopy += `Latest QOps Type: ${task.latestGaia?.transactionType || 'N/A'}\n`;
-      textToCopy += `Latest QOps State: ${task.latestGaia?.transactionState || 'N/A'}\n`;
-      textToCopy += `Latest QOps Reason: ${task.latestGaia?.unfReasonCode || 'N/A'}\n\n`;
-
-
-      textToCopy += `Progress & Logs:\n`;
-      // Combine logs if available, else subtasks
-
-      if (qopsLogs.length > 0) {
-        textToCopy += `--- Q-Ops Transaction Log ---\n`;
-        qopsLogs.forEach((log, idx) => {
-          textToCopy += `${idx + 1}. Date: ${log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'} | Type: ${log.transactionType || log.mainCategory || 'N/A'} | State: ${log.transactionState || 'N/A'} | Agent: ${log.agentName || 'N/A'} | Note: ${log.note || '-'}\n`;
-        });
-      } else {
-        textToCopy += `--- Subtasks ---\n`;
-        task.subTasks?.forEach((subtask, subIndex) => {
-          textToCopy += `${subIndex + 1}. ${subtask.title || `Step ${subIndex + 1}`}\n`;
-          textToCopy += `Action: ${subtask.note || 'No action taken yet'}\n`;
-          if (subtask.completedBy) {
-            textToCopy += `Completed by: ${subtask.completedBy.name}\n`;
-          }
-          if (subtask.dateTime) {
-            textToCopy += `Completed on: ${subtask.dateTime}\n`;
-          }
-          textToCopy += '\n';
-        });
-      }
-
-      textToCopy += '\n';
-    });
-
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      // In a real app we might want a snackbar, but keeping alert for now as per previous code
-      alert('Task details copied to clipboard! You can now paste it anywhere.');
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-      alert('Failed to copy text. Please try again.');
-    });
-  };
-
-  const redirectToWhatsApp = () => {
-    const textToCopy = `${displayTitle}\n\n`;
-    let formattedMessage = textToCopy;
-
-    tasks.forEach((task, index) => {
-      formattedMessage += `=== Task ${index + 1} ===\n`;
-      formattedMessage += `Request Number: ${task.requestNumber}\n`;
-      formattedMessage += `SLID: ${task.slid}\n`;
-      formattedMessage += `Customer: ${task.customerName}\n`;
-      formattedMessage += `Contact: ${task.contactNumber}\n`;
-      formattedMessage += `Score: ${task.evaluationScore}\n`;
-      formattedMessage += `Status: ${task.status}\n\n`;
-    });
-
-    // Get phone from first task's populated teamId
-    let phoneNumber = tasks[0]?.teamId?.contactNumber;
-
-    if (!phoneNumber) {
-      alert('Team contact number not available');
+  const phone = (selected || tasks[0])?.teamId?.contactNumber;
+  const openWhatsApp = () => {
+    let n = String(phone || '').trim();
+    const plus = n.startsWith('+');
+    n = n.replace(/[^0-9]/g, '');
+    if (n.length < 10 || n.length > 15) {
+      toast.error('The team’s phone number isn’t valid');
       return;
     }
-
-    // Clean and validate phone number
-    let cleanNumber = phoneNumber.toString().trim();
-    const hasPlus = cleanNumber.startsWith('+');
-    cleanNumber = cleanNumber.replace(/[^0-9]/g, '');
-    if (hasPlus && cleanNumber) cleanNumber = '+' + cleanNumber;
-
-    const digitsOnly = cleanNumber.replace(/\+/g, '');
-    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-      alert('Invalid team phone number');
-      return;
-    }
-
-    navigator.clipboard.writeText(formattedMessage).catch(() => { });
-
-    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(formattedMessage)}`;
-    window.open(whatsappUrl, '_blank');
+    const msg = [displayTitle, '', ...(selected ? [selected] : tasks).map((t, i) => `${i + 1}. ${t.slid || ''} · ${t.customerName || ''} · score ${t.evaluationScore ?? '—'} · ${t.status || ''}`)].join('\n');
+    window.open(`https://wa.me/${plus ? '+' : ''}${n}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
   };
 
-  const exportToExcel = () => {
-    const data = tasks.map((task) => ({
-      'Request Number': task.requestNumber,
-      'Operation': task.operation || 'N/A',
-      'SLID': task.slid,
-      'PIS Date': new Date(task.pisDate).toLocaleString(),
-      'Request Date': task.contractDate ? new Date(task.contractDate).toLocaleDateString() : 'N/A',
-      'FE Date': task.feDate ? new Date(task.feDate).toLocaleDateString() : (task.appDate ? new Date(task.appDate).toLocaleDateString() : 'N/A'),
-      'UN Date': task.unDate ? new Date(task.unDate).toLocaleDateString() : 'N/A',
-      'In Date': task.inDate ? new Date(task.inDate).toLocaleDateString() : 'N/A',
-      'Close Date': task.closeDate ? new Date(task.closeDate).toLocaleDateString() : 'N/A',
-      'Customer Name': task.customerName,
-      'Customer Feedback': task.customerFeedback,
-      'Satisfaction Score': task.evaluationScore,
-      'Feedback Severity': task.priority || 'Not specified',
-      'Contact Number': task.contactNumber,
-      'Tariff Name': task.tarrifName,
-      'Reason': task.reason,
-      'Sub Reason': task.subReason || 'N/A',
-      'Root Cause': task.rootCause || 'N/A',
-      'GAIA Check': task.gaiaCheck || 'N/A',
-      'GAIA Content': task.gaiaContent || 'N/A',
-      'ITN Related': task.itnRelated || 'N/A',
-      'Related to Current Subscription': task.relatedToSubscription || 'N/A',
-      'Latest QOps Type': task.latestGaia?.transactionType || 'N/A',
-      'Latest QOps State': task.latestGaia?.transactionState || 'N/A',
-      'Latest QOps Reason': task.latestGaia?.unfReasonCode || 'N/A',
-      'Customer Type': task.customerType,
-      'Governorate': task.governorate,
-      'District': task.district,
-      'Action taken by assigned user': task.subTasks?.map((sub, index) => `Step ${index + 1}: ${sub.note}`).join('\n') || '',
-      'Team Name': task.teamName,
-      'Team Company': task.teamCompany,
-      'Interview Date': new Date(task.interviewDate).toLocaleString(),
-      // Handle optional chaining safely
-      'Dispatched': task.relatedIssues?.[0]?.dispatched === 'yes' ? 'Yes' : 'No',
-      'Resolved Date': task.relatedIssues?.[0]?.resolveDate ? new Date(task.relatedIssues[0].resolveDate).toLocaleDateString() : 'N/A',
-      'Closed Date': task.relatedIssues?.[0]?.closedAt ? new Date(task.relatedIssues[0].closedAt).toLocaleDateString() : 'N/A',
-    }));
+  const columns = [
+    { field: 'interviewDate', headerName: 'Interview', type: 'date', width: 120, valueGetter: (v) => (v ? new Date(v) : null), renderCell: ({ value }) => fmt(value) },
+    { field: 'week', headerName: 'Week', type: 'number', width: 80, align: 'left', headerAlign: 'left', valueGetter: (_v, row) => weekOf(row.interviewDate) },
+    {
+      field: 'slid', headerName: 'SLID', width: 150,
+      renderCell: ({ row }) => (
+        <Box sx={{ minWidth: 0 }}>
+          <Typography noWrap sx={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{row.slid}</Typography>
+          <Typography noWrap sx={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Req. {row.requestNumber}</Typography>
+        </Box>
+      ),
+    },
+    { field: 'customerName', headerName: 'Customer', flex: 1, minWidth: 160, renderCell: ({ value }) => <Typography noWrap dir="auto" sx={{ fontSize: 13 }}>{value || '—'}</Typography> },
+    {
+      field: 'evaluationScore', headerName: 'Score', type: 'number', width: 140, align: 'left', headerAlign: 'left',
+      valueGetter: (v) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : null),
+      renderCell: ({ value }) => { const n = npsOf(value); return n ? <Badge tone={n.tone}>{n.label} · {value}</Badge> : '—'; },
+    },
+    { field: 'reason', headerName: 'Reason', flex: 1, minWidth: 150, valueGetter: (v) => list(v) },
+    { field: 'rootCause', headerName: 'Root cause', flex: 1, minWidth: 160, valueGetter: (v) => list(v) },
+    { field: 'responsible', headerName: 'Owner', width: 120, valueGetter: (v) => list(v) },
+  ];
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const colWidths = Object.keys(data[0]).map((key) => ({ wch: key.length + 5 }));
-    worksheet['!cols'] = colWidths;
+  const detail = selected && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        {!single && <Button variant="text" startIcon={<ArrowBack sx={{ fontSize: 16 }} />} onClick={() => setSelectedId(null)} sx={{ color: 'var(--text-secondary)', mr: 0.5 }}>All tasks</Button>}
+        <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Request #{selected.requestNumber}</Typography>
+        {selected.slid && <Badge outline sx={{ fontFamily: 'var(--font-mono)' }}>{selected.slid}</Badge>}
+        {selected.interviewDate && <Badge>Week {weekOf(selected.interviewDate)}</Badge>}
+        {npsOf(selected.evaluationScore) && <Badge tone={npsOf(selected.evaluationScore).tone} dot>{npsOf(selected.evaluationScore).label} · {selected.evaluationScore}</Badge>}
+        <Box sx={{ flex: 1 }} />
+        <Typography sx={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>PIS {fmt(selected.pisDate)}</Typography>
+        <Button variant="outlined" startIcon={<EditOutlined sx={{ fontSize: 16 }} />} onClick={() => setEditTask(selected)}>Edit task</Button>
+      </Box>
 
-    const workbook = XLSX.utils.book_new();
-    // Sanitize sheet name if needed
-    const sheetName = tasks[0]?.slid ? String(tasks[0].slid).substring(0, 30) : 'Tasks';
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' } }}>
+        <SectionCard title="Customer" bodySx={{ py: 1 }}>
+          <Field label="Name">{selected.customerName}</Field>
+          <Field label="Contact">{selected.contactNumber}</Field>
+          <Field label="Type">{selected.customerType}</Field>
+          <Field label="Location">{[selected.governorate, selected.district].filter(Boolean).join(', ')}</Field>
+          <Field label="Tariff">{selected.tarrifName}</Field>
+        </SectionCard>
+        <SectionCard title="Issue" bodySx={{ py: 1 }}>
+          <Field label="Reason">{list(selected.reason)}</Field>
+          <Field label="Sub reason">{list(selected.subReason)}</Field>
+          <Field label="Severity">{selected.priority && selected.priority !== 'Not specified' ? selected.priority : ''}</Field>
+          <Field label="Scoring factors">{list(selected.scoringKeys)}</Field>
+          <Field label="ITN related">{list(selected.itnRelated)}</Field>
+          <Field label="Current subscription">{list(selected.relatedToSubscription)}</Field>
+        </SectionCard>
+        <SectionCard title="Outcome and team" bodySx={{ py: 1 }}>
+          <Field label="Root cause">{list(selected.rootCause)}</Field>
+          <Field label="Owner">{list(selected.responsible)}</Field>
+          <Field label="Validation"><Badge tone={selected.validationStatus === 'Validated' ? 'success' : 'neutral'} dot>{selected.validationStatus || 'Not validated'}</Badge></Field>
+          <Field label="Field team">{selected.teamName}</Field>
+          <Field label="Company">{selected.teamCompany}</Field>
+        </SectionCard>
+      </Box>
 
-    const fileName = title ? `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx` : `${tasks[0]?.slid || 'tasks'}_${teamName || 'export'}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
+      <SectionCard title="Customer feedback" bodySx={{ py: 1.5 }}>
+        <Typography dir="auto" sx={{ fontSize: 13.5, whiteSpace: 'pre-wrap', color: selected.customerFeedback ? 'var(--text)' : 'var(--text-muted)' }}>
+          {selected.customerFeedback || 'No feedback recorded.'}
+        </Typography>
+      </SectionCard>
+
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' } }}>
+        <SectionCard title="Dates" bodySx={{ py: 1 }}>
+          <Field label="Request">{fmt(selected.contractDate)}</Field>
+          <Field label="FE">{fmt(selected.feDate || selected.appDate)}</Field>
+          <Field label="UN">{fmt(selected.unDate)}</Field>
+          <Field label="In">{fmt(selected.inDate)}</Field>
+          <Field label="Close">{fmt(selected.closeDate)}</Field>
+          <Field label="Interview">{fmt(selected.interviewDate)}</Field>
+        </SectionCard>
+        <SectionCard
+          title="Q-Ops log"
+          description={[selected.gaiaCheck && `GAIA check: ${selected.gaiaCheck}`, selected.latestGaia?.transactionType && `Latest: ${[selected.latestGaia.transactionType, selected.latestGaia.transactionState, selected.latestGaia.unfReasonCode].filter(Boolean).join(' · ')}`].filter(Boolean).join(' · ') || undefined}
+          padding={0}
+          bodySx={{ p: 0 }}
+        >
+          {selected.gaiaContent && (
+            <Typography dir="auto" sx={{ px: 2.5, py: 1.25, fontSize: 12.5, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', whiteSpace: 'pre-wrap' }}>{selected.gaiaContent}</Typography>
+          )}
+          <TableContainer sx={{ maxHeight: 280, border: 0, borderRadius: 0 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Type / state</TableCell>
+                  <TableCell>Agent</TableCell>
+                  <TableCell>Note</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingLogs ? (
+                  <TableRow><TableCell colSpan={4} sx={{ color: 'var(--text-muted)', py: 2.5, textAlign: 'center' }}>Loading…</TableCell></TableRow>
+                ) : logs.length ? (
+                  logs.map((l, i) => (
+                    <TableRow key={l._id || i}>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{l.eventDate ? moment(l.eventDate).format('D MMM YYYY') : '—'}</TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontSize: 12.5 }}>{l.transactionType || l.mainCategory}</Typography>
+                        {l.transactionState && <Typography sx={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{l.transactionState}</Typography>}
+                      </TableCell>
+                      <TableCell>{l.agentName || '—'}</TableCell>
+                      <TableCell dir="auto" sx={{ maxWidth: 320, whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{l.note || '—'}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow><TableCell colSpan={4} sx={{ color: 'var(--text-muted)', py: 2.5, textAlign: 'center', borderBottom: 0 }}>No Q-Ops entries yet.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </SectionCard>
+      </Box>
+    </Box>
+  );
+
+  const overview = !selected && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' } }}>
+        <StatCard label="Tasks" value={tasks.length} />
+        <StatCard label="Detractors" value={stats.det} hint="Score 0–6" />
+        <StatCard label="Neutrals" value={stats.neu} hint="Score 7–8" />
+        <StatCard label="Average score" value={stats.avg} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 32, px: 1.25, width: { xs: '100%', sm: 300 }, borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', boxShadow: 'var(--shadow-xs)', '&:focus-within': { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-ring)' } }}>
+          <SearchIcon sx={{ fontSize: 17, color: 'var(--text-muted)' }} />
+          <InputBase value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search SLID, customer, reason, owner…" inputProps={{ 'aria-label': 'Search tasks' }} sx={{ flex: 1, fontSize: 13 }} />
+          {query && <IconButton size="small" aria-label="Clear search" onClick={() => setQuery('')} sx={{ p: 0.25 }}><Close sx={{ fontSize: 15 }} /></IconButton>}
+        </Box>
+        <Box sx={{ flex: 1 }} />
+        <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{rows.length} of {tasks.length} tasks · click a row for details</Typography>
+      </Box>
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        getRowId={(r) => r._id || `${r.slid}-${r.requestNumber}`}
+        onRowClick={({ row }) => setSelectedId(row._id)}
+        disableRowSelectionOnClick
+        autoHeight
+        rowHeight={50}
+        columnHeaderHeight={40}
+        pageSizeOptions={[10, 25, 50]}
+        initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'interviewDate', sort: 'desc' }] } }}
+        slots={{ noRowsOverlay: () => <EmptyState title="No tasks match" description="Clear the search to see all tasks." minHeight={180} /> }}
+        sx={{ ...gridSx, minHeight: 260 }}
+      />
+    </Box>
+  );
 
   return (
     <>
-      <Dialog
+      <AppDialog
         open={open}
         onClose={onClose}
-        fullScreen
-       
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, px: 3 }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <Box sx={{
-              width: 40, height: 40, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.2),
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.palette.primary.main
-            }}>
-              <MdAssignment size={24} />
-            </Box>
-            <Box>
-              <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="600" color="var(--text)">
-                {displayTitle}
-              </Typography>
-              <Typography variant="caption" color="gray">
-                Showing {tasks.length} tasks details
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Tooltip title="Copy to Clipboard">
-              <IconButton onClick={copyToClipboard} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'var(--text)' } }}>
-                <MdContentCopy />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Export to Excel">
-              <IconButton onClick={exportToExcel} sx={{ mr: 1, color: 'gray', '&:hover': { color: 'var(--text)' } }}>
-                <MdFileDownload />
-              </IconButton>
-            </Tooltip>
-            {tasks[0]?.teamId?.contactNumber && (
-              <Tooltip title="Contact via WhatsApp">
-                <IconButton onClick={redirectToWhatsApp} sx={{ mr: 1, color: '#25D366', '&:hover': { bgcolor: alpha('#25D366', 0.1) } }}>
-                  <FaWhatsapp />
-                </IconButton>
+        size="xl"
+        title={displayTitle}
+        description={selected && !single ? `${selected.customerName || selected.slid || 'Task'} · ${tasks.length} tasks in this view` : `${tasks.length} task${tasks.length === 1 ? '' : 's'}${tasks.length > 1 ? ` · ${stats.det} detractor${stats.det === 1 ? '' : 's'}, ${stats.neu} neutral${stats.neu === 1 ? '' : 's'}` : ''}`}
+        extraActions={
+          <>
+            <Button variant="text" startIcon={<ContentCopy sx={{ fontSize: 16 }} />} onClick={copyDetails} sx={{ color: 'var(--text-secondary)' }}>Copy details</Button>
+            {phone && (
+              <Tooltip title="Send a summary to the team on WhatsApp">
+                <Button variant="text" startIcon={<FaWhatsapp size={15} />} onClick={openWhatsApp} sx={{ color: 'var(--text-secondary)' }}>WhatsApp</Button>
               </Tooltip>
             )}
-            <IconButton onClick={onClose} sx={{ color: 'gray', '&:hover': { color: 'white', bgcolor: 'var(--overlay-subtle)' } }}>
-              <MdClose />
-            </IconButton>
-          </Box>
-        </DialogTitle>
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outlined" onClick={onClose}>Close</Button>
+            <Button variant="contained" startIcon={<FileDownloadOutlined sx={{ fontSize: 16 }} />} onClick={exportAll} disabled={!tasks.length}>
+              {selected && !single ? 'Export this task' : `Export ${tasks.length === 1 ? 'task' : 'tasks'} (.xlsx)`}
+            </Button>
+          </>
+        }
+      >
+        {tasks.length ? (selected ? detail : overview) : <EmptyState title="No tasks" description="Nothing to show for this selection." />}
+      </AppDialog>
 
-        <DialogContent sx={{ p: { xs: 2, md: 4 } }}>
-          <Stack spacing={4}>
-            {tasks.map((task, index) => (
-              <Paper
-                key={index}
-                elevation={0}
-                sx={{
-                  p: 0,
-                  bgcolor: 'var(--surface)',
-                  borderRadius: "10px",
-                  border: '1px solid var(--border)',
-                  overflow: 'hidden',
-                  transition: 'transform 0.2s',
-                  '&:hover': {
-                    borderColor: theme.palette.primary.main,
-                    boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.5)}`
-                  }
-                }}
-              >
-                {/* Task Header Bar */}
-                <Box sx={{
-                  p: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  borderBottom: '1px solid var(--border)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 2,
-                  alignItems: 'center'
-                }}>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Chip
-                      label={`#${index + 1}`}
-                      size="small"
-                      sx={{
-                        borderRadius: '8px',
-                        fontWeight: '600',
-                        bgcolor: theme.palette.primary.main,
-                        color: 'var(--text)'
-                      }}
-                    />
-                    <Typography variant="subtitle1" fontWeight="600" color="var(--text)">
-                      Request #{task.requestNumber}
-                    </Typography>
-                    {task.interviewDate && (
-                      <Chip
-                        label={`Week ${getWeekNumber(task.interviewDate, settings?.weekStartDay, settings?.week1StartDate, settings?.week1EndDate, settings?.startWeekNumber).week}`}
-                        size="small"
-                        sx={{
-                          borderRadius: '8px',
-                          fontWeight: '600',
-                          bgcolor: alpha(theme.palette.secondary.main, 0.2),
-                          color: theme.palette.secondary.main,
-                          border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`
-                        }}
-                      />
-                    )}
-                    {task.slid && (
-                      <Chip
-                        label={task.slid}
-                        variant="outlined"
-                        size="small"
-                        sx={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', fontWeight: 500 }}
-                      />
-                    )}
-                  </Stack>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Typography variant="body2" sx={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <MdTimer />
-                      PIS: {task.pisDate ? moment(task.pisDate).format("MMM DD, YYYY") : 'N/A'}
-                    </Typography>
-                    <Button
-                      startIcon={<MdEdit />}
-                      size="small"
-                      onClick={() => handleEditClick(task)}
-                      sx={{
-                        color: theme.palette.primary.main,
-                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.2) }
-                      }}
-                    >
-                      Edit Task
-                    </Button>
-                  </Stack>
-                </Box>
-
-                <Box sx={{ p: 3 }}>
-                  <Grid container spacing={3}>
-                    {/* Column 1: Customer & Location */}
-                    <Grid item xs={12} md={4}>
-                      <SectionHeader title="Customer & Location" icon={<MdPerson size={16} />} />
-                      <Stack spacing={2}>
-                        <DetailItem label="Customer Name" value={task.customerName} />
-                        <DetailItem label="Contact" value={task.contactNumber} />
-                        <DetailItem label="Type" value={task.customerType} />
-                        <DetailItem
-                          label="Location"
-                          icon={<MdLocationOn size={14} />}
-                          value={`${task.governorate || ''}${task.governorate && task.district ? ', ' : ''}${task.district || ''}`}
-                        />
-                        <DetailItem label="Request Date" value={task.contractDate ? moment(task.contractDate).format("MMM DD, YYYY") : 'N/A'} />
-                        <DetailItem label="FE Date" value={task.feDate ? moment(task.feDate).format("MMM DD, YYYY") : (task.appDate ? moment(task.appDate).format("MMM DD, YYYY") : 'N/A')} />
-                        <DetailItem label="UN Date" value={task.unDate ? moment(task.unDate).format("MMM DD, YYYY") : 'N/A'} />
-                        <DetailItem label="In Date" value={task.inDate ? moment(task.inDate).format("MMM DD, YYYY") : 'N/A'} />
-                        <DetailItem label="Close Date" value={task.closeDate ? moment(task.closeDate).format("MMM DD, YYYY") : 'N/A'} />
-                      </Stack>
-                    </Grid>
-
-                    {/* Column 2: Issue Details */}
-                    <Grid item xs={12} md={4}>
-                      <SectionHeader title="Issue Details" icon={<MdInfoOutline size={16} />} />
-                      <Stack spacing={2}>
-                        <DetailItem
-                          label="Satisfaction Score"
-                          value={
-                            <Chip
-                              label={`${task.evaluationScore} (${task.evaluationScore >= 9 ? 'Promoter' :
-                                task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})`}
-                              size="small"
-                              sx={{
-                                fontWeight: '600',
-                                color: 'var(--text)',
-                                bgcolor: task.evaluationScore >= 9 ? '#16A34A' :
-                                  task.evaluationScore >= 7 ? '#64748b' : '#DC2626'
-                              }}
-                            />
-                          }
-                        />
-                        <DetailItem label="Tariff" value={task.tarrifName} />
-                        <DetailItem label="Reason" value={task.reason} />
-                        <DetailItem label="Sub Reason" value={task.subReason} />
-                        <DetailItem
-                          label="Customer Feedback"
-                          value={task.customerFeedback}
-                        />
-                      </Stack>
-                    </Grid>
-
-                    {/* Column 3: Outcome & Team */}
-                    <Grid item xs={12} md={4}>
-                      <SectionHeader title="Outcome & Team" icon={<MdBusiness size={16} />} />
-                      <Stack spacing={2}>
-                        <DetailItem label="Root Cause" value={task.rootCause} />
-                        <DetailItem label="Owner" value={task.responsible || 'N/A'} icon={<MdPerson size={14} />} />
-                        <DetailItem label="Scoring Factors" value={task.scoringKeys} />
-                        <DetailItem label="ITN Related" value={task.itnRelated} />
-                        <DetailItem label="Related to Current Subscription" value={task.relatedToSubscription} />
-                        <DetailItem
-                          label="Validation"
-                          value={
-                            <Chip
-                              label={task.validationStatus || 'Not Validated'}
-                              size="small"
-                              sx={{
-                                bgcolor: task.validationStatus === 'Validated' ? alpha('#16A34A', 0.2) : alpha('#DC2626', 0.2),
-                                color: task.validationStatus === 'Validated' ? '#16A34A' : '#DC2626',
-                                fontWeight: '600'
-                              }}
-                            />
-                          }
-                        />
-                        <DetailItem label="Team" value={task.teamName} />
-                        <DetailItem label="Company" value={task.teamCompany} />
-                      </Stack>
-                    </Grid>
-
-                    {/* Column 4: Q-Ops & GAIA (New Section) */}
-                    <Grid item xs={12}>
-                      <Divider sx={{ my: 2 }} />
-                      <SectionHeader title="Q-Ops Transaction Logs" icon={<MdHistory size={16} />} />
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} md={4}>
-                          <Stack spacing={2}>
-                            <DetailItem label="GAIA Check" value={task.gaiaCheck || "N/A"}
-                              valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: '600' }
-                                : {}}
-                            />
-                            <DetailItem label="GAIA Content" value={task.gaiaContent || "N/A"} />
-                            {task.latestGaia && (
-                              <>
-                                <DetailItem label="Latest QOps Type" value={task.latestGaia.transactionType || "N/A"} />
-                                <DetailItem label="Latest QOps State" value={task.latestGaia.transactionState || "N/A"} />
-                                <DetailItem label="Latest QOps Reason" value={task.latestGaia.unfReasonCode || "N/A"} />
-                              </>
-                            )}
-                          </Stack>
-                        </Grid>
-                        <Grid item xs={12} md={8}>
-                          <Box sx={{ border: '1px solid var(--border)', borderRadius: 2, overflow: 'hidden' }}>
-                            <TableContainer sx={{ maxHeight: 300 }}>
-                              <Table size="small" stickyHeader>
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Execution Date</TableCell>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Type / State</TableCell>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Agent</TableCell>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Note</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {loadingLogs ? (
-                                    <TableRow>
-                                      <TableCell colSpan={4} align="center" sx={{ color: 'var(--text-secondary)', py: 3 }}>
-                                        <CircularProgress size={20} sx={{ mr: 1 }} /> Loading logs...
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : qopsLogs.length > 0 ? (
-                                    qopsLogs.map((log, i) => (
-                                      <TableRow key={i}>
-                                        <TableCell sx={{ color: 'var(--text)' }}>{log.eventDate ? moment(log.eventDate).format('DD/MM/YYYY') : '-'}</TableCell>
-                                        <TableCell sx={{ color: 'var(--text)' }}>
-                                          <Typography variant="body2" fontSize="0.75rem">{log.transactionType || log.mainCategory}</Typography>
-                                          <Typography variant="caption" color="gray">{log.transactionState}</Typography>
-                                        </TableCell>
-                                        <TableCell sx={{ color: 'var(--text)' }}>{log.agentName || '-'}</TableCell>
-                                        <TableCell sx={{ color: 'var(--text-secondary)', maxWidth: 250 }}>
-                                          <ExpandableNote text={log.note} />
-                                        </TableCell>
-                                      </TableRow>
-                                    ))
-                                  ) : (
-                                    <TableRow>
-                                      <TableCell colSpan={4} align="center" sx={{ color: 'var(--text-secondary)', py: 3 }}>
-                                        No Q-Ops logs found.
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    </Grid>
-
-                    {/* Original Subtasks Section - Keeping just in case, but QOps is priority */}
-                    {/* {task.subTasks && task.subTasks.length > 0 && ...} */}
-
-                  </Grid>
-                </Box>
-              </Paper>
-            ))}
-          </Stack>
-        </DialogContent>
-
-        <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
-          <Button onClick={onClose} sx={{ color: 'gray' }}>
-            Close Preview
-          </Button>
-          <Button
-            onClick={exportToExcel}
-            variant="contained"
-            startIcon={<MdFileDownload />}
-            sx={{ '&:hover': { bgcolor: theme.palette.primary.dark } }}
-          >
-            Export Details to Excel
-          </Button>
-        </DialogActions>
-      </Dialog >
-
-      {selectedTaskToEdit && (
+      {editTask && (
         <EditTaskDialog
-          open={editDialogOpen}
-          setOpen={setEditDialogOpen}
-          task={selectedTaskToEdit}
-          handleTaskUpdate={handleTaskUpdateSuccess}
+          open={Boolean(editTask)}
+          setOpen={(v) => !v && setEditTask(null)}
+          task={editTask}
+          handleTaskUpdate={(updated) => {
+            setEditTask(null);
+            onTaskUpdated?.(updated);
+          }}
         />
       )}
     </>

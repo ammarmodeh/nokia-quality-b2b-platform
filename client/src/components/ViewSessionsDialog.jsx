@@ -346,7 +346,7 @@ ${detailedSections}
                             component="div"
                             variant="body2"
                             color="var(--text-muted)"
-                            sx={{ fontWeight: 'bold', mb: 0.5 }}
+                            sx={{ fontWeight: '600', mb: 0.5 }}
                           >
                             Training Outlines:
                           </Typography>
@@ -426,7 +426,7 @@ ${detailedSections}
                       {session.status === "Completed" && (
                         <IconButton
                           onClick={() => handleEditClick(session)}
-                          sx={{ color: '#1976d2' }}
+                          sx={{ color: '#2563EB' }}
                           size="small"
                         >
                           <EditIcon fontSize="small" />
@@ -434,7 +434,7 @@ ${detailedSections}
                       )}
                       <IconButton
                         onClick={() => handleDeleteClick(session)}
-                        sx={{ color: '#f44336' }}
+                        sx={{ color: '#DC2626' }}
                         size="small"
                       >
                         <DeleteIcon fontSize="small" />
@@ -462,23 +462,9 @@ ${detailedSections}
         maxWidth="md"
         fullWidth
         fullScreen={fullScreen}
-        sx={{
-          "& .MuiDialog-paper": {
-            backgroundColor: 'var(--surface)',
-            boxShadow: 'none',
-            borderRadius: fullScreen ? '0px' : '8px',
-          }
-        }}
+       
       >
-        <DialogTitle sx={{
-          backgroundColor: 'var(--surface)',
-          color: 'var(--text)',
-          borderBottom: '1px solid var(--border)',
-          padding: '16px 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+        <DialogTitle sx={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             Training Session History
             <Typography variant="body2" color="var(--text-muted)">
@@ -492,11 +478,11 @@ ${detailedSections}
               onClick={handleExportExcel}
               size="small"
               sx={{
-                color: '#4caf50',
-                borderColor: '#4caf50',
+                color: '#16A34A',
+                borderColor: '#16A34A',
                 '&:hover': {
-                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                  borderColor: '#4caf50',
+                  backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                  borderColor: '#16A34A',
                 }
               }}
             >
@@ -508,11 +494,11 @@ ${detailedSections}
               onClick={handleExportPDF}
               size="small"
               sx={{
-                color: '#f44336',
-                borderColor: '#f44336',
+                color: '#DC2626',
+                borderColor: '#DC2626',
                 '&:hover': {
-                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                  borderColor: '#f44336',
+                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                  borderColor: '#DC2626',
                 }
               }}
             >
@@ -536,7 +522,7 @@ ${detailedSections}
             <Tab
               label={`Completed (${completedSessions.length})`}
               sx={{
-                color: activeTab === 0 ? '#7b68ee' : '#6b7280',
+                color: activeTab === 0 ? '#6C47FF' : '#6b7280',
                 textTransform: 'none',
                 minWidth: 'unset',
                 padding: '12px 16px',
@@ -545,7 +531,7 @@ ${detailedSections}
             <Tab
               label={`Missed/Canceled (${missedOrCanceledSessions.length})`}
               sx={{
-                color: activeTab === 1 ? '#7b68ee' : '#6b7280',
+                color: activeTab === 1 ? '#6C47FF' : '#6b7280',
                 textTransform: 'none',
                 minWidth: 'unset',
                 padding: '12px 16px',
@@ -554,15 +540,9 @@ ${detailedSections}
           </Tabs>
         </Box>
 
-        <DialogContent sx={{
-          backgroundColor: 'var(--surface)',
-          color: 'var(--text)',
-          '&.MuiDialogContent-root': {
+        <DialogContent sx={{ '&.MuiDialogContent-root': {
             padding: '0',
-          },
-          height: fullScreen ? 'calc(100vh - 180px)' : '400px',
-          overflow: 'auto',
-        }}>
+          }, height: fullScreen ? 'calc(100vh - 180px)' : '400px', overflow: 'auto' }}>
           {activeTab === 0 ? (
             renderSessionList(completedSessions)
           ) : (
@@ -572,11 +552,7 @@ ${detailedSections}
 
         <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-        <DialogActions sx={{
-          backgroundColor: 'var(--surface)',
-          borderTop: '1px solid var(--border)',
-          padding: '12px 24px',
-        }}>
+        <DialogActions sx={{ padding: '12px 24px' }}>
           <Button
             onClick={onClose}
             sx={{

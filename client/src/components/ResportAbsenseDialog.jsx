@@ -68,30 +68,13 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
       maxWidth="sm"
       fullWidth
       fullScreen={fullScreen}
-      sx={{
-        "& .MuiDialog-paper": {
-          backgroundColor: 'var(--surface)',
-          boxShadow: 'none',
-          borderRadius: fullScreen ? '0px' : '8px', // Remove border radius for mobile view
-        }
-      }}
     >
-      <DialogTitle sx={{
-        backgroundColor: 'var(--surface)',
-        color: 'var(--text)',
-        borderBottom: '1px solid var(--border)',
-        padding: '16px 24px',
-      }}>
+      <DialogTitle sx={{ padding: '16px 24px' }}>
         Report Absence for {teamName}
       </DialogTitle>
 
-      <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-      <DialogContent sx={{
-        backgroundColor: 'var(--surface)',
-        color: 'var(--text)',
-        padding: '20px 24px',
-      }}>
+      <DialogContent sx={{ padding: '20px 24px' }}>
         <Box sx={{ mt: 2 }}>
           <Typography variant="body1" gutterBottom>
             Use this form to report when a team failed to attend a confirmed training session.
@@ -109,7 +92,7 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
             type="date"
             InputLabelProps={{
               shrink: true,
-              style: { color: dateError ? '#f44336' : '#6b7280' }
+              style: { color: dateError ? '#DC2626' : '#6b7280' }
             }}
             sx={{
               '& .MuiInputBase-root': {
@@ -117,13 +100,13 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
               },
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: dateError ? '#f44336' : '#e5e7eb',
+                  borderColor: dateError ? '#DC2626' : '#e5e7eb',
                 },
                 '&:hover fieldset': {
-                  borderColor: dateError ? '#f44336' : '#666',
+                  borderColor: dateError ? '#DC2626' : 'var(--text-muted)',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: dateError ? '#f44336' : '#7b68ee',
+                  borderColor: dateError ? '#DC2626' : '#6C47FF',
                 },
               },
             }}
@@ -150,7 +133,7 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
                   borderColor: 'var(--border)',
                 },
                 '&:hover fieldset': {
-                  borderColor: '#666',
+                  borderColor: 'var(--text-muted)',
                 },
                 '&.Mui-focused fieldset': {
                   borderColor: 'var(--accent)',
@@ -163,11 +146,7 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
 
       <Divider sx={{ backgroundColor: '#e5e7eb' }} />
 
-      <DialogActions sx={{
-        backgroundColor: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: '12px 24px',
-      }}>
+      <DialogActions sx={{ padding: '12px 24px' }}>
         <Button
           onClick={onClose}
           sx={{
@@ -184,12 +163,9 @@ const ReportAbsenceDialog = ({ open, onClose, onSave, teamName }) => {
           color="error"
           variant="contained"
           disabled={!!dateError}
-          sx={{
-            backgroundColor: '#f44336',
-            '&:hover': {
-              backgroundColor: '#e57373',
-            }
-          }}
+          sx={{ '&:hover': {
+              backgroundColor: '#DC2626',
+            } }}
         >
           Report Absence
         </Button>
