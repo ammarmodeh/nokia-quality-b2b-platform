@@ -23,6 +23,37 @@ import { TASK_TAXONOMY, taxonomyByLabel, taxonomyLabel } from "../../constants/t
 const WEEKS = 8;
 const STATUS_TONE = { Active: "success", Suspended: "warning", "On Leave": "info", Resigned: "neutral", Terminated: "danger" };
 
+const shortName = (name = "") => (name.length > 12 ? `${name.slice(0, 11)}…` : name);
+
+// Violations per tracker category in the selected period (survey tasks + custom tables).
+const CategoryStrip = ({ data }) => {
+  if (!data) return null;
+  const items = [
+    { key: "dvoc", label: taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory), color: taxonomyByLabel[TASK_TAXONOMY.category]?.color, count: data.dvoc, hint: "Detractors and neutrals from survey tasks" },
+    ...data.custom.map((c) => ({ key: `${c.issueCategory}|${c.issueSubCategory || ""}`, label: taxonomyLabel(c.issueCategory, c.issueSubCategory), color: taxonomyByLabel[c.issueCategory]?.color, count: c.count, hint: c.tables.map((t) => `${t.name}: ${t.count}`).join(" · ") })),
+  ];
+  // custom DVOC · Installation rows fold into the survey item
+  const merged = [];
+  for (const it of items) {
+    const same = merged.find((m) => m.label === it.label);
+    if (same) Object.assign(same, { count: same.count + it.count, hint: `${same.hint} · ${it.hint}` });
+    else merged.push({ ...it });
+  }
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap", px: 2, py: 1, borderBottom: "1px solid var(--border)" }}>
+      <Typography sx={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", mr: 0.5 }}>By tracker · {data.label}</Typography>
+      {merged.map((it) => (
+        <Tooltip key={it.key} title={it.hint}>
+          <span><Badge color={it.color} sx={{ fontVariantNumeric: "tabular-nums" }}>{it.label} {it.count}</Badge></span>
+        </Tooltip>
+      ))}
+      {data.unmatched > 0 && (
+        <Typography sx={{ fontSize: 11.5, color: "var(--text-muted)" }}>{data.unmatched} custom-table row{data.unmatched > 1 ? "s" : ""} name a team that isn&apos;t in Field Teams</Typography>
+      )}
+    </Box>
+  );
+};
+
 const Sparkline = ({ values }) => {
   const max = Math.max(1, ...values);
   const w = 72, h = 22, step = w / (values.length - 1 || 1);
@@ -78,7 +109,7 @@ const RowMenu = ({ row, onViewTasks, onAddSession, onViewSessions, onReportAbsen
  * in TeamViolationTracker; this only renders rows and forwards actions.
  */
 const ViolationTable = ({
-  rows, tasks, weekStartDay = 0, detractorLimit, neutralLimit, breakdown,
+  rows, tasks, weekStartDay = 0, detractorLimit, neutralLimit, breakdown, categoryBreakdown,
   search, onSearch, statusFilter, onStatusFilter, teamStatus, onTeamStatus,
   selection, onSelection, onBulkAddSession, onExport,
   onTeamDetails, onAddSession, onViewSessions, onReportAbsence,
@@ -136,8 +167,26 @@ const ViolationTable = ({
         renderCell: ({ value }) => <Typography sx={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{value}</Typography>,
       },
       {
-        field: "byTracker", headerName: "By tracker", width: 150, sortable: false,
-        renderCell: ({ row }) => (row.totalViolations ? <Badge color={tax?.color} title={taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory)}>DVOC · Inst. {row.totalViolations}</Badge> : <Typography sx={{ fontSize: 12, color: "var(--text-muted)" }}>—</Typography>),
+        field: "byTracker", headerName: "By tracker", width: 190, sortable: false,
+        description: "DVOC · Installation violations year to date, plus custom-table rows in the selected period",
+        renderCell: ({ row }) => {
+          const custom = row.customByTracker || [];
+          if (!row.totalViolations && !custom.length) return <Typography sx={{ fontSize: 12, color: "var(--text-muted)" }}>—</Typography>;
+          const extra = custom.slice(row.totalViolations ? 1 : 2);
+          return (
+            <Box sx={{ display: "flex", gap: 0.5, alignItems: "center", minWidth: 0 }}>
+              {row.totalViolations > 0 && <Badge color={tax?.color} title={taxonomyLabel(TASK_TAXONOMY.category, TASK_TAXONOMY.subCategory)}>DVOC · Inst. {row.totalViolations}</Badge>}
+              {custom.slice(0, row.totalViolations ? 1 : 2).map((c) => (
+                <Badge key={c.tableId} color={taxonomyByLabel[c.issueCategory]?.color} title={`${c.name} · ${taxonomyLabel(c.issueCategory, c.issueSubCategory)}`}>{shortName(c.name)} {c.count}</Badge>
+              ))}
+              {extra.length > 0 && (
+                <Tooltip title={extra.map((c) => `${c.name}: ${c.count}`).join(" · ")}>
+                  <span><Badge tone="neutral">+{extra.length}</Badge></span>
+                </Tooltip>
+              )}
+            </Box>
+          );
+        },
       },
       { field: "trend", headerName: `Last ${WEEKS} wks`, width: 104, sortable: false, renderCell: ({ row }) => <Sparkline values={trend.get(row.teamName) || Array(WEEKS).fill(0)} /> },
       {
@@ -222,6 +271,7 @@ const ViolationTable = ({
           </Button>
         )}
       </Box>
+      <CategoryStrip data={categoryBreakdown} />
       <DataGrid
         rows={shown}
         columns={columns}

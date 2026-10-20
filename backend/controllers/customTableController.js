@@ -6,6 +6,7 @@ import { CustomTable, CustomRow, TableView, TableTemplate, ImportBatch, RowActiv
 import { FIELD_TYPES, READ_ONLY_TYPES, CORE_CONCEPTS, CORE_TYPES, newFieldKey, coerce, coerceData, systemColumns, convertValue } from "../utils/customFields.js";
 import { validateTaxonomy } from "../utils/taxonomy.js";
 import { builtInTemplate } from "../utils/builtInTemplates.js";
+import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 
 const isAdmin = (req) => req.user?.role === "Admin";
 const oid = (v) => mongoose.Types.ObjectId.isValid(String(v));
@@ -634,6 +635,73 @@ export const calendarEvents = async (req, res) => {
       return { id: r._id, tableId: t._id, tableName: t.name, issueCategory: t.issueCategory, issueSubCategory: t.issueSubCategory, title: typeof title === "object" ? JSON.stringify(title) : title || `#${r.autoNumber}`, date: r.dueDate, status: r.status, dateField: dateField.key, dateType: dateField.type };
     })
   );
+};
+
+// Dashboard roll-up: per table, row counts by tracker category, field team, status and
+// severity for rows whose mapped date falls in [from, to]. `team` = comma-separated names or ids.
+export const summary = async (req, res) => {
+  const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 7 * 864e5);
+  const to = req.query.to ? new Date(req.query.to) : new Date();
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return fail(res, 400, "Invalid date range");
+  const teamFilter = String(req.query.team || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+
+  const tables = (await CustomTable.find({ archived: false, ...visibleFilter(req) }).lean()).filter((t) => t.fields.some((f) => f.coreMapping === "date" && !f.archived));
+  if (!tables.length) return res.json({ from, to, tables: [] });
+  const teams = await FieldTeamsSchema.find({}, { teamName: 1 }).lean();
+  const teamById = Object.fromEntries(teams.map((t) => [String(t._id), t]));
+  const teamByName = Object.fromEntries(teams.filter((t) => t.teamName).map((t) => [t.teamName.trim().toLowerCase(), t]));
+  const rows = await CustomRow.find({ tableId: { $in: tables.map((t) => t._id) }, deleted: false, dueDate: { $gte: from, $lte: to } }, { tableId: 1, data: 1, status: 1, fieldTeamId: 1 }).lean();
+  const rowsBy = {};
+  for (const r of rows) (rowsBy[String(r.tableId)] ||= []).push(r);
+
+  const bump = (map, key, extra) => {
+    const m = map.get(key) || { ...extra, count: 0 };
+    m.count++;
+    map.set(key, m);
+  };
+  const out = tables.map((t) => {
+    const mapped = Object.fromEntries(t.fields.filter((f) => f.coreMapping && !f.archived).map((f) => [f.coreMapping, f]));
+    const byCategory = new Map(), byTeam = new Map(), byStatus = new Map(), bySeverity = new Map();
+    let total = 0;
+    for (const r of rowsBy[String(t._id)] || []) {
+      // field team: a fieldTeam field stores an id, a text field stores a name
+      let team = null;
+      if (mapped.fieldTeam) {
+        const raw = mapped.fieldTeam.type === "fieldTeam" ? r.fieldTeamId || r.data?.[mapped.fieldTeam.key] : r.data?.[mapped.fieldTeam.key];
+        if (raw) {
+          const known = teamById[String(raw)] || teamByName[String(raw).trim().toLowerCase()];
+          team = known ? { fieldTeamId: known._id, teamName: known.teamName } : { fieldTeamId: null, teamName: String(raw).trim() };
+        }
+      }
+      if (teamFilter.length && !(team && (teamFilter.includes(team.teamName.toLowerCase()) || (team.fieldTeamId && teamFilter.includes(String(team.fieldTeamId)))))) continue;
+      total++;
+      const cat = mapped.category && typeof r.data?.[mapped.category.key] === "object" && r.data[mapped.category.key]?.category ? r.data[mapped.category.key] : { category: t.issueCategory, sub: t.issueSubCategory };
+      bump(byCategory, `${cat.category}|${cat.sub || ""}`, { issueCategory: cat.category, issueSubCategory: cat.sub || null });
+      if (team) bump(byTeam, String(team.fieldTeamId || team.teamName.toLowerCase()), team);
+      else bump(byTeam, "", { fieldTeamId: null, teamName: null });
+      bump(byStatus, r.status ?? "", { status: r.status ?? null });
+      if (mapped.severity) {
+        const sev = r.data?.[mapped.severity.key];
+        bump(bySeverity, sev == null || sev === "" ? "" : String(sev), { severity: sev == null || sev === "" ? null : String(sev) });
+      }
+    }
+    const list = (m) => [...m.values()].sort((a, b) => b.count - a.count);
+    return {
+      tableId: t._id,
+      name: t.name,
+      icon: t.icon,
+      color: t.color,
+      issueCategory: t.issueCategory,
+      issueSubCategory: t.issueSubCategory,
+      mapped: Object.keys(mapped),
+      total,
+      byCategory: list(byCategory),
+      byTeam: list(byTeam),
+      byStatus: list(byStatus),
+      bySeverity: list(bySeverity),
+    };
+  });
+  res.json({ from, to, tables: out });
 };
 
 export const fieldTypes = (req, res) => res.json({ types: FIELD_TYPES, readOnly: READ_ONLY_TYPES, core: CORE_TYPES });

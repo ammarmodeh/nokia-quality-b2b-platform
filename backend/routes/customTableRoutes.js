@@ -15,6 +15,7 @@ const r = customTableRouter;
 r.use(protect);
 r.get("/field-types", c.fieldTypes);
 r.get("/calendar", wrap(c.calendarEvents));
+r.get("/summary", wrap(c.summary));
 r.get("/", wrap(c.listTables));
 r.post("/", adminOnly, wrap(c.createTable));
 r.get("/:id", wrap(c.getTable));

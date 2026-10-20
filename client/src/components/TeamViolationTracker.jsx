@@ -8,7 +8,7 @@ import api from "../api/api";
 import * as XLSX from 'xlsx';
 import ViolationTable from "./violations/ViolationTable";
 
-const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, teamFilter = [] }) => {
+const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, teamFilter = [], customSummary = null, period = null }) => {
   // The app shows toasts with sonner (no notistack provider is mounted).
   const enqueueSnackbar = (message, { variant } = {}) =>
     (variant === "error" ? toast.error : variant === "warning" ? toast.warning : variant === "info" ? toast.info : toast.success)(message);
@@ -160,7 +160,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
         total += parseFloat(yearData[weekKey].sampleSize) || 0;
       });
       return total || ytdTotalSamples;
-    } catch (error) {
+    } catch {
       return ytdTotalSamples;
     }
   }, [samplesTokenData, ytdTotalSamples]);
@@ -974,8 +974,55 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
     return tasks.filter((task) => task.teamName === selectedTeam);
   }, [selectedTeam, tasks]);
 
+  // Custom-table rows (selected period) per field team, matched by team id or name.
+  const customByTeam = useMemo(() => {
+    const map = new Map();
+    for (const t of customSummary?.tables || []) {
+      for (const g of t.byTeam) {
+        if (!g.teamName) continue;
+        const key = g.fieldTeamId ? String(g.fieldTeamId) : g.teamName.trim().toLowerCase();
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push({ tableId: t.tableId, name: t.name, color: t.color, issueCategory: t.issueCategory, issueSubCategory: t.issueSubCategory, count: g.count });
+      }
+    }
+    return map;
+  }, [customSummary]);
+
+  const rowsWithCustom = useMemo(() => {
+    if (!customByTeam.size) return rows;
+    return rows.map((row) => {
+      const custom = [...(customByTeam.get(String(row.id)) || []), ...(customByTeam.get((row.teamName || '').trim().toLowerCase()) || [])];
+      return custom.length ? { ...row, customByTracker: custom, customTotal: custom.reduce((n, c) => n + c.count, 0) } : row;
+    });
+  }, [rows, customByTeam]);
+
+  // Category breakdown for the selected period: DVOC · Installation from survey tasks + custom tables.
+  const categoryBreakdown = useMemo(() => {
+    if (!period?.start || !period?.end) return null;
+    const start = period.start.getTime();
+    const end = new Date(period.end).setHours(23, 59, 59, 999);
+    const dvoc = tasks.filter((t) => {
+      if (teamFilter.length && !teamFilter.includes(t.teamName)) return false;
+      if (!t.interviewDate || !(t.evaluationScore >= 1 && t.evaluationScore <= 8)) return false;
+      const d = new Date(t.interviewDate).getTime();
+      return d >= start && d <= end;
+    }).length;
+    const cats = new Map();
+    for (const t of customSummary?.tables || []) {
+      for (const c of t.byCategory) {
+        const key = `${c.issueCategory}|${c.issueSubCategory || ''}`;
+        const cur = cats.get(key) || { issueCategory: c.issueCategory, issueSubCategory: c.issueSubCategory, count: 0, tables: [] };
+        cur.count += c.count;
+        cur.tables.push({ name: t.name, count: c.count });
+        cats.set(key, cur);
+      }
+    }
+    const unmatched = (customSummary?.tables || []).reduce((n, t) => n + t.byTeam.filter((g) => g.teamName && !g.fieldTeamId).reduce((m, g) => m + g.count, 0), 0);
+    return { label: period.label, dvoc, custom: [...cats.values()].filter((c) => c.count > 0).sort((a, b) => b.count - a.count), unmatched };
+  }, [period, tasks, teamFilter, customSummary]);
+
   const filteredRows = useMemo(() => {
-    let baseRows = teamFilter.length ? rows.filter(row => teamFilter.includes(row.teamName)) : rows;
+    let baseRows = teamFilter.length ? rowsWithCustom.filter(row => teamFilter.includes(row.teamName)) : rowsWithCustom;
 
     // Apply status filter
     if (statusFilter === 'detractorFail') {
@@ -1007,9 +1054,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
         return false;
       });
     });
-  }, [rows, searchText, statusFilter, teamFilter]);
+  }, [rowsWithCustom, searchText, statusFilter, teamFilter]);
 
-  const handleViolationDialogOpen = () => setViolationDialogOpen(true);
   const handleViolationDialogClose = () => setViolationDialogOpen(false);
 
   return (
@@ -1021,6 +1067,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
         detractorLimit={teamDetractorLimit}
         neutralLimit={teamNeutralLimit}
         breakdown={calculationBreakdown}
+        categoryBreakdown={categoryBreakdown}
         search={searchText}
         onSearch={setSearchText}
         statusFilter={statusFilter}

@@ -5,7 +5,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import CalendarMonthOutlined from "@mui/icons-material/CalendarMonthOutlined";
 import PollOutlined from "@mui/icons-material/PollOutlined";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import { format } from "date-fns";
+import { endOfDay, format } from "date-fns";
 import api from "../../api/api";
 import PageHeader from "../../components/ui/PageHeader";
 import FilterChip from "../../components/ui/FilterChip";
@@ -136,6 +136,23 @@ const DashboardPage = () => {
   }, [refresh]);
 
   const resolved = useMemo(() => resolvePeriod(period, settings || {}, { from, to }), [period, settings, from, to]);
+  const [customSummary, setCustomSummary] = useState(null);
+  const rangeFrom = resolved.current.start?.toISOString();
+  const rangeTo = resolved.current.end ? endOfDay(resolved.current.end).toISOString() : undefined;
+  const teamKey = teamFilter.join(",");
+  const periodLabel = resolved.current.label;
+  useEffect(() => {
+    if (!settings) return undefined;
+    let cancelled = false;
+    // Custom tables with a mapped date (and optionally field team) roll into the tracker for the selected period.
+    api
+      .get("/custom-tables/summary", { params: { from: rangeFrom, to: rangeTo, team: teamKey || undefined } })
+      .then((r) => !cancelled && setCustomSummary({ ...r.data, label: periodLabel }))
+      .catch(() => !cancelled && setCustomSummary(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [settings, rangeFrom, rangeTo, teamKey, refresh, periodLabel]);
   const scopedTasks = useMemo(() => (teamFilter.length ? tasks.filter((t) => teamFilter.includes(t.teamName)) : tasks), [tasks, teamFilter]);
 
   const teamOptions = useMemo(() => {
@@ -191,7 +208,7 @@ const DashboardPage = () => {
             <NpsPerformance tasks={scopedTasks} samples={samples} settings={settings} period={resolved} teamFilter={teamFilter} />
             <NpsTrends tasks={scopedTasks} samples={samples} settings={settings} grain={grain} onGrainChange={(g) => setQuery({ grain: g })} />
             <Suspense fallback={<PageLoader minHeight={240} />}>
-              <TeamViolationTracker tasks={tasks} initialFieldTeams={teams} teamFilter={teamFilter} onTaskUpdated={() => setRefresh((r) => r + 1)} />
+              <TeamViolationTracker tasks={tasks} initialFieldTeams={teams} teamFilter={teamFilter} customSummary={customSummary} period={resolved.current} onTaskUpdated={() => setRefresh((r) => r + 1)} />
             </Suspense>
           </>
         )
