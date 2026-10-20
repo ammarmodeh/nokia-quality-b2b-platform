@@ -2,7 +2,7 @@ import XLSX from "xlsx-js-style";
 
 /**
  * Export rows as a styled XLSX (bold frozen header, autofilter, widths, dates)
- * or CSV. columns: [[header, (row) => value], ...]
+ * or CSV. columns: [[header, (row) => value], ...]. Returns the file name; throws if it can't be built.
  */
 export function exportRows(rows, columns, { format = "xlsx", filename = "export", sheet = "Sheet1" } = {}) {
   const header = columns.map((c) => c[0]);
@@ -21,7 +21,7 @@ export function exportRows(rows, columns, { format = "xlsx", filename = "export"
     a.download = `${filename}-${stamp}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
-    return;
+    return a.download;
   }
 
   const range = XLSX.utils.decode_range(ws["!ref"]);
@@ -40,5 +40,7 @@ export function exportRows(rows, columns, { format = "xlsx", filename = "export"
   ws["!views"] = [{ state: "frozen", ySplit: 1 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheet);
-  XLSX.writeFile(wb, `${filename}-${stamp}.xlsx`);
+  const name = `${filename}-${stamp}.xlsx`;
+  XLSX.writeFile(wb, name);
+  return name;
 }
