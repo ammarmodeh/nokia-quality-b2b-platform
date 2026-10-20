@@ -12,12 +12,11 @@ import {
   Tooltip,
   IconButton,
   Paper,
-  Divider,
   useMediaQuery,
   useTheme,
   Grid,
   Stack,
-  Avatar
+  Avatar,
 } from '@mui/material';
 import {
   MdClose,
@@ -53,15 +52,15 @@ const colors = {
   get background() { return tok('--bg'); },
   get surface() { return tok('--surface'); },
   get primary() { return tok('--accent'); },
-  secondary: '#10b981', // Emerald
+  secondary: '#16A34A', // Emerald
   get textPrimary() { return tok('--text'); },
   get textSecondary() { return tok('--text-secondary'); },
   get border() { return tok('--border'); },
   timeline: {
-    reported: '#3b82f6', // Blue
-    dispatched: '#f59e0b', // Amber
-    resolved: '#10b981', // green
-    closed: '#8b5cf6', // Violet
+    reported: '#2563EB', // Blue
+    dispatched: '#D97706', // Amber
+    resolved: '#16A34A', // green
+    closed: '#6C47FF', // Violet
   }
 };
 
@@ -70,7 +69,7 @@ const SectionTitle = ({ icon: Icon, title }) => (
     <Avatar sx={{ bgcolor: `${colors.primary}20`, color: colors.primary, width: 32, height: 32 }}>
       <Icon size={18} />
     </Avatar>
-    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: colors.textPrimary, letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: colors.textPrimary, letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '0.75rem' }}>
       {title}
     </Typography>
   </Box>
@@ -130,7 +129,7 @@ const StatusTimeline = ({ issue }) => {
               }}>
                 <step.icon size={20} />
               </Avatar>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: step.active ? '#fff' : colors.textSecondary, display: 'block' }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: step.active ? '#fff' : colors.textSecondary, display: 'block' }}>
                 {step.label}
               </Typography>
               <Typography variant="caption" sx={{ fontSize: '0.65rem', color: colors.textSecondary }}>
@@ -255,7 +254,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
 
       navigator.clipboard.writeText(formattedMessage).catch(() => { });
       window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(formattedMessage)}`, '_blank');
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch team contact information');
     }
   };
@@ -288,7 +287,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
             <MdOutlineBugReport size={24} />
           </Avatar>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
               Issue Details
             </Typography>
             <Typography variant="caption" sx={{ color: colors.textSecondary, fontWeight: 500 }}>
@@ -298,7 +297,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
         </Box>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Copy to Clipboard">
-            <IconButton onClick={handleCopyDetails} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: colors.primary } }}>
+            <IconButton onClick={handleCopyDetails} sx={{ color: 'var(--text-secondary)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: colors.primary } }}>
               <MdContentCopy size={20} />
             </IconButton>
           </Tooltip>
@@ -307,7 +306,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
               <MdWhatsapp size={20} />
             </IconButton>
           </Tooltip>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: '#fff' } }}>
+          <IconButton onClick={onClose} sx={{ color: 'var(--text-secondary)', '&:hover': { bgcolor: 'var(--overlay-subtle)', color: '#fff' } }}>
             <MdClose size={20} />
           </IconButton>
         </Stack>
@@ -319,7 +318,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
         <Grid container spacing={isMobile ? 2 : 4}>
           {/* Customer Information */}
           <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: 3, border: `1px solid ${colors.border}`, height: '100%' }}>
+            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.border}`, height: '100%' }}>
               <SectionTitle icon={MdPerson} title="Customer Information" />
               <Stack spacing={0.5}>
                 <DetailItem icon={MdPerson} label="Full Name" value={issue.customerName} />
@@ -336,7 +335,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
 
           {/* Reporter Information */}
           <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: 3, border: `1px solid ${colors.border}`, height: '100%' }}>
+            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.border}`, height: '100%' }}>
               <SectionTitle icon={MdAssignmentInd} title="Reporter Information" />
               <Stack spacing={0.5}>
                 <DetailItem icon={MdAssignmentInd} label="Reporter Name" value={issue.reporter} />
@@ -349,7 +348,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
 
           {/* Issue Details */}
           <Grid item xs={12}>
-            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: 3, border: `1px solid ${colors.border}` }}>
+            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.border}` }}>
               <SectionTitle icon={MdOutlineBugReport} title="Problem Description" />
               <Box sx={{ mb: 3 }}>
                 <Typography variant="caption" sx={{ color: colors.textSecondary, mb: 1, display: 'block' }}>Reported Categories:</Typography>
@@ -367,7 +366,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
                 </Box>
               </Box>
               <Box sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, borderLeft: `4px solid ${colors.primary}` }}>
-                <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 800, textTransform: 'uppercase', mb: 0.5, display: 'block' }}>Reporter Note</Typography>
+                <Typography variant="caption" sx={{ color: colors.primary, fontWeight: 600, textTransform: 'uppercase', mb: 0.5, display: 'block' }}>Reporter Note</Typography>
                 <Typography variant="body2" sx={{ color: 'var(--text)', fontStyle: 'italic', lineHeight: 1.6 }}>
                   {issue.reporterNote || "No additional notes from reporter."}
                 </Typography>
@@ -377,7 +376,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
 
           {/* Team Assignment */}
           <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: 3, border: `1px solid ${colors.border}`, height: '100%' }}>
+            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.border}`, height: '100%' }}>
               <SectionTitle icon={MdOutlineEngineering} title="Field Team & Assignment" />
               <Stack spacing={0.5}>
                 <DetailItem icon={FaBuilding} label="Team Company" value={issue.teamCompany} />
@@ -392,7 +391,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
 
           {/* Status & Resolution */}
           <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: 3, border: `1px solid ${colors.border}`, height: '100%' }}>
+            <Paper sx={{ p: 2.5, bgcolor: colors.surface, borderRadius: "10px", border: `1px solid ${colors.border}`, height: '100%' }}>
               <SectionTitle icon={MdCheckCircle} title="Resolution Status" />
               <Stack spacing={0.5}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.8 }}>
@@ -401,9 +400,9 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
                     label={issue.solved === 'yes' ? 'RESOLVED' : 'IN PROGRESS'}
                     size="small"
                     sx={{
-                      bgcolor: issue.solved === 'yes' ? `${colors.secondary}20` : 'rgba(245, 158, 11, 0.1)',
-                      color: issue.solved === 'yes' ? colors.secondary : '#f59e0b',
-                      fontWeight: 800,
+                      bgcolor: issue.solved === 'yes' ? `${colors.secondary}20` : 'rgba(217, 119, 6, 0.1)',
+                      color: issue.solved === 'yes' ? colors.secondary : '#D97706',
+                      fontWeight: 600,
                       fontSize: '0.65rem'
                     }}
                   />
@@ -420,7 +419,7 @@ const ViewIssueDetailsDialog = ({ open, onClose, issue, onUpdate }) => {
           {/* Resolution Details */}
           {issue.solved === 'yes' && (
             <Grid item xs={12}>
-              <Paper sx={{ p: 2.5, bgcolor: `${colors.secondary}05`, borderRadius: 3, border: `1px solid ${colors.secondary}20` }}>
+              <Paper sx={{ p: 2.5, bgcolor: `${colors.secondary}05`, borderRadius: "10px", border: `1px solid ${colors.secondary}20` }}>
                 <SectionTitle icon={MdOutlineDoneAll} title="Resolution Summary" />
                 <Typography variant="body2" sx={{ direction: 'rtl', textAlign: 'right', color: colors.textPrimary, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
                   {issue.resolutionDetails || "Issue resolved but no details provided."}

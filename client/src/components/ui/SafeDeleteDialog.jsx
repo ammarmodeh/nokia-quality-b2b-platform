@@ -127,7 +127,7 @@ const SafeDeleteDialog = ({ open, onClose, records: incoming = [], noun = { one:
       {failed.length > 0 ? (
         <ErrorState
           sx={{ mt: 2 }}
-          title={`${failed.length} of ${count} ${label} weren't deleted`}
+          title={`${failed.length} of ${count} ${label} ${failed.length === 1 ? "wasn’t" : "weren’t"} deleted`}
           message={
             <Box component="span" sx={{ display: "block" }}>
               They are unchanged. {count - failed.length > 0 ? "The others were deleted. " : ""}

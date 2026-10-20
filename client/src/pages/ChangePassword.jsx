@@ -109,7 +109,7 @@ const ChangePassword = ({ embedded = false } = {}) => {
         borderColor: 'var(--border)',
       },
       '&:hover fieldset': {
-        borderColor: '#666',
+        borderColor: 'var(--text-muted)',
       },
       '&.Mui-focused fieldset': {
         borderColor: 'var(--accent)',
@@ -123,22 +123,22 @@ const ChangePassword = ({ embedded = false } = {}) => {
   const buttonStyles = {
     backgroundColor: 'var(--accent)',
     color: 'var(--text)',
-    fontWeight: 'bold',
+    fontWeight: '600',
     '&:hover': {
       backgroundColor: 'var(--accent-hover)',
     },
     '&:disabled': {
-      backgroundColor: '#555',
+      backgroundColor: 'var(--border-strong)',
       color: 'var(--text-muted)'
     }
   };
 
   // const cancelButtonStyles = {
   //   color: 'var(--text)',
-  //   backgroundColor: '#555',
-  //   fontWeight: 'bold',
+  //   backgroundColor: 'var(--border-strong)',
+  //   fontWeight: '600',
   //   '&:hover': {
-  //     backgroundColor: '#666',
+  //     backgroundColor: 'var(--text-muted)',
   //   }
   // };
 
@@ -206,7 +206,7 @@ const ChangePassword = ({ embedded = false } = {}) => {
             <Typography
               variant={isMobile ? 'h6' : 'h5'}
               component="h1"
-              sx={{ color: 'var(--text)', fontWeight: 'bold' }}
+              sx={{ color: 'var(--text)', fontWeight: '600' }}
             >
               Change Password
             </Typography>
@@ -367,7 +367,7 @@ const ChangePassword = ({ embedded = false } = {}) => {
           variant="filled"
           sx={{
             width: '100%',
-            backgroundColor: snackbarSeverity === 'success' ? 'var(--accent)' : '#d32f2f',
+            backgroundColor: snackbarSeverity === 'success' ? 'var(--accent)' : '#DC2626',
             color: 'var(--text)',
             '& .MuiAlert-icon': {
               color: 'var(--text)'

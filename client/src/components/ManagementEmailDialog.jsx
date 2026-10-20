@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -11,7 +11,6 @@ import {
   Tabs,
   Tab,
   IconButton,
-  Divider,
 } from '@mui/material';
 import {
   ContentCopy as CopyIcon,
@@ -24,7 +23,7 @@ import { TextField } from '@mui/material';
 import { toast } from 'sonner';
 import { getWeekNumber, getCustomWeekNumber } from '../utils/helpers';
 import { filterTasksByWeek, aggregateSamples } from '../utils/dateFilterHelpers';
-import { startOfWeek, subWeeks, format } from 'date-fns';
+import { startOfWeek, subWeeks } from 'date-fns';
 
 const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, period = '', startDate = null, endDate = null, settings = {} }) => {
   const [tab, setTab] = useState(0);
@@ -51,7 +50,6 @@ const ManagementEmailDialog = ({ open, onClose, type = 'dashboard', data = {}, p
       const promoterCount = Math.max(0, totalSamples - (detractorCount + neutralCount));
       const promotersPercent = totalSamples > 0 ? Math.round((promoterCount / totalSamples) * 100) : 0;
       const detractorsPercent = totalSamples > 0 ? Math.round((detractorCount / totalSamples) * 100) : 0;
-      const neutralsPercent = totalSamples > 0 ? Math.round((neutralCount / totalSamples) * 100) : 0;
       const npsScore = promotersPercent - detractorsPercent;
 
       const targetPromoters = 75;
@@ -494,7 +492,7 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
         sx: {
           bgcolor: 'var(--bg)',
           color: 'var(--text)',
-          borderRadius: 3,
+          borderRadius: "10px",
           backgroundImage: 'none',
         },
       }}
@@ -502,7 +500,7 @@ ${topReasons.map(([reason, count]) => `- ${reason}: ${count} حالة`).join('\n
       <DialogTitle sx={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <EmailIcon sx={{ color: 'primary.main' }} />
-          <Typography variant="h6" fontWeight="bold">Generate Management Report</Typography>
+          <Typography variant="h6" fontWeight="600">Generate Management Report</Typography>
         </Stack>
         <IconButton onClick={onClose} sx={{ color: 'grey.500' }}>
           <CloseIcon />

@@ -27,7 +27,7 @@ export const ReactivateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatu
         onClose();
         setUpdateTeamStatus(prev => !prev);
       }
-    } catch (error) {
+    } catch {
       alert("Failed to reactivate team.");
     }
   };
@@ -109,7 +109,7 @@ export const ReactivateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatu
             backgroundColor: 'var(--accent)',
             color: '#f9fafb',
             '&:hover': {
-              backgroundColor: '#1d4ed8'
+              backgroundColor: '#2563EB'
             }
           }}
         >

@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
-  Container,
   Card,
   CardContent,
   Typography,
@@ -18,7 +17,7 @@ import {
   Paper,
   InputAdornment,
   LinearProgress,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
 import { FileCopy as FileCopyIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { MdOutlineSearch, MdClose, MdGridView } from "react-icons/md";
@@ -30,14 +29,14 @@ import VisibilityDialog from "../components/VisibilityDialog";
 
 // --- Stats Card Component ---
 const StatCard = ({ title, count, total, color, icon }) => (
-  <Card sx={{ height: '100%', position: 'relative', overflow: 'visible', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+  <Card sx={{ height: '100%', position: 'relative', overflow: 'visible', borderRadius: "10px", boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
     <CardContent sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
         <Box>
           <Typography variant="subtitle2" color="textSecondary" fontWeight="600" gutterBottom>
             {title}
           </Typography>
-          <Typography variant="h4" fontWeight="800" color="textPrimary">
+          <Typography variant="h4" fontWeight="600" color="textPrimary">
             {count}
           </Typography>
         </Box>
@@ -62,11 +61,11 @@ const StatCard = ({ title, count, total, color, icon }) => (
             sx={{
               flexGrow: 1,
               height: 6,
-              borderRadius: 5,
+              borderRadius: "10px",
               bgcolor: `${color}20`,
               '& .MuiLinearProgress-bar': {
                 bgcolor: color,
-                borderRadius: 5,
+                borderRadius: "10px",
               }
             }}
           />
@@ -122,7 +121,7 @@ const Users = ({ embedded = false } = {}) => {
       });
       setTeam((prev) => prev.map((m) => m._id === memberId ? { ...m, visibleTo } : m));
       setSelectedMember((prev) => prev?._id === memberId ? { ...prev, visibleTo } : prev);
-    } catch (error) { }
+    } catch { }
   }, []);
 
   const isVisible = useCallback((member, currentUserId) => {
@@ -232,18 +231,18 @@ const Users = ({ embedded = false } = {}) => {
       {/* Stats Cards */}
       <Grid container spacing={3} mb={4}>
         <Grid item xs={12} sm={4}>
-          <StatCard title="Total Members" count={stats.total} total={0} color="#3b82f6" icon={<FaUsers />} />
+          <StatCard title="Total Members" count={stats.total} total={0} color="#2563EB" icon={<FaUsers />} />
         </Grid>
         <Grid item xs={12} sm={4}>
-          <StatCard title="Admins / Leads" count={stats.admins} total={stats.total} color="#8b5cf6" icon={<FaUserTie />} />
+          <StatCard title="Admins / Leads" count={stats.admins} total={stats.total} color="#6C47FF" icon={<FaUserTie />} />
         </Grid>
         <Grid item xs={12} sm={4}>
-          <StatCard title="Departments" count={stats.departments} total={0} color="#10b981" icon={<FaBuilding />} />
+          <StatCard title="Departments" count={stats.departments} total={0} color="#16A34A" icon={<FaBuilding />} />
         </Grid>
       </Grid>
 
       {/* Toolbar */}
-      <Paper sx={{ mb: 3, borderRadius: 3, p: 2 }} elevation={0}>
+      <Paper sx={{ mb: 3, borderRadius: "10px", p: 2 }} elevation={0}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
           <Tabs value={selectedView} onChange={(e, v) => setSelectedView(v)} sx={{ '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 48 } }}>
             <Tab icon={<MdGridView />} iconPosition="start" label="Board View" />
@@ -286,7 +285,7 @@ const Users = ({ embedded = false } = {}) => {
                 height: '100%',
                 textAlign: 'center',
                 p: 3,
-                borderRadius: 3,
+                borderRadius: "10px",
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                 position: 'relative',
                 transition: 'transform 0.2s',
@@ -300,7 +299,7 @@ const Users = ({ embedded = false } = {}) => {
 
                 <Avatar src={member.avatar} alt={member.name} sx={{ width: 80, height: 80, mx: 'auto', mb: 2, border: '3px solid #f1f5f9' }} />
 
-                <Typography variant="h6" fontWeight="bold" gutterBottom>{member.name}</Typography>
+                <Typography variant="h6" fontWeight="600" gutterBottom>{member.name}</Typography>
 
                 <Chip label={member.title || "Member"} size="small" sx={{ mb: 2, bgcolor: '#e0f2fe', color: '#0369a1', fontWeight: 600 }} />
 
@@ -319,7 +318,7 @@ const Users = ({ embedded = false } = {}) => {
           ))}
         </Grid>
       ) : (
-        <Paper sx={{ height: 650, width: '100%', borderRadius: 3, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+        <Paper sx={{ height: 650, width: '100%', borderRadius: "10px", boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
           <DataGrid
             rows={filteredTeam}
             columns={columns}
@@ -328,7 +327,7 @@ const Users = ({ embedded = false } = {}) => {
             pageSizeOptions={[10, 25, 50]}
             disableRowSelectionOnClick
             slots={{ toolbar: GridToolbar }}
-            sx={{ border: 'none', '& .MuiDataGrid-cell': { borderBottom: '1px solid #f1f5f9' }, '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8fafc', fontWeight: 'bold' } }}
+            sx={{ border: 'none', '& .MuiDataGrid-cell': { borderBottom: '1px solid #f1f5f9' }, '& .MuiDataGrid-columnHeaders': { bgcolor: '#f8fafc', fontWeight: '600' } }}
           />
         </Paper>
       )}

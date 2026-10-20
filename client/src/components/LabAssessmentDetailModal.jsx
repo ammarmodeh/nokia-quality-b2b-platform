@@ -1,7 +1,6 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -9,7 +8,6 @@ import {
   Grid,
   Chip,
   Button,
-  Divider,
   Stack,
   Table,
   TableBody,
@@ -25,8 +23,6 @@ import {
   Print as PrintIcon,
   FileDownload as FileDownloadIcon,
   CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  HelpOutline as HelpOutlineIcon,
   Build as BuildIcon,
   Speed as SpeedIcon,
   Router as RouterIcon,
@@ -35,7 +31,6 @@ import {
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   SettingsInputComponent as SettingsIcon,
   PhotoCamera as PhotoCameraIcon,
-  PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import { exportIndividualLabAssessmentReport } from "../utils/labAssessmentExcelExport";
 import { exportArabicLabAssessmentReport } from "../utils/labAssessmentArabicExcelExport";
@@ -113,11 +108,11 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
   const score = assessment.overallScore !== undefined ? assessment.overallScore : (assessment.totalScore || 0);
   const defaultGetAssessmentStatus = (score) => {
     const s = Number(score) || 0;
-    if (s >= 90) return { label: "Excellent (Pass)", color: "#00e676", isPass: true, tier: "90-100" };
-    if (s >= 80) return { label: "V.Good (Pass)", color: "#4caf50", isPass: true, tier: "80-89" };
-    if (s >= 70) return { label: "Need improvements, and close monitoring (Pass)", color: "#fbc02d", isPass: true, tier: "70-79" };
-    if (s >= 50) return { label: "Suspension, need training, then re-evaluate the team (Fail)", color: "#ff9800", isPass: false, tier: "50-69" };
-    return { label: "Ineligible (Fail)", color: "#f44336", isPass: false, tier: "0-49" };
+    if (s >= 90) return { label: "Excellent (Pass)", color: "#16A34A", isPass: true, tier: "90-100" };
+    if (s >= 80) return { label: "V.Good (Pass)", color: "#16A34A", isPass: true, tier: "80-89" };
+    if (s >= 70) return { label: "Need improvements, and close monitoring (Pass)", color: "#D97706", isPass: true, tier: "70-79" };
+    if (s >= 50) return { label: "Suspension, need training, then re-evaluate the team (Fail)", color: "#D97706", isPass: false, tier: "50-69" };
+    return { label: "Ineligible (Fail)", color: "#DC2626", isPass: false, tier: "0-49" };
   };
 
   const statusInfo = getAssessmentStatus ? getAssessmentStatus(score) : defaultGetAssessmentStatus(score);
@@ -134,14 +129,14 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
     let color = "var(--text-muted)";
     let bg = "rgba(158,158,158,0.15)";
     if (isPass) {
-      color = "#4caf50";
-      bg = "rgba(76, 175, 80, 0.15)";
+      color = "#16A34A";
+      bg = "rgba(22, 163, 74, 0.15)";
     } else if (isFail) {
-      color = "#f44336";
-      bg = "rgba(244, 67, 54, 0.15)";
+      color = "#DC2626";
+      bg = "rgba(220, 38, 38, 0.15)";
     } else if (isWarn) {
-      color = "#ffa726";
-      bg = "rgba(255, 167, 38, 0.15)";
+      color = "#D97706";
+      bg = "rgba(217, 119, 6, 0.15)";
     }
 
     return (
@@ -151,7 +146,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
         sx={{
           bgcolor: bg,
           color: color,
-          fontWeight: "bold",
+          fontWeight: "600",
           border: `1px solid ${color}40`,
           fontSize: "0.75rem",
         }}
@@ -161,14 +156,14 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
 
   const sectionIcons = {
     "1. FDB – Fiber Splicing & Fiber Management": <SensorsIcon sx={{ color: "var(--accent-text)" }} />,
-    "2. BEP – Outdoor/Indoor Fiber Splicing": <SettingsIcon sx={{ color: "#00bcd4" }} />,
-    "3. OTO – Splicing, Fiber Management & Optical Testing": <SpeedIcon sx={{ color: "#ff9800" }} />,
-    "4. ONT – Installation, Configuration & Service Activation": <RouterIcon sx={{ color: "#e91e63" }} />,
-    "5. Assistant Tools & Mobile Applications": <BuildIcon sx={{ color: "#00e676" }} />,
-    "6. Customer Education": <SchoolIcon sx={{ color: "#4caf50" }} />,
-    "7. Quality Ticket Awareness": <AssignmentTurnedInIcon sx={{ color: "#9c27b0" }} />,
-    "8. Self-Assessment & Photo Documentation": <PhotoCameraIcon sx={{ color: "#00bcd4" }} />,
-    "9. Communication & Professional Behaviour": <SchoolIcon sx={{ color: "#ff9800" }} />,
+    "2. BEP – Outdoor/Indoor Fiber Splicing": <SettingsIcon sx={{ color: "#2563EB" }} />,
+    "3. OTO – Splicing, Fiber Management & Optical Testing": <SpeedIcon sx={{ color: "#D97706" }} />,
+    "4. ONT – Installation, Configuration & Service Activation": <RouterIcon sx={{ color: "#DB2777" }} />,
+    "5. Assistant Tools & Mobile Applications": <BuildIcon sx={{ color: "#16A34A" }} />,
+    "6. Customer Education": <SchoolIcon sx={{ color: "#16A34A" }} />,
+    "7. Quality Ticket Awareness": <AssignmentTurnedInIcon sx={{ color: "#6C47FF" }} />,
+    "8. Self-Assessment & Photo Documentation": <PhotoCameraIcon sx={{ color: "#2563EB" }} />,
+    "9. Communication & Professional Behaviour": <SchoolIcon sx={{ color: "#D97706" }} />,
   };
 
   // Tools & Equipment stats for detail modal
@@ -183,13 +178,13 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
 
   // Helper table renderer
   const renderDetailTable = (checkpointsList, section) => (
-    <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "14px" }}>
+    <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "10px" }}>
       <Table size="small">
         <TableHead>
           <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
-            <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700, width: "55%" }}>Checkpoint</TableCell>
-            <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700, width: "15%" }}>Result</TableCell>
-            <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700, width: "30%" }}>Assessor Observations / Notes</TableCell>
+            <TableCell sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600, width: "55%" }}>Checkpoint</TableCell>
+            <TableCell align="center" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600, width: "15%" }}>Result</TableCell>
+            <TableCell sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600, width: "30%" }}>Assessor Observations / Notes</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -214,7 +209,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                 <TableCell sx={{ color: colors?.textPrimary || "#fff", py: 1.5 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{cp.name}</Typography>
                   {cp.subSection && (
-                    <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3" }}>
+                    <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)" }}>
                       {cp.subSection}
                     </Typography>
                   )}
@@ -228,10 +223,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                         label={`${scoreVal} / ${cpMax} Pts`}
                         size="small"
                         sx={{
-                          bgcolor: isPass ? "rgba(76, 175, 80, 0.15)" : "rgba(244, 67, 54, 0.15)",
-                          color: isPass ? "#4caf50" : "#f44336",
-                          fontWeight: "bold",
-                          border: `1px solid ${isPass ? "#4caf5040" : "#f4433640"}`,
+                          bgcolor: isPass ? "rgba(22, 163, 74, 0.15)" : "rgba(220, 38, 38, 0.15)",
+                          color: isPass ? "#16A34A" : "#DC2626",
+                          fontWeight: "600",
+                          border: `1px solid ${isPass ? "#16A34A40" : "#DC262640"}`,
                           fontSize: "0.75rem",
                         }}
                       />
@@ -239,9 +234,9 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                         label={isPass ? "Pass" : "Fail"}
                         size="small"
                         sx={{
-                          bgcolor: isPass ? "#4caf50" : "#f44336",
+                          bgcolor: isPass ? "#16A34A" : "#DC2626",
                           color: "var(--text)",
-                          fontWeight: 800,
+                          fontWeight: 600,
                           fontSize: "0.7rem",
                           height: 22,
                           px: 0.5,
@@ -323,9 +318,9 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
       fullWidth
       PaperProps={{
         sx: {
-          bgcolor: colors?.surface || "#252525",
+          bgcolor: colors?.surface || "var(--border)",
           color: colors?.textPrimary || "#fff",
-          borderRadius: "20px",
+          borderRadius: "10px",
           border: `1px solid ${colors?.border || "var(--border)"}`,
           boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
         },
@@ -347,8 +342,8 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             sx={{
               width: 44,
               height: 44,
-              borderRadius: "12px",
-              bgcolor: "rgba(123, 104, 238, 0.15)",
+              borderRadius: "10px",
+              bgcolor: "rgba(108, 71, 255, 0.15)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -358,10 +353,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             <SpeedIcon />
           </Box>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: colors?.textPrimary || "#fff" }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: colors?.textPrimary || "#fff" }}>
               E2E FTTH Practical Assessment Report
             </Typography>
-            <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3" }}>
+            <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)" }}>
               Conducted in Controlled Laboratory Environment
             </Typography>
           </Box>
@@ -374,12 +369,12 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             startIcon={<FileDownloadIcon />}
             onClick={handleExportArabicExcel}
             sx={{
-              bgcolor: "#2e7d32",
+              bgcolor: "#16A34A",
               "&:hover": { bgcolor: "#1b5e20" },
               color: "var(--text)",
-              fontWeight: 700,
+              fontWeight: 600,
               borderRadius: "10px",
-              boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
+              boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
             }}
           >
             Arabic Excel (تقرير Excel)
@@ -390,12 +385,12 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             startIcon={<FileDownloadIcon />}
             onClick={() => exportIndividualLabAssessmentReport(assessment)}
             sx={{
-              bgcolor: "#2e7d32",
+              bgcolor: "#16A34A",
               "&:hover": { bgcolor: "#1b5e20" },
               color: "var(--text)",
-              fontWeight: 700,
+              fontWeight: 600,
               borderRadius: "10px",
-              boxShadow: "0 4px 12px rgba(46, 125, 50, 0.3)",
+              boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
             }}
           >
             Excel Report (.xlsx)
@@ -406,15 +401,15 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             startIcon={<PrintIcon />}
             onClick={handlePrint}
             sx={{
-              borderColor: colors?.border || "#3d3d3d",
+              borderColor: colors?.border || "var(--border)",
               color: colors?.textPrimary || "#fff",
               borderRadius: "10px",
-              "&:hover": { borderColor: "var(--accent)", bgcolor: "rgba(123, 104, 238, 0.1)" },
+              "&:hover": { borderColor: "var(--accent)", bgcolor: "rgba(108, 71, 255, 0.1)" },
             }}
           >
             Print
           </Button>
-          <IconButton onClick={onClose} sx={{ color: colors?.textSecondary || "#b3b3b3" }}>
+          <IconButton onClick={onClose} sx={{ color: colors?.textSecondary || "var(--text-secondary)" }}>
             <CloseIcon />
           </IconButton>
         </Stack>
@@ -428,25 +423,25 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             sx={{
               p: 3,
               bgcolor: "var(--overlay-subtle)",
-              borderRadius: "16px",
+              borderRadius: "10px",
               border: `1px solid ${colors?.border || "var(--border)"}`,
             }}
           >
             <Grid container spacing={3} alignItems="center">
               <Grid item xs={12} sm={6} md={3}>
-                <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>
                   FIELD TEAM & COMPANY
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff" }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: colors?.textPrimary || "#fff" }}>
                   {teamName}
                 </Typography>
-                <Typography variant="body2" sx={{ color: colors?.textSecondary || "#b3b3b3" }}>
+                <Typography variant="body2" sx={{ color: colors?.textSecondary || "var(--text-secondary)" }}>
                   {teamCompany}
                 </Typography>
               </Grid>
 
               <Grid item xs={12} sm={6} md={3}>
-                <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>
                   PROFILE & EXPERIENCE
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5, flexWrap: "wrap" }}>
@@ -454,10 +449,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                     label={teamEmploymentType}
                     size="small"
                     sx={{
-                      bgcolor: teamEmploymentType === "Employee" ? "rgba(76,175,80,0.15)" : "rgba(123, 104, 238, 0.15)",
-                      color: teamEmploymentType === "Employee" ? "#4caf50" : "#7b68ee",
-                      fontWeight: 700,
-                      border: `1px solid ${teamEmploymentType === "Employee" ? "#4caf5040" : "#7b68ee40"}`,
+                      bgcolor: teamEmploymentType === "Employee" ? "rgba(22, 163, 74,0.15)" : "rgba(108, 71, 255, 0.15)",
+                      color: teamEmploymentType === "Employee" ? "#16A34A" : "#6C47FF",
+                      fontWeight: 600,
+                      border: `1px solid ${teamEmploymentType === "Employee" ? "#16A34A40" : "#6C47FF40"}`,
                     }}
                   />
                   {teamAge !== null && (
@@ -465,10 +460,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                       label={`Age: ${teamAge} Yrs`}
                       size="small"
                       sx={{
-                        bgcolor: "rgba(233, 30, 99, 0.12)",
-                        color: "#f472b6",
-                        fontWeight: 700,
-                        border: "1px solid rgba(233, 30, 99, 0.3)",
+                        bgcolor: "rgba(219, 39, 119, 0.12)",
+                        color: "#DB2777",
+                        fontWeight: 600,
+                        border: "1px solid rgba(219, 39, 119, 0.3)",
                       }}
                     />
                   )}
@@ -477,26 +472,26 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                   </Typography>
                 </Box>
                 {teamDateOfBirth && (
-                  <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3", display: "block", mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)", display: "block", mt: 0.5 }}>
                     DoB: {new Date(teamDateOfBirth).toLocaleDateString()}
                   </Typography>
                 )}
               </Grid>
 
               <Grid item xs={12} sm={6} md={3}>
-                <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>
                   ASSESSOR & DATE
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 600, color: colors?.textPrimary || "#fff" }}>
                   {assessorName}
                 </Typography>
-                <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3" }}>
+                <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)" }}>
                   {new Date(assessmentDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </Typography>
               </Grid>
 
               <Grid item xs={12} sm={6} md={3} sx={{ textAlign: { sm: "right" } }}>
-                <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>
                   OVERALL PERFORMANCE
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: { xs: "flex-start", sm: "flex-end" }, gap: 1.5, mt: 0.5 }}>
@@ -506,13 +501,13 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                       bgcolor: `${statusInfo.color}22`,
                       color: statusInfo.color,
                       fontSize: "1.2rem",
-                      fontWeight: 800,
+                      fontWeight: 600,
                       height: 40,
                       border: `2px solid ${statusInfo.color}`,
                       px: 1,
                     }}
                   />
-                  <Typography variant="subtitle2" sx={{ color: statusInfo.color, fontWeight: 700 }}>
+                  <Typography variant="subtitle2" sx={{ color: statusInfo.color, fontWeight: 600 }}>
                     {statusInfo.label}
                   </Typography>
                 </Box>
@@ -525,11 +520,11 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             sx={{
               p: 3,
               bgcolor: "var(--overlay-subtle)",
-              borderRadius: "16px",
+              borderRadius: "10px",
               border: `1px solid ${colors?.border || "var(--border)"}`,
             }}
           >
-            <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: "var(--accent-text)", display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5, color: "var(--accent-text)", display: "flex", alignItems: "center", gap: 1 }}>
               <SchoolIcon fontSize="small" /> Field Team Safety & Compliance Certifications
             </Typography>
 
@@ -541,9 +536,9 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                     <Paper
                       sx={{
                         p: 2,
-                        bgcolor: isCertified ? "rgba(76, 175, 80, 0.08)" : "rgba(255,255,255,0.015)",
-                        border: isCertified ? "1px solid #4caf50" : `1px solid ${colors?.border || "#3d3d3d"}`,
-                        borderRadius: "12px",
+                        bgcolor: isCertified ? "rgba(22, 163, 74, 0.08)" : "rgba(255,255,255,0.015)",
+                        border: isCertified ? "1px solid #16A34A" : `1px solid ${colors?.border || "var(--border)"}`,
+                        borderRadius: "10px",
                       }}
                     >
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
@@ -552,14 +547,14 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                             label={cert.code}
                             size="small"
                             sx={{
-                              bgcolor: isCertified ? "#4caf50" : "rgba(255,255,255,0.08)",
+                              bgcolor: isCertified ? "#16A34A" : "rgba(255,255,255,0.08)",
                               color: "var(--text)",
-                              fontWeight: 800,
+                              fontWeight: 600,
                               fontSize: "0.75rem",
                               height: 22,
                             }}
                           />
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: isCertified ? "#4caf50" : (colors?.textPrimary || "#fff") }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: isCertified ? "#16A34A" : (colors?.textPrimary || "#fff") }}>
                             {cert.title}
                           </Typography>
                         </Box>
@@ -567,15 +562,15 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                           label={isCertified ? "Certified" : "Not Certified"}
                           size="small"
                           sx={{
-                            bgcolor: isCertified ? "rgba(76, 175, 80, 0.15)" : "rgba(255,255,255,0.05)",
-                            color: isCertified ? "#4caf50" : (colors?.textSecondary || "#b3b3b3"),
-                            fontWeight: 700,
+                            bgcolor: isCertified ? "rgba(22, 163, 74, 0.15)" : "rgba(255,255,255,0.05)",
+                            color: isCertified ? "#16A34A" : (colors?.textSecondary || "var(--text-secondary)"),
+                            fontWeight: 600,
                             fontSize: "0.7rem",
                             height: 20,
                           }}
                         />
                       </Box>
-                      <Typography variant="caption" sx={{ color: colors?.textSecondary || "#b3b3b3", display: "block", lineHeight: 1.3 }}>
+                      <Typography variant="caption" sx={{ color: colors?.textSecondary || "var(--text-secondary)", display: "block", lineHeight: 1.3 }}>
                         {cert.description}
                       </Typography>
                     </Paper>
@@ -590,7 +585,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
           {assessment.equipmentChecklist && assessment.equipmentChecklist.length > 0 && (
             <Box>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#2196f3", display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#2563EB", display: "flex", alignItems: "center", gap: 1 }}>
                   <BuildIcon fontSize="small" /> Tools & Equipment
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
@@ -598,19 +593,19 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                     label={`${eqPercentage}% (${eqValidCount}/${eqTotalCount} Valid/Avail)`}
                     size="small"
                     sx={{
-                      bgcolor: isEqPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
-                      color: isEqPass ? "#4caf50" : "#f44336",
-                      fontWeight: "bold",
-                      border: `1px solid ${isEqPass ? "#4caf5060" : "#f4433660"}`,
+                      bgcolor: isEqPass ? "rgba(22, 163, 74,0.18)" : "rgba(220, 38, 38,0.18)",
+                      color: isEqPass ? "#16A34A" : "#DC2626",
+                      fontWeight: "600",
+                      border: `1px solid ${isEqPass ? "#16A34A60" : "#DC262660"}`,
                     }}
                   />
                   <Chip
                     label={isEqPass ? "Pass" : "Fail"}
                     size="small"
                     sx={{
-                      bgcolor: isEqPass ? "#4caf50" : "#f44336",
+                      bgcolor: isEqPass ? "#16A34A" : "#DC2626",
                       color: "var(--text)",
-                      fontWeight: 800,
+                      fontWeight: 600,
                       fontSize: "0.75rem",
                       px: 0.5,
                     }}
@@ -618,13 +613,13 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                 </Stack>
               </Box>
 
-              <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "14px" }}>
+              <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "10px" }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "var(--overlay-subtle)" }}>
-                      <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Tool / Equipment Item</TableCell>
-                      <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Status</TableCell>
-                      <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Remarks / Condition</TableCell>
+                      <TableCell sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>Tool / Equipment Item</TableCell>
+                      <TableCell align="center" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>Status</TableCell>
+                      <TableCell sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>Remarks / Condition</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -729,7 +724,7 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                 return (
                   <Box key={sIdx}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors?.textPrimary || "#fff", display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: colors?.textPrimary || "#fff", display: "flex", alignItems: "center", gap: 1 }}>
                         {sectionIcons[sec.sectionTitle] || <CheckCircleIcon fontSize="small" sx={{ color: "var(--accent-text)" }} />}
                         {sec.sectionTitle}
                       </Typography>
@@ -740,10 +735,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                             label="Quality Supervisor Awareness (No Pass/Fail)"
                             size="small"
                             sx={{
-                              bgcolor: "rgba(156, 39, 176, 0.18)",
+                              bgcolor: "rgba(108, 71, 255, 0.18)",
                               color: "#ce93d8",
-                              fontWeight: 700,
-                              border: "1px solid rgba(156, 39, 176, 0.4)",
+                              fontWeight: 600,
+                              border: "1px solid rgba(108, 71, 255, 0.4)",
                             }}
                           />
                         ) : isPointsOnly ? (
@@ -752,19 +747,19 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                               label={`${secTotal} / ${secMax} Pts (${secScorePct}%)`}
                               size="small"
                               sx={{
-                                bgcolor: isSecPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
-                                color: isSecPass ? "#4caf50" : "#f44336",
-                                fontWeight: "bold",
-                                border: `1px solid ${isSecPass ? "#4caf5040" : "#f4433640"}`,
+                                bgcolor: isSecPass ? "rgba(22, 163, 74,0.18)" : "rgba(220, 38, 38,0.18)",
+                                color: isSecPass ? "#16A34A" : "#DC2626",
+                                fontWeight: "600",
+                                border: `1px solid ${isSecPass ? "#16A34A40" : "#DC262640"}`,
                               }}
                             />
                             <Chip
                               label={isSecPass ? "Pass" : "Fail"}
                               size="small"
                               sx={{
-                                bgcolor: isSecPass ? "#4caf50" : "#f44336",
+                                bgcolor: isSecPass ? "#16A34A" : "#DC2626",
                                 color: "var(--text)",
-                                fontWeight: 800,
+                                fontWeight: 600,
                                 fontSize: "0.75rem",
                                 px: 0.5,
                               }}
@@ -776,19 +771,19 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                               label={`${secScorePct}%`}
                               size="small"
                               sx={{
-                                bgcolor: isSecPass ? "rgba(76,175,80,0.18)" : "rgba(244,67,54,0.18)",
-                                color: isSecPass ? "#4caf50" : "#f44336",
-                                fontWeight: "bold",
-                                border: `1px solid ${isSecPass ? "#4caf5040" : "#f4433640"}`,
+                                bgcolor: isSecPass ? "rgba(22, 163, 74,0.18)" : "rgba(220, 38, 38,0.18)",
+                                color: isSecPass ? "#16A34A" : "#DC2626",
+                                fontWeight: "600",
+                                border: `1px solid ${isSecPass ? "#16A34A40" : "#DC262640"}`,
                               }}
                             />
                             <Chip
                               label={isSecPass ? "Pass" : "Fail"}
                               size="small"
                               sx={{
-                                bgcolor: isSecPass ? "#4caf50" : "#f44336",
+                                bgcolor: isSecPass ? "#16A34A" : "#DC2626",
                                 color: "var(--text)",
-                                fontWeight: 800,
+                                fontWeight: 600,
                                 fontSize: "0.75rem",
                                 px: 0.5,
                               }}
@@ -810,10 +805,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                                 p: 2,
                                 bgcolor: "var(--overlay-subtle)",
                                 border: `1px solid var(--border)`,
-                                borderRadius: "12px",
+                                borderRadius: "10px",
                               }}
                             >
-                              <Typography variant="body2" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff", mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: colors?.textPrimary || "#fff", mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
                                 <span>{group.icon}</span> {group.title}
                               </Typography>
                               {renderDetailTable(groupCps, sec)}
@@ -833,10 +828,10 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
                                 p: 2,
                                 bgcolor: "var(--overlay-subtle)",
                                 border: `1px solid var(--border)`,
-                                borderRadius: "12px",
+                                borderRadius: "10px",
                               }}
                             >
-                              <Typography variant="body2" sx={{ fontWeight: 700, color: colors?.textPrimary || "#fff", mb: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: colors?.textPrimary || "#fff", mb: 1 }}>
                                 {group.title}
                               </Typography>
                               {renderDetailTable(groupCps, sec)}
@@ -854,23 +849,23 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
               // Fallback for legacy format
               assessment.checkpoints && assessment.checkpoints.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, color: colors?.textPrimary || "#fff" }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1.5, color: colors?.textPrimary || "#fff" }}>
                     Assessment Checkpoints
                   </Typography>
-                  <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "14px" }}>
+                  <TableContainer component={Paper} sx={{ bgcolor: "var(--overlay-subtle)", border: `1px solid ${colors?.border || "var(--border)"}`, borderRadius: "10px" }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Checkpoint</TableCell>
-                          <TableCell align="center" sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Score (0-5)</TableCell>
-                          <TableCell sx={{ color: colors?.textSecondary || "#b3b3b3", fontWeight: 700 }}>Notes</TableCell>
+                          <TableCell sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>Checkpoint</TableCell>
+                          <TableCell align="center" sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>Score (0-5)</TableCell>
+                          <TableCell sx={{ color: colors?.textSecondary || "var(--text-secondary)", fontWeight: 600 }}>Notes</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {assessment.checkpoints.map((cp, idx) => (
                           <TableRow key={idx}>
                             <TableCell sx={{ color: colors?.textPrimary || "#fff" }}>{cp.name}</TableCell>
-                            <TableCell align="center" sx={{ color: "var(--accent-text)", fontWeight: 700 }}>{cp.score} / 5</TableCell>
+                            <TableCell align="center" sx={{ color: "var(--accent-text)", fontWeight: 600 }}>{cp.score} / 5</TableCell>
                             <TableCell sx={{ color: cp.notes ? (colors?.textPrimary || "#fff") : "rgba(255,255,255,0.3)" }}>{cp.notes || "None"}</TableCell>
                           </TableRow>
                         ))}
@@ -887,12 +882,12 @@ const LabAssessmentDetailModal = ({ open, onClose, assessment, colors, getAssess
             <Paper
               sx={{
                 p: 3,
-                bgcolor: "rgba(123, 104, 238, 0.05)",
-                border: "1px dashed rgba(123, 104, 238, 0.4)",
-                borderRadius: "16px",
+                bgcolor: "rgba(108, 71, 255, 0.05)",
+                border: "1px dashed rgba(108, 71, 255, 0.4)",
+                borderRadius: "10px",
               }}
             >
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "var(--accent-text)", mb: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "var(--accent-text)", mb: 1 }}>
                 Assessor Comprehensive Feedback & Recommendations
               </Typography>
               <Typography variant="body2" sx={{ color: colors?.textPrimary || "#fff", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>

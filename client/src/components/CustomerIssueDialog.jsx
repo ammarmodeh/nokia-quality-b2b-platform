@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Select, FormControl, InputLabel, Box, Typography, useTheme, useMediaQuery, IconButton, Grid, Checkbox, FormControlLabel, Tooltip } from "@mui/material";
 import { useSelector } from "react-redux";
 import ManagedAutocomplete from "./common/ManagedAutocomplete";
-import { MdAdd, MdDelete, MdHistory, MdTerminal } from "react-icons/md";
+import { MdAdd, MdDelete, MdHistory } from "react-icons/md";
 import api from "../api/api";
 import { FaUser } from "react-icons/fa";
 import { Autocomplete as MuiAutocomplete } from "@mui/material";
@@ -141,7 +141,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             const d = new Date(dateVal);
             if (isNaN(d.getTime())) return "";
             return d.toISOString().split('T')[0];
-          } catch (e) {
+          } catch {
             return "";
           }
         };
@@ -447,10 +447,10 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
         borderColor: 'var(--border)',
       },
       '&:hover fieldset': {
-        borderColor: isAdmin ? '#666' : '#e5e7eb',
+        borderColor: isAdmin ? 'var(--text-muted)' : '#e5e7eb',
       },
       '&.Mui-focused fieldset': {
-        borderColor: isAdmin ? '#1976d2' : '#e5e7eb',
+        borderColor: isAdmin ? '#2563EB' : '#e5e7eb',
       },
       '&.Mui-disabled': {
         cursor: 'not-allowed',
@@ -470,17 +470,17 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       borderColor: 'var(--border)',
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: isAdmin ? '#666' : '#e5e7eb',
+      borderColor: isAdmin ? 'var(--text-muted)' : '#e5e7eb',
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: isAdmin ? '#1976d2' : '#e5e7eb',
+      borderColor: isAdmin ? '#2563EB' : '#e5e7eb',
     },
   };
 
   const inputLabelStyles = {
     color: 'var(--text-secondary)',
     '&.Mui-focused': {
-      color: isAdmin ? '#1976d2' : '#6b7280',
+      color: isAdmin ? '#2563EB' : '#6b7280',
     },
   };
 
@@ -497,7 +497,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
       backgroundColor: 'var(--surface)',
     },
     '&.Mui-selected': {
-      backgroundColor: '#1976d2',
+      backgroundColor: '#2563EB',
       '&:hover': {
         backgroundColor: '#1565c0',
       },
@@ -506,17 +506,17 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
 
   const cancelButtonStyles = {
     color: 'var(--text)',
-    backgroundColor: '#555',
+    backgroundColor: 'var(--border-strong)',
     '&:hover': {
-      backgroundColor: '#666',
+      backgroundColor: 'var(--text-muted)',
     },
   };
 
   const submitButtonStyles = {
     color: 'var(--text)',
-    backgroundColor: isAdmin ? '#1976d2' : '#555',
+    backgroundColor: isAdmin ? '#2563EB' : 'var(--border-strong)',
     '&:hover': {
-      backgroundColor: isAdmin ? '#1565c0' : '#555',
+      backgroundColor: isAdmin ? '#1565c0' : 'var(--border-strong)',
     },
     cursor: isAdmin ? 'pointer' : 'not-allowed',
   };
@@ -596,9 +596,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                     <IconButton
                       onClick={() => checkExistingIssues(true)}
                       sx={{
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        color: '#f59e0b',
-                        '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.2)' }
+                        backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                        color: '#D97706',
+                        '&:hover': { backgroundColor: 'rgba(217, 119, 6, 0.2)' }
                       }}
                     >
                       <MdHistory />
@@ -709,7 +709,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   }
                   label={
                     <Box>
-                      <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>Quality of Service (QoS)</Typography>
+                      <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: '600' }}>Quality of Service (QoS)</Typography>
                       <Typography variant="caption" sx={{ color: 'var(--text-secondary)', display: 'block' }}>Flag for higher weighting in rankings</Typography>
                     </Box>
                   }
@@ -855,7 +855,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                       color: 'var(--accent-text)',
                       fontSize: '0.65rem',
                       textTransform: 'none',
-                      '&:hover': { borderColor: 'var(--accent)', backgroundColor: alpha('#7b68ee', 0.05) }
+                      '&:hover': { borderColor: 'var(--accent)', backgroundColor: alpha('#6C47FF', 0.05) }
                     }}
                   >
                     Use Reporter
@@ -924,7 +924,7 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 </Grid>
                 <Grid item xs={1}>
                   <IconButton onClick={() => removeIssueRow(index)} disabled={formData.issues.length === 1 || !isAdmin}>
-                    <MdDelete color="#f44336" />
+                    <MdDelete color="#DC2626" />
                   </IconButton>
                 </Grid>
               </Grid>
@@ -1249,21 +1249,21 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
           "& .MuiDialog-paper": {
             backgroundColor: 'var(--surface)', // Darker background for warning
             color: 'var(--text)',
-            borderRadius: '12px',
-            border: '1px solid #f59e0b', // Amber warning border
+            borderRadius: "10px",
+            border: '1px solid #D97706', // Amber warning border
           }
         }}
       >
         <DialogTitle sx={{
-          backgroundColor: 'rgba(245, 158, 11, 0.15)', // Amber tint
-          color: '#f59e0b',
+          backgroundColor: 'rgba(217, 119, 6, 0.15)', // Amber tint
+          color: '#D97706',
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          borderBottom: '1px solid rgba(245, 158, 11, 0.3)'
+          borderBottom: '1px solid rgba(217, 119, 6, 0.3)'
         }}>
           <MdHistory size={24} />
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="h6" fontWeight="600">
             Existing Issue(s) Found
           </Typography>
         </DialogTitle>
@@ -1283,17 +1283,17 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={4}>
                     <Typography variant="caption" color="var(--text-secondary)">Reported Date</Typography>
-                    <Typography variant="body2" fontWeight="bold">
+                    <Typography variant="body2" fontWeight="600">
                       {issue.date ? new Date(issue.date).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
                     <Typography variant="caption" color="var(--text-secondary)">Reporter</Typography>
-                    <Typography variant="body2" fontWeight="bold">{issue.reporter}</Typography>
+                    <Typography variant="body2" fontWeight="600">{issue.reporter}</Typography>
                   </Grid>
                   <Grid item xs={12} sm={4}>
                     <Typography variant="caption" color="var(--text-secondary)">Assigned To</Typography>
-                    <Typography variant="body2" fontWeight="bold">{issue.assignedTo}</Typography>
+                    <Typography variant="body2" fontWeight="600">{issue.assignedTo}</Typography>
                   </Grid>
 
                   <Grid item xs={12} sm={4}>
@@ -1303,8 +1303,8 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
                   <Grid item xs={12} sm={4}>
                     <Typography variant="caption" color="var(--text-secondary)">Status</Typography>
                     <Typography variant="body2" sx={{
-                      color: issue.solved === 'yes' ? '#4caf50' : '#f44336',
-                      fontWeight: 'bold',
+                      color: issue.solved === 'yes' ? '#16A34A' : '#DC2626',
+                      fontWeight: '600',
                       textTransform: 'capitalize'
                     }}>
                       {issue.solved === 'yes' ? 'Closed' : 'Open'}
@@ -1326,9 +1326,9 @@ const CustomerIssueDialog = ({ open, onClose, onSubmit, issue = null }) => {
             onClick={() => setDuplicateDialogOpen(false)}
             variant="contained"
             sx={{
-              backgroundColor: '#f59e0b',
+              backgroundColor: '#D97706',
               color: '#000',
-              fontWeight: 'bold',
+              fontWeight: '600',
               '&:hover': { backgroundColor: '#d97706' }
             }}
           >

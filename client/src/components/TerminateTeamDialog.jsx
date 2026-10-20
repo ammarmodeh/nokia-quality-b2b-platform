@@ -29,7 +29,7 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
         onClose();
         setUpdateTeamStatus(prev => !prev);
       }
-    } catch (error) {
+    } catch {
       alert("Failed to terminate team.");
     }
   };
@@ -87,25 +87,6 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
             fullWidth
             margin="normal"
             required
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: 'var(--border)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'var(--accent)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'var(--accent)',
-                },
-              },
-              '& .MuiInputBase-input': {
-                color: 'var(--text)',
-              },
-              '& .MuiInputLabel-root': {
-                color: 'var(--text-secondary)',
-              },
-            }}
           />
         </form>
       </DialogContent>
@@ -136,7 +117,7 @@ export const TerminateTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus
             backgroundColor: 'var(--accent)',
             color: '#f9fafb',
             '&:hover': {
-              backgroundColor: '#1d4ed8'
+              backgroundColor: '#2563EB'
             }
           }}
         >

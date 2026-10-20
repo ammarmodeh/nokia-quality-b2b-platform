@@ -26,7 +26,38 @@ import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
 import FilterAltOffOutlined from '@mui/icons-material/FilterAltOffOutlined';
 import FieldTeamDetailsDialog from '../components/FieldTeamDetailsDialog';
 import api from '../api/api';
-import { DialogContentText } from '@mui/material';
+import SafeDeleteDialog from '../components/ui/SafeDeleteDialog';
+import BulkBar from '../components/ui/BulkBar';
+import { exportRows } from '../utils/exportRows';
+import { bulkDelete, DELETE_PATHS } from '../api/bulkDelete';
+
+// Every field of a team, for the backup taken before a permanent delete.
+const TEAM_BACKUP_COLUMNS = [
+  ['Team', (t) => t.teamName],
+  ['Code', (t) => t.teamCode],
+  ['Company', (t) => t.teamCompany],
+  ['Members', (t) => [t.firstName, t.secondName, t.thirdName, t.surname].filter(Boolean).join(' ')],
+  ['Contact', (t) => t.contactNumber],
+  ['Quiz code', (t) => t.quizCode],
+  ['Employment', (t) => t.employmentType || ''],
+  ['Status', (t) => (t.isTerminated ? 'Terminated' : t.isResigned ? 'Resigned' : t.isSuspended ? 'Suspended' : t.isOnLeave ? 'On leave' : 'Active')],
+  ['Evaluation score', (t) => t.evaluationScore ?? ''],
+  ['Violation points', (t) => t.totalViolationPoints ?? ''],
+  ['Sessions', (t) => (t.sessionHistory || []).length],
+  ['State log', (t) => (t.stateLogs || []).map((l) => `${l.state || ''} ${l.reason || ''} ${l.timestamp ? new Date(l.timestamp).toISOString().slice(0, 10) : ''}`.trim()).join('; ')],
+  ['FSM serial', (t) => t.fsmSerialNumber || ''],
+  ['Laptop serial', (t) => t.laptopSerialNumber || ''],
+  ['Created', (t) => (t.createdAt ? new Date(t.createdAt) : '')],
+  ['Record ID', (t) => t._id],
+];
+const EVAL_BACKUP_COLUMNS = [
+  ['Team', (q) => q.teamName],
+  ['Taken', (q) => (q.submittedAt ? new Date(q.submittedAt) : '')],
+  ['Score (%)', (q) => q.percentage],
+  ['Points', (q) => q.correctAnswers],
+  ['Questions', (q) => q.totalQuestions],
+  ['Record ID', (q) => q._id],
+];
 
 const FieldTeamForm = () => {
   const user = useSelector((state) => state?.auth?.user);
@@ -58,9 +89,8 @@ const FieldTeamForm = () => {
   // NEW: State for View Details and Delete Confirmation
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [teamToView, setTeamToView] = useState(null);
-  const [openDeleteConfirmDialog, setOpenDeleteConfirmDialog] = useState(false);
-  const [teamToDelete, setTeamToDelete] = useState(null);
-  const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
+  const [deletingTeams, setDeletingTeams] = useState(null); // teams to delete permanently
+  const [evalToDelete, setEvalToDelete] = useState(null);
 
   // Dynamic Analysis Period State
   const [escalationPeriod, setEscalationPeriod] = useState('Cumulative');
@@ -99,12 +129,12 @@ const FieldTeamForm = () => {
   const getEscalationConsequence = (accDet, accNeu) => {
     const points = accDet + Math.floor(accNeu / 2);
     if (points === 0) {
-      if (accNeu === 1) return { level: 0, text: 'No Consequence (1 Neutral)', color: '#10b981', points };
-      return { level: 0, text: 'Compliant (0 Violation)', color: '#10b981', points };
+      if (accNeu === 1) return { level: 0, text: 'No Consequence (1 Neutral)', color: '#16A34A', points };
+      return { level: 0, text: 'Compliant (0 Violation)', color: '#16A34A', points };
     }
-    if (points === 1) return { level: 1, text: '1st Offense: Verbal Warning', color: '#f59e0b', points };
+    if (points === 1) return { level: 1, text: '1st Offense: Verbal Warning', color: '#D97706', points };
     if (points === 2) return { level: 2, text: '1st Offense (Repeated): Mandatory Training (3 Hours)', color: '#ea580c', points };
-    if (points === 3) return { level: 3, text: '2nd Offense: First Formal Warning', color: '#ef4444', points };
+    if (points === 3) return { level: 3, text: '2nd Offense: First Formal Warning', color: '#DC2626', points };
     if (points === 4) return { level: 4, text: '3rd Offense: Second Formal Warning + Deduction', color: '#dc2626', points };
     if (points === 5) return { level: 5, text: '4th Offense: Third Formal Warning + Deduction 1 Week Suspension', color: '#991b1b', points };
     return { level: 6, text: '5th Offense & Beyond: 1 Month Suspension (Next = Termination)', color: '#7f1d1d', points };
@@ -405,7 +435,7 @@ const FieldTeamForm = () => {
       } else {
         alert('Failed to update quiz permission');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while updating quiz permission');
     }
   }, []);
@@ -417,44 +447,7 @@ const FieldTeamForm = () => {
   }, []);
 
   // Handle delete click (Updated to open confirmation dialog)
-  const handleDeleteClick = useCallback((team) => {
-    setTeamToDelete(team);
-    setOpenDeleteConfirmDialog(true);
-    setDeleteConfirmationName("");
-  }, []);
-
-  // Handle confirm delete
-  const handleConfirmDeleteTeam = async () => {
-    if (!teamToDelete) return;
-
-    if (deleteConfirmationName !== teamToDelete.teamName) {
-      alert("Team name does not match. Deletion cancelled.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await api.delete(`/field-teams/delete-field-team/${teamToDelete._id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-
-      if (response.status === 200) {
-        alert('Team deleted successfully!');
-        setUpdateState((prev) => !prev);
-        setOpenDeleteConfirmDialog(false);
-        setTeamToDelete(null);
-        setDeleteConfirmationName("");
-      } else {
-        alert('Failed to delete the team.');
-      }
-    } catch (error) {
-      alert('An error occurred while deleting the team.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleDeleteClick = useCallback((team) => setDeletingTeams([team]), []);
 
   // Handle edit submission
   const onEditSubmit = useCallback(async (data) => {
@@ -546,38 +539,7 @@ const FieldTeamForm = () => {
     const inactive = terminated + resigned + suspended + onLeave + otherInactive;
 
     // Helper functions for styling
-    const applyHeaderStyle = (ws, range, bg = "1F2937", color = "FFFFFF") => {
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (!ws[cellAddress]) continue;
-          ws[cellAddress].s = {
-            font: { bold: true, color: { rgb: color } },
-            fill: { fgColor: { rgb: bg } },
-            alignment: { horizontal: "center", vertical: "center" },
-            border: {
-              top: { style: "thin", color: { rgb: "000000" } },
-              bottom: { style: "thin", color: { rgb: "000000" } },
-              left: { style: "thin", color: { rgb: "000000" } },
-              right: { style: "thin", color: { rgb: "000000" } }
-            }
-          };
-        }
-      }
-    };
 
-    const applyDataRowStyle = (ws, range) => {
-      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (!ws[cellAddress]) continue;
-          ws[cellAddress].s = {
-            alignment: { vertical: "center" },
-            border: { bottom: { style: "thin", color: { rgb: "E5E7EB" } } }
-          };
-        }
-      }
-    };
 
     const fixSheetRange = (ws) => {
       let maxR = 0;
@@ -588,7 +550,7 @@ const FieldTeamForm = () => {
           const cell = XLSX.utils.decode_cell(key);
           if (cell.r > maxR) maxR = cell.r;
           if (cell.c > maxC) maxC = cell.c;
-        } catch (e) {
+        } catch {
           // ignore
         }
       });
@@ -820,27 +782,11 @@ const FieldTeamForm = () => {
   }, [teams]);
 
   // Handle delete evaluation
-  const handleDeleteEvaluation = useCallback(async (quizId) => {
-    if (!window.confirm('Are you sure you want to delete this evaluation result? This action cannot be undone.')) return;
+  const handleDeleteEvaluation = useCallback((quizId) => {
+    const item = evaluationHistory.find((q) => q._id === quizId);
+    if (item) setEvalToDelete(item);
+  }, [evaluationHistory]);
 
-    try {
-      const response = await api.delete(`/quiz-results/${quizId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
-
-      if (response.status === 200) {
-        alert('Evaluation result deleted successfully!');
-        setUpdateState((prev) => !prev);
-        setEvaluationHistory(prev => prev.filter(q => q._id !== quizId));
-      } else {
-        alert('Failed to delete evaluation result.');
-      }
-    } catch (error) {
-      alert('An error occurred while deleting the evaluation result.');
-    }
-  }, []);
 
   // Handle suspend, terminate, reactivate, on leave, and resigned clicks
   const handleSuspendClick = useCallback((teamId) => {
@@ -889,7 +835,7 @@ const FieldTeamForm = () => {
       } else {
         alert('Failed to mark team as on leave.');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while marking the team as on leave.');
     }
   }, [leaveReason, leaveStartDate, leaveEndDate, leaveUseToday, selectedTeamId]);
@@ -911,7 +857,7 @@ const FieldTeamForm = () => {
       } else {
         alert('Failed to mark team as resigned.');
       }
-    } catch (error) {
+    } catch {
       alert('An error occurred while marking the team as resigned.');
     }
   }, [resignationReason, selectedTeamId]);
@@ -1080,6 +1026,14 @@ const FieldTeamForm = () => {
           )}
         </Box>
 
+        {selection.length > 0 && (
+          <BulkBar
+            count={selection.length}
+            onExport={() => exportRows(teams.filter((t) => selection.includes(t._id)), TEAM_BACKUP_COLUMNS, { filename: 'field-teams-selected' })}
+            onDelete={user.role === 'Admin' ? () => setDeletingTeams(teams.filter((t) => selection.includes(t._id))) : undefined}
+            onClear={() => setSelection([])}
+          />
+        )}
         {loading && !teams.length ? (
           <PageLoader />
         ) : (
@@ -1173,7 +1127,7 @@ const FieldTeamForm = () => {
               backgroundColor: '#000',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid #333',
+              border: isMobile ? 'none' : '1px solid var(--border)',
               width: isMobile ? '100%' : '70%',
             },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
@@ -1209,7 +1163,7 @@ const FieldTeamForm = () => {
                     gap: 1
                   }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="subtitle2" sx={{ color: 'var(--accent-text)', fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ color: 'var(--accent-text)', fontWeight: '600' }}>
                         Attempt #{evaluationHistory.length - index}
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
@@ -1221,10 +1175,10 @@ const FieldTeamForm = () => {
                       <Box sx={{
                         width: 50, height: 50, borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        bgcolor: evalItem.percentage >= 90 ? 'rgba(76, 175, 80, 0.1)' : evalItem.percentage >= 70 ? 'rgba(255, 152, 0, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-                        border: evalItem.percentage >= 90 ? '1px solid #4caf50' : evalItem.percentage >= 70 ? '1px solid #ff9800' : '1px solid #f44336'
+                        bgcolor: evalItem.percentage >= 90 ? 'rgba(22, 163, 74, 0.1)' : evalItem.percentage >= 70 ? 'rgba(217, 119, 6, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+                        border: evalItem.percentage >= 90 ? '1px solid #16A34A' : evalItem.percentage >= 70 ? '1px solid #D97706' : '1px solid #DC2626'
                       }}>
-                        <Typography sx={{ fontWeight: 'bold', color: evalItem.percentage >= 90 ? '#4caf50' : evalItem.percentage >= 70 ? '#ff9800' : '#f44336' }}>
+                        <Typography sx={{ fontWeight: '600', color: evalItem.percentage >= 90 ? '#16A34A' : evalItem.percentage >= 70 ? '#D97706' : '#DC2626' }}>
                           {evalItem.percentage}%
                         </Typography>
                       </Box>
@@ -1271,7 +1225,7 @@ const FieldTeamForm = () => {
               backgroundColor: '#000',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid #333',
+              border: isMobile ? 'none' : '1px solid var(--border)',
               width: isMobile ? '100%' : '70%',
             },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
@@ -1307,7 +1261,7 @@ const FieldTeamForm = () => {
                       top: 0,
                       bottom: 0,
                       width: 4,
-                      bgcolor: log.state === 'Active' ? '#4caf50' : log.state === 'Suspended' ? '#ed6c02' : log.state === 'Terminated' ? '#d32f2f' : '#9c27b0',
+                      bgcolor: log.state === 'Active' ? '#16A34A' : log.state === 'Suspended' ? '#ed6c02' : log.state === 'Terminated' ? '#DC2626' : '#6C47FF',
                       borderRadius: 2
                     },
                     bgcolor: 'var(--bg)',
@@ -1315,7 +1269,7 @@ const FieldTeamForm = () => {
                     borderRadius: 2,
                     border: '1px solid #222'
                   }}>
-                    <Typography variant="subtitle2" sx={{ color: 'var(--text)', fontWeight: 'bold', mb: 0.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'var(--text)', fontWeight: '600', mb: 0.5 }}>
                       {log.state}
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
@@ -1358,7 +1312,7 @@ const FieldTeamForm = () => {
               backgroundColor: '#000',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid #333',
+              border: isMobile ? 'none' : '1px solid var(--border)',
               width: isMobile ? '100%' : '70%',
             },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
@@ -1395,17 +1349,6 @@ const FieldTeamForm = () => {
                 fullWidth
                 value={leaveReason}
                 onChange={(e) => setLeaveReason(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'var(--bg)',
-                    '& fieldset': { borderColor: 'var(--border)' },
-                    '&:hover fieldset': { borderColor: '#0288d1' },
-                    '&.Mui-focused fieldset': { borderColor: '#0288d1' },
-                    '& input': { color: 'var(--text)' }
-                  },
-                  '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#0288d1' }
-                }}
               />
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <TextField
@@ -1420,17 +1363,6 @@ const FieldTeamForm = () => {
                     }
                   }}
                   InputLabelProps={{ shrink: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: 'var(--bg)',
-                      '& fieldset': { borderColor: 'var(--border)' },
-                      '&:hover fieldset': { borderColor: '#0288d1' },
-                      '&.Mui-focused fieldset': { borderColor: '#0288d1' },
-                      '& input': { color: 'var(--text)' }
-                    },
-                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#0288d1' }
-                  }}
                 />
                 <TextField
                   label="End Date"
@@ -1439,17 +1371,6 @@ const FieldTeamForm = () => {
                   value={leaveEndDate}
                   onChange={(e) => setLeaveEndDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: 'var(--bg)',
-                      '& fieldset': { borderColor: 'var(--border)' },
-                      '&:hover fieldset': { borderColor: '#0288d1' },
-                      '&.Mui-focused fieldset': { borderColor: '#0288d1' },
-                      '& input': { color: 'var(--text)' }
-                    },
-                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#0288d1' }
-                  }}
                 />
               </Box>
             </Stack>
@@ -1474,7 +1395,7 @@ const FieldTeamForm = () => {
               backgroundColor: '#000',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               borderRadius: isMobile ? 0 : 3,
-              border: isMobile ? 'none' : '1px solid #333',
+              border: isMobile ? 'none' : '1px solid var(--border)',
               width: isMobile ? '100%' : '70%',
             },
             "& .MuiBackdrop-root": { bgcolor: 'rgba(0,0,0,0.8)' }
@@ -1495,23 +1416,12 @@ const FieldTeamForm = () => {
                 fullWidth
                 value={resignationReason}
                 onChange={(e) => setResignationReason(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'var(--bg)',
-                    '& fieldset': { borderColor: 'var(--border)' },
-                    '&:hover fieldset': { borderColor: '#9c27b0' },
-                    '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
-                    '& input': { color: 'var(--text)' }
-                  },
-                  '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#9c27b0' }
-                }}
               />
             </Stack>
           </DialogContent>
           <DialogActions sx={{ bgcolor: 'var(--bg)', borderTop: '1px solid var(--border)', p: 2 }}>
             <Button onClick={() => setOpenResignedDialog(false)} sx={{ color: 'var(--text)' }}>Cancel</Button>
-            <Button onClick={handleConfirmResigned} variant="contained" sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}>
+            <Button onClick={handleConfirmResigned} variant="contained" sx={{ bgcolor: '#6C47FF', '&:hover': { bgcolor: '#7b1fa2' } }}>
               Confirm Resignation
             </Button>
           </DialogActions>
@@ -1526,7 +1436,7 @@ const FieldTeamForm = () => {
         >
           {(menuTeam?.isSuspended || menuTeam?.isOnLeave) && (
             <MenuItem onClick={() => { handleReactivateClick(menuTeam._id); handleMenuClose(); }}>
-              <ListItemIcon><PlayCircleOutlineIcon fontSize="small" sx={{ color: '#4caf50' }} /></ListItemIcon>
+              <ListItemIcon><PlayCircleOutlineIcon fontSize="small" sx={{ color: '#16A34A' }} /></ListItemIcon>
               Reactivate
             </MenuItem>
           )}
@@ -1540,7 +1450,7 @@ const FieldTeamForm = () => {
 
           {!menuTeam?.isTerminated && (
             <MenuItem onClick={() => { handleTerminateClick(menuTeam._id); handleMenuClose(); }}>
-              <ListItemIcon><BlockIcon fontSize="small" sx={{ color: '#d32f2f' }} /></ListItemIcon>
+              <ListItemIcon><BlockIcon fontSize="small" sx={{ color: '#DC2626' }} /></ListItemIcon>
               Terminate
             </MenuItem>
           )}
@@ -1554,7 +1464,7 @@ const FieldTeamForm = () => {
 
           {!menuTeam?.isResigned && !menuTeam?.isTerminated && (
             <MenuItem onClick={() => { handleResignedClick(menuTeam._id); handleMenuClose(); }}>
-              <ListItemIcon><FaSignOutAlt fontSize="small" color="#9c27b0" /></ListItemIcon>
+              <ListItemIcon><FaSignOutAlt fontSize="small" color="#6C47FF" /></ListItemIcon>
               Resigned
             </MenuItem>
           )}
@@ -1562,7 +1472,7 @@ const FieldTeamForm = () => {
           <Divider sx={{ borderColor: 'var(--border)', my: 0.5 }} />
 
           <MenuItem onClick={() => { handleOpenEscalationDialog(menuTeam); handleMenuClose(); }}>
-            <ListItemIcon><GavelIcon fontSize="small" sx={{ color: '#ec4899' }} /></ListItemIcon>
+            <ListItemIcon><GavelIcon fontSize="small" sx={{ color: '#DB2777' }} /></ListItemIcon>
             Manage Escalation Action & Status
           </MenuItem>
 
@@ -1578,8 +1488,8 @@ const FieldTeamForm = () => {
 
           {user.role === 'Admin' && <Divider sx={{ borderColor: 'var(--border)', my: 0.5 }} />}
           {user.role === 'Admin' && (
-            <MenuItem onClick={() => { handleDeleteClick(menuTeam); handleMenuClose(); }} sx={{ color: '#f44336' }}>
-              <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#f44336' }} /></ListItemIcon>
+            <MenuItem onClick={() => { handleDeleteClick(menuTeam); handleMenuClose(); }} sx={{ color: '#DC2626' }}>
+              <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: '#DC2626' }} /></ListItemIcon>
               Delete Team permanently
             </MenuItem>
           )}
@@ -1592,61 +1502,35 @@ const FieldTeamForm = () => {
           team={teamToView}
         />
 
-        {/* Delete Confirmation Dialog */}
-        <Dialog
-          open={openDeleteConfirmDialog}
-          onClose={() => setOpenDeleteConfirmDialog(false)}
-          PaperProps={{
-            sx: {
-              bgcolor: 'var(--bg)',
-              color: 'var(--text)',
-              border: '1px solid var(--border)',
-              borderRadius: 2
-            }
+        {/* Permanent delete: backup export + typed confirmation; the server refuses teams with history */}
+        <SafeDeleteDialog
+          open={Boolean(deletingTeams)}
+          onClose={() => setDeletingTeams(null)}
+          records={deletingTeams || []}
+          noun={{ one: 'field team', many: 'field teams' }}
+          nameOf={(t) => `${t.teamName}${t.teamCompany ? ` · ${t.teamCompany}` : ''}`}
+          exportColumns={TEAM_BACKUP_COLUMNS}
+          exportFilename="field-team"
+          onDelete={(list) => bulkDelete(DELETE_PATHS.fieldTeams, list.map((t) => t._id))}
+          onDeleted={({ deleted }) => {
+            setSelection((sel) => sel.filter((id) => !deleted.includes(id)));
+            if (deleted.length) setUpdateState((prev) => !prev);
           }}
-        >
-          <DialogTitle sx={{ borderBottom: '1px solid #222', p: 2 }}>Confirm Deletion</DialogTitle>
-          <DialogContent sx={{ p: 3 }}>
-            <DialogContentText sx={{ color: 'var(--text-secondary)', mb: 2 }}>
-              Are you sure you want to delete <strong>{teamToDelete?.teamName}</strong>? This action is permanent and cannot be undone.
-            </DialogContentText>
-            <DialogContentText sx={{ color: 'var(--text-muted)', mb: 2, fontSize: '0.875rem' }}>
-              To confirm, please type the team name exactly as shown above.
-            </DialogContentText>
-            <TextField
-              fullWidth
-              variant="outlined"
-              size="small"
-              placeholder="Type team name here"
-              value={deleteConfirmationName}
-              onChange={(e) => setDeleteConfirmationName(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'var(--bg)',
-                  '& fieldset': { borderColor: 'var(--border)' },
-                  '&:hover fieldset': { borderColor: '#f44336' },
-                  '&.Mui-focused fieldset': { borderColor: '#f44336' },
-                  '& input': { color: 'var(--text)' }
-                }
-              }}
-            />
-          </DialogContent>
-          <DialogActions sx={{ p: 2, borderTop: '1px solid #222' }}>
-            <Button onClick={() => setOpenDeleteConfirmDialog(false)} sx={{ color: 'var(--text-muted)' }}>Cancel</Button>
-            <Button
-              onClick={handleConfirmDeleteTeam}
-              variant="contained"
-              disabled={deleteConfirmationName !== teamToDelete?.teamName}
-              sx={{
-                bgcolor: '#f44336',
-                '&:hover': { bgcolor: '#d32f2f' },
-                '&.Mui-disabled': { bgcolor: 'var(--surface)', color: '#444' }
-              }}
-            >
-              Confirm Permanent Deletion
-            </Button>
-          </DialogActions>
-        </Dialog>
+        />
+        <SafeDeleteDialog
+          open={Boolean(evalToDelete)}
+          onClose={() => setEvalToDelete(null)}
+          records={evalToDelete ? [evalToDelete] : []}
+          noun={{ one: 'evaluation result', many: 'evaluation results' }}
+          nameOf={(q) => `${q.teamName || 'Team'} · ${q.submittedAt ? new Date(q.submittedAt).toLocaleDateString() : ''} · ${q.percentage ?? ''}%`}
+          exportColumns={EVAL_BACKUP_COLUMNS}
+          exportFilename="evaluation-result"
+          onDelete={(list) => bulkDelete(DELETE_PATHS.quizResults, list.map((q) => q._id))}
+          onDeleted={({ deleted }) => {
+            setEvaluationHistory((prev) => prev.filter((q) => !deleted.includes(q._id)));
+            if (deleted.length) setUpdateState((prev) => !prev);
+          }}
+        />
 
         {/* Manage Escalation Action & History Dialog */}
         <Dialog
@@ -1659,20 +1543,20 @@ const FieldTeamForm = () => {
               bgcolor: 'var(--bg)',
               color: 'var(--text)',
               border: '1px solid var(--border)',
-              borderRadius: 3,
+              borderRadius: "10px",
               boxShadow: '0 20px 40px rgba(0,0,0,0.8)'
             }
           }}
         >
           <DialogTitle sx={{ borderBottom: '1px solid #222', p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <GavelIcon sx={{ color: '#ec4899', fontSize: 28 }} />
+              <GavelIcon sx={{ color: '#DB2777', fontSize: 28 }} />
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'var(--text)', fontSize: '1.1rem' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.1rem' }}>
                   Manage Escalation Action & Warning History
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>
-                  Field Team: <strong style={{ color: '#ec4899' }}>{escalationTeam?.teamName}</strong> ({escalationTeam?.teamCode})
+                  Field Team: <strong style={{ color: '#DB2777' }}>{escalationTeam?.teamName}</strong> ({escalationTeam?.teamCode})
                 </Typography>
               </Box>
             </Box>
@@ -1684,7 +1568,7 @@ const FieldTeamForm = () => {
                   bgcolor: `${teamMetricsMap[escalationTeam._id].consequenceColor}22`,
                   color: teamMetricsMap[escalationTeam._id].consequenceColor,
                   border: `1px solid ${teamMetricsMap[escalationTeam._id].consequenceColor}55`,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   fontSize: '0.75rem'
                 }}
               />
@@ -1698,8 +1582,8 @@ const FieldTeamForm = () => {
               borderBottom: '1px solid #222',
               px: 2.5,
               '& .MuiTab-root': { color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'none', minHeight: 48 },
-              '& .Mui-selected': { color: '#ec4899' },
-              '& .MuiTabs-indicator': { bgcolor: '#ec4899' }
+              '& .Mui-selected': { color: '#DB2777' },
+              '& .MuiTabs-indicator': { bgcolor: '#DB2777' }
             }}
           >
             <Tab label="Record New Escalation Warning" icon={<AddCircleOutlineIcon />} iconPosition="start" />
@@ -1739,12 +1623,12 @@ const FieldTeamForm = () => {
                         if (!escDate) setEscDate(new Date().toISOString().split('T')[0]);
                       }}
                       sx={{
-                        bgcolor: escAction === preset.act ? '#ec4899' : '#1e293b',
+                        bgcolor: escAction === preset.act ? '#DB2777' : '#1e293b',
                         color: 'var(--text)',
                         border: '1px solid var(--border)',
                         fontWeight: 600,
                         fontSize: '0.75rem',
-                        '&:hover': { bgcolor: '#ec489988' }
+                        '&:hover': { bgcolor: '#DB277788' }
                       }}
                     />
                   ))}
@@ -1758,17 +1642,6 @@ const FieldTeamForm = () => {
                     value={escOffenseScale}
                     onChange={(e) => setEscOffenseScale(e.target.value)}
                     SelectProps={{ native: true }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'var(--bg)',
-                        '& fieldset': { borderColor: 'var(--border)' },
-                        '&:hover fieldset': { borderColor: '#ec4899' },
-                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& select': { color: 'var(--text)' }
-                      },
-                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
-                    }}
                   >
                     {[
                       '1st Offense',
@@ -1791,17 +1664,6 @@ const FieldTeamForm = () => {
                     value={escPeriodTag}
                     onChange={(e) => setEscPeriodTag(e.target.value)}
                     placeholder="e.g. Cumulative (From 01/06/2026) or Aug 2026"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'var(--bg)',
-                        '& fieldset': { borderColor: 'var(--border)' },
-                        '&:hover fieldset': { borderColor: '#ec4899' },
-                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& input': { color: 'var(--text)' }
-                      },
-                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
-                    }}
                   />
                 </Box>
 
@@ -1817,12 +1679,12 @@ const FieldTeamForm = () => {
                     '& .MuiOutlinedInput-root': {
                       bgcolor: 'var(--bg)',
                       '& fieldset': { borderColor: 'var(--border)' },
-                      '&:hover fieldset': { borderColor: '#ec4899' },
-                      '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                      '&:hover fieldset': { borderColor: '#DB2777' },
+                      '&.Mui-focused fieldset': { borderColor: '#DB2777' },
                       '& input': { color: 'var(--text)' }
                     },
                     '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
+                    '& .MuiInputLabel-root.Mui-focused': { color: '#DB2777' }
                   }}
                 />
 
@@ -1834,17 +1696,6 @@ const FieldTeamForm = () => {
                     value={escStatus}
                     onChange={(e) => setEscStatus(e.target.value)}
                     SelectProps={{ native: true }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'var(--bg)',
-                        '& fieldset': { borderColor: 'var(--border)' },
-                        '&:hover fieldset': { borderColor: '#ec4899' },
-                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& select': { color: 'var(--text)' }
-                      },
-                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
-                    }}
                   >
                     {['Pending', 'Under Review', 'Action Taken', 'Warning Issued', 'Training Assigned', '1 Week Suspension', '1 Month Suspension', 'Termination', 'Completed', 'Closed', 'Waived', 'Compliant'].map((st, idx) => (
                       <option key={idx} value={st} style={{ backgroundColor: 'var(--bg)', color: '#fff' }}>
@@ -1860,17 +1711,6 @@ const FieldTeamForm = () => {
                     value={escDate}
                     onChange={(e) => setEscDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'var(--bg)',
-                        '& fieldset': { borderColor: 'var(--border)' },
-                        '&:hover fieldset': { borderColor: '#ec4899' },
-                        '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                        '& input': { color: 'var(--text)' }
-                      },
-                      '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
-                    }}
                   />
                 </Box>
 
@@ -1882,17 +1722,6 @@ const FieldTeamForm = () => {
                   value={escNotes}
                   onChange={(e) => setEscNotes(e.target.value)}
                   placeholder="Add details regarding date of warning, deduction percentage, trainer details or next review date..."
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: 'var(--bg)',
-                      '& fieldset': { borderColor: 'var(--border)' },
-                      '&:hover fieldset': { borderColor: '#ec4899' },
-                      '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                      '& textarea': { color: 'var(--text)' }
-                    },
-                    '& .MuiInputLabel-root': { color: 'var(--text-muted)' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: '#ec4899' }
-                  }}
                 />
               </Box>
             ) : (
@@ -1901,7 +1730,7 @@ const FieldTeamForm = () => {
                   <Box sx={{ textAlign: 'center', py: 4, color: 'var(--text-muted)' }}>
                     <HistoryIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
                     <Typography variant="body1" sx={{ fontWeight: 600 }}>No Escalation Warnings Recorded</Typography>
-                    <Typography variant="caption">Use the "Record New Escalation Warning" tab to add warnings and disciplinary actions.</Typography>
+                    <Typography variant="caption">Use the “Record New Escalation Warning” tab to add warnings and disciplinary actions.</Typography>
                   </Box>
                 ) : (
                   <Stack spacing={2}>
@@ -1924,12 +1753,12 @@ const FieldTeamForm = () => {
                             <Chip
                               label={item.offenseScale || 'Warning'}
                               size="small"
-                              sx={{ bgcolor: '#ec489922', color: '#ec4899', border: '1px solid #ec489955', fontWeight: 700, fontSize: '0.75rem' }}
+                              sx={{ bgcolor: '#DB277722', color: '#DB2777', border: '1px solid #DB277755', fontWeight: 600, fontSize: '0.75rem' }}
                             />
                             <Chip
                               label={item.status || 'Action Taken'}
                               size="small"
-                              sx={{ bgcolor: '#3b82f622', color: '#60a5fa', border: '1px solid #3b82f655', fontWeight: 600, fontSize: '0.72rem' }}
+                              sx={{ bgcolor: '#2563EB22', color: '#2563EB', border: '1px solid #2563EB55', fontWeight: 600, fontSize: '0.72rem' }}
                             />
                             {item.period && (
                               <Chip
@@ -1958,7 +1787,7 @@ const FieldTeamForm = () => {
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteEscalationHistoryItem(idx)}
-                            sx={{ color: '#ef4444', '&:hover': { bgcolor: '#ef444422' } }}
+                            sx={{ color: '#DC2626', '&:hover': { bgcolor: '#DC262622' } }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -1981,9 +1810,9 @@ const FieldTeamForm = () => {
                 onClick={handleSaveEscalation}
                 disabled={loading}
                 sx={{
-                  bgcolor: '#ec4899',
+                  bgcolor: '#DB2777',
                   color: 'var(--text)',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   px: 3,
                   '&:hover': { bgcolor: '#db2777' }
                 }}

@@ -11,11 +11,10 @@ import {
   Chip,
   Avatar,
   Paper,
-  Divider,
   useMediaQuery,
   useTheme,
   LinearProgress,
-  Stack
+  Stack,
 } from '@mui/material';
 import {
   Badge,
@@ -65,7 +64,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
     >
       <Box sx={{ p: 2, borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', gap: 1.5 }}>
         {React.cloneElement(icon, { sx: { color: 'var(--accent-text)' } })}
-        <Typography variant="subtitle1" sx={{ color: 'var(--text)', fontWeight: 700, letterSpacing: 0.5 }}>
+        <Typography variant="subtitle1" sx={{ color: 'var(--text)', fontWeight: 600, letterSpacing: 0.5 }}>
           {title}
         </Typography>
       </Box>
@@ -76,10 +75,10 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
   );
 
   const getStatusColor = () => {
-    if (team.isTerminated) return '#f44336';
+    if (team.isTerminated) return '#DC2626';
     if (team.isSuspended) return '#ed6c02';
-    if (team.isOnLeave) return '#9c27b0';
-    if (team.isActive) return '#4caf50';
+    if (team.isOnLeave) return '#6C47FF';
+    if (team.isActive) return '#16A34A';
     return '#757575';
   };
 
@@ -146,14 +145,14 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
             <Avatar sx={{
               width: 64,
               height: 64,
-              bgcolor: 'rgba(123, 104, 238, 0.2)',
+              bgcolor: 'rgba(108, 71, 255, 0.2)',
               border: '2px solid var(--accent)',
               color: 'var(--accent-text)'
             }}>
               <Badge sx={{ fontSize: 32 }} />
             </Avatar>
             <Box>
-              <Typography variant="h5" sx={{ color: 'var(--text)', fontWeight: 800, mb: 0.5 }}>
+              <Typography variant="h5" sx={{ color: 'var(--text)', fontWeight: 600, mb: 0.5 }}>
                 {team.teamName}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
@@ -164,7 +163,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                   sx={{
                     height: 24,
                     fontSize: '0.7rem',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     bgcolor: `${getStatusColor()}20`,
                     color: getStatusColor(),
                     border: `1px solid ${getStatusColor()}40`,
@@ -217,18 +216,18 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                 overflow: 'hidden'
               }}>
                 <Box sx={{ position: 'relative', zIndex: 1 }}>
-                  <Typography variant="subtitle2" sx={{ color: 'var(--text-muted)', fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: 'var(--text-muted)', fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <School fontSize="small" color="primary" /> EVALUATION SCORE
                   </Typography>
 
                   <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
                     <Typography variant="h2" sx={{
-                      fontWeight: 800,
-                      color: score >= 90 ? '#4caf50' : score >= 70 ? '#ff9800' : '#f44336'
+                      fontWeight: 600,
+                      color: score >= 90 ? '#16A34A' : score >= 70 ? '#D97706' : '#DC2626'
                     }}>
                       {parseFloat(score).toFixed(0)}
                     </Typography>
-                    <Typography variant="h5" sx={{ color: '#555' }}>/100</Typography>
+                    <Typography variant="h5" sx={{ color: 'var(--border-strong)' }}>/100</Typography>
                   </Box>
 
                   <LinearProgress
@@ -236,18 +235,18 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                     value={parseFloat(score)}
                     sx={{
                       height: 8,
-                      borderRadius: 4,
+                      borderRadius: "10px",
                       bgcolor: 'var(--surface)',
                       mb: 2,
                       '& .MuiLinearProgress-bar': {
-                        bgcolor: score >= 90 ? '#4caf50' : score >= 70 ? '#ff9800' : '#f44336'
+                        bgcolor: score >= 90 ? '#16A34A' : score >= 70 ? '#D97706' : '#DC2626'
                       }
                     }}
                   />
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                      Status: <span style={{ color: isEvaluated ? '#fff' : '#888', fontWeight: isEvaluated ? 600 : 400 }}>
+                      Status: <span style={{ color: isEvaluated ? '#fff' : 'var(--text-muted)', fontWeight: isEvaluated ? 600 : 400 }}>
                         {isEvaluated ? 'Evaluated' : 'Pending'}
                       </span>
                     </Typography>
@@ -268,14 +267,14 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                 alignItems: 'center',
                 gap: 2
               }}>
-                <Avatar sx={{ bgcolor: 'rgba(244, 67, 54, 0.15)', color: '#f44336' }}>
+                <Avatar sx={{ bgcolor: 'rgba(220, 38, 38, 0.15)', color: '#DC2626' }}>
                   <GppBad />
                 </Avatar>
                 <Box>
                   <Typography variant="caption" sx={{ color: '#ff8a80', fontWeight: 600, display: 'block' }}>
                     TOTAL VIOLATION POINTS
                   </Typography>
-                  <Typography variant="h4" sx={{ color: '#ffcdd2', fontWeight: 700 }}>
+                  <Typography variant="h4" sx={{ color: '#ffcdd2', fontWeight: 600 }}>
                     {violationPoints}
                   </Typography>
                 </Box>
@@ -365,8 +364,8 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                           sx={{
                             p: 1.5,
                             borderRadius: 2,
-                            bgcolor: isCertified ? 'rgba(76, 175, 80, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-                            border: isCertified ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid #222',
+                            bgcolor: isCertified ? 'rgba(22, 163, 74, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                            border: isCertified ? '1px solid rgba(22, 163, 74, 0.3)' : '1px solid #222',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: 0.5,
@@ -379,13 +378,13 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                                 size="small"
                                 sx={{
                                   height: 20,
-                                  fontWeight: 800,
+                                  fontWeight: 600,
                                   fontSize: '0.65rem',
-                                  bgcolor: isCertified ? '#4caf50' : '#333',
+                                  bgcolor: isCertified ? '#16A34A' : 'var(--border)',
                                   color: 'var(--text)',
                                 }}
                               />
-                              <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 700, fontSize: '0.85rem' }}>
+                              <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem' }}>
                                 {c.title}
                               </Typography>
                             </Box>
@@ -395,10 +394,10 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                               sx={{
                                 height: 20,
                                 fontSize: '0.65rem',
-                                fontWeight: 700,
-                                bgcolor: isCertified ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.1)',
-                                color: isCertified ? '#4caf50' : '#f44336',
-                                border: isCertified ? '1px solid #4caf5040' : '1px solid #f4433630',
+                                fontWeight: 600,
+                                bgcolor: isCertified ? 'rgba(22, 163, 74, 0.2)' : 'rgba(220, 38, 38, 0.1)',
+                                color: isCertified ? '#16A34A' : '#DC2626',
+                                border: isCertified ? '1px solid #16A34A40' : '1px solid #DC262630',
                               }}
                             />
                           </Box>
@@ -415,8 +414,8 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
               <SectionCard title="Role Expertise" icon={<VerifiedUser />}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {(!team.isNewToInstallation && !team.isNewToActivation) ? (
-                    <Box sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <VerifiedUser sx={{ color: '#4caf50' }} />
+                    <Box sx={{ p: 2, bgcolor: 'rgba(22, 163, 74, 0.1)', border: '1px solid #16A34A', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <VerifiedUser sx={{ color: '#16A34A' }} />
                       <Typography variant="body2" sx={{ color: 'var(--text)', fontWeight: 600 }}>
                         Identified as a Rich Expert in all roles.
                       </Typography>
@@ -461,7 +460,7 @@ const FieldTeamDetailsDialog = ({ open, onClose, team }) => {
                 </Grid>
               </SectionCard>
 
-              <SectionCard title="Escalation Policy & Management Action" icon={<Warning sx={{ color: '#ec4899' }} />}>
+              <SectionCard title="Escalation Policy & Management Action" icon={<Warning sx={{ color: '#DB2777' }} />}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <DetailItem icon={<Warning />} label="Escalation Action" value={team.escalationAction || 'None Assigned'} fullWidth />

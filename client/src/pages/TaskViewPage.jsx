@@ -2,7 +2,7 @@ import { alpha } from "../theme/colorFns";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { Paper, Typography, Avatar, Chip, Stack, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, IconButton, useMediaQuery, useTheme, Tabs, Tab, Divider, TextField, MenuItem, List, ListItem, ListItemText, ListItemAvatar, Grid } from "@mui/material";
+import { Paper, Typography, Avatar, Chip, Stack, Box, Button, IconButton, useMediaQuery, useTheme, Tabs, Tab, Divider, List, ListItem, ListItemText, ListItemAvatar, Grid } from "@mui/material";
 import { useSelector } from "react-redux";
 import { FaEdit, FaHistory, FaTools, FaInfoCircle, FaClipboardList } from "react-icons/fa";
 import { MdClose, MdDeleteForever, MdContentCopy, MdVisibility, MdAdd, MdCheckCircle, MdSchedule } from "react-icons/md";
@@ -102,7 +102,7 @@ const TaskViewPage = () => {
     <Box sx={{ minHeight: '100vh', p: isMobile ? 1 : 4 }}>
       <Paper elevation={0} sx={{
         bgcolor: theme.palette.background.paper,
-        borderRadius: 4,
+        borderRadius: "10px",
         overflow: 'hidden',
         boxShadow: `0 20px 50px ${alpha(theme.palette.common.black, 0.1)}`,
         border: `1px solid ${theme.palette.divider}`
@@ -125,7 +125,7 @@ const TaskViewPage = () => {
               </IconButton>
             </Link>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: -0.5, color: theme.palette.text.primary }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: -0.5, color: theme.palette.text.primary }}>
                 {task.slid} <span style={{ color: alpha(theme.palette.text.primary, 0.3) }}>/</span> {task.requestNumber}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
@@ -135,7 +135,7 @@ const TaskViewPage = () => {
                   sx={{
                     bgcolor: alpha(task.status === 'Closed' ? theme.palette.success.main : theme.palette.primary.main, 0.15),
                     color: task.status === 'Closed' ? theme.palette.success.main : theme.palette.primary.main,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     borderRadius: 1
                   }}
                 />
@@ -152,7 +152,7 @@ const TaskViewPage = () => {
               sx={{
                 borderRadius: 2,
                 textTransform: 'none',
-                fontWeight: 700,
+                fontWeight: 600,
                 boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`
               }}
             >
@@ -181,7 +181,7 @@ const TaskViewPage = () => {
           sx={{
             px: 3,
             borderBottom: `1px solid ${theme.palette.divider}`,
-            '& .MuiTab-root': { fontWeight: 700, textTransform: 'none', minWidth: 100, fontSize: '0.95rem' }
+            '& .MuiTab-root': { fontWeight: 600, textTransform: 'none', minWidth: 100, fontSize: '0.95rem' }
           }}
         >
           <Tab icon={<FaInfoCircle />} iconPosition="start" label="Overview" />
@@ -227,7 +227,7 @@ const TaskViewPage = () => {
               </Stack>
               <Stack spacing={3}>
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 800 }}>Task Breakdown</Typography>
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>Task Breakdown</Typography>
                   <MetricRow label="Satisfaction" value={task.evaluationScore} color="primary" icon={<MdCheckCircle />} />
                   <Divider sx={{ my: 1.5 }} />
                   <MetricRow label="Svc Recipient" value={task.serviceRecipientInitial} color="info" icon={<MdVisibility />} />
@@ -250,7 +250,7 @@ const TaskViewPage = () => {
 
               <Divider sx={{ my: 4, borderColor: 'var(--border)' }} />
 
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
                 ROOT CAUSE ANALYSIS
               </Typography>
               <Grid container spacing={3}>
@@ -273,7 +273,7 @@ const TaskViewPage = () => {
           {tabValue === 2 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 800 }}>Tracking History</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Tracking History</Typography>
                 <Button startIcon={<MdAdd />} onClick={() => setTicketDialogOpen(true)}>Record New Event</Button>
               </Box>
               <List sx={{ p: 0 }}>
@@ -294,7 +294,7 @@ const TaskViewPage = () => {
                     <ListItemText
                       primary={
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{ticket.mainCategory}</Typography>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{ticket.mainCategory}</Typography>
                           <Chip label={ticket.status} size="small" variant="outlined" />
                           <Typography variant="caption" sx={{ color: 'text.secondary', flexGrow: 1, textAlign: 'right' }}>
                             {format(new Date(ticket.timestamp), "MMM dd, yyyy HH:mm")}
@@ -311,31 +311,31 @@ const TaskViewPage = () => {
                             {ticket.eventDate && (
                               <Grid item xs={12} sm={4}>
                                 <Typography variant="caption" color="text.secondary">Event Date: </Typography>
-                                <Typography variant="caption" fontWeight={700}>{format(new Date(ticket.eventDate), "MMM dd, yyyy")}</Typography>
+                                <Typography variant="caption" fontWeight={600}>{format(new Date(ticket.eventDate), "MMM dd, yyyy")}</Typography>
                               </Grid>
                             )}
                             {ticket.rootCause && (
                               <Grid item xs={12} sm={4}>
                                 <Typography variant="caption" color="text.secondary">Root Cause: </Typography>
-                                <Typography variant="caption" fontWeight={700}>{ticket.rootCause}</Typography>
+                                <Typography variant="caption" fontWeight={600}>{ticket.rootCause}</Typography>
                               </Grid>
                             )}
                             {ticket.actionTaken && (
                               <Grid item xs={12} sm={4}>
                                 <Typography variant="caption" color="text.secondary">Action: </Typography>
-                                <Typography variant="caption" fontWeight={700}>{ticket.actionTaken}</Typography>
+                                <Typography variant="caption" fontWeight={600}>{ticket.actionTaken}</Typography>
                               </Grid>
                             )}
                             {ticket.resolutionDate && (
                               <Grid item xs={12} sm={4}>
                                 <Typography variant="caption" color="text.secondary">Resolved: </Typography>
-                                <Typography variant="caption" fontWeight={700}>{format(new Date(ticket.resolutionDate), "MMM dd, yyyy")}</Typography>
+                                <Typography variant="caption" fontWeight={600}>{format(new Date(ticket.resolutionDate), "MMM dd, yyyy")}</Typography>
                               </Grid>
                             )}
                             {ticket.closureDate && (
                               <Grid item xs={12} sm={4}>
                                 <Typography variant="caption" color="text.secondary">Closed: </Typography>
-                                <Typography variant="caption" fontWeight={700}>{format(new Date(ticket.closureDate), "MMM dd, yyyy")}</Typography>
+                                <Typography variant="caption" fontWeight={600}>{format(new Date(ticket.closureDate), "MMM dd, yyyy")}</Typography>
                               </Grid>
                             )}
                             {ticket.followUpRequired && (
@@ -345,13 +345,13 @@ const TaskViewPage = () => {
                                   label={`Follow-up: ${ticket.followUpDate ? format(new Date(ticket.followUpDate), "MMM dd") : 'Required'}`}
                                   color="warning"
                                   variant="outlined"
-                                  sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }}
+                                  sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600 }}
                                 />
                               </Grid>
                             )}
                           </Grid>
 
-                          <Typography variant="caption" sx={{ display: 'block', mt: 2, color: theme.palette.primary.main, fontWeight: 700, borderTop: `1px dashed ${theme.palette.divider}`, pt: 1 }}>
+                          <Typography variant="caption" sx={{ display: 'block', mt: 2, color: theme.palette.primary.main, fontWeight: 600, borderTop: `1px dashed ${theme.palette.divider}`, pt: 1 }}>
                             Logged by: {ticket.recordedBy?.name}
                           </Typography>
                         </Box>
@@ -396,7 +396,7 @@ const TaskViewPage = () => {
 
 const DataSection = ({ title, children }) => (
   <Box>
-    <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>{title}</Typography>
+    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>{title}</Typography>
     <Box>{children}</Box>
   </Box>
 );
@@ -429,7 +429,7 @@ const DetailItem = ({ label, value, fullWidth, direction }) => (
         ))}
       </Stack>
     ) : (
-      <Typography variant="body2" sx={{ fontWeight: 700, mt: 0.5, textAlign: direction === 'ltr' ? 'left' : 'inherit' }}>{value || "—"}</Typography>
+      <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5, textAlign: direction === 'ltr' ? 'left' : 'inherit' }}>{value || "—"}</Typography>
     )}
   </Box>
 );
@@ -440,7 +440,7 @@ const MetricRow = ({ label, value, color, icon }) => (
       <Box sx={{ color }}>{icon}</Box>
       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>{label}</Typography>
     </Stack>
-    <Typography variant="body2" sx={{ fontWeight: 800 }}>{value || "N/A"}</Typography>
+    <Typography variant="body2" sx={{ fontWeight: 600 }}>{value || "N/A"}</Typography>
   </Stack>
 );
 

@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, FormHelperText, Autocomplete, Typography, IconButton, Divider, Box, Grid, FormControlLabel, Checkbox, Radio, RadioGroup, FormLabel } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, Button, TextField, Select, MenuItem, Stack, FormControl, InputLabel, Autocomplete, Typography, IconButton, Divider, Box, Grid, Checkbox } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import { useForm } from "react-hook-form";
-import SelectList from "../SelectList";
 import { useSelector } from "react-redux";
 import api from "../../api/api";
 import { toast } from "sonner";
@@ -18,7 +17,7 @@ const DEPARTMENT = ["Quality", "Production"];
 const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, handleChange }) => {
   return (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', fontSize: '1rem' }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: '600', color: 'primary.main', fontSize: '1rem' }}>
         RCA & Responsibility
       </Typography>
       <Stack spacing={2}>
@@ -149,6 +148,9 @@ const EditTaskDialog = ({
   onUpdate
 }) => {
   const [task, setTask] = useState(taskProp);
+  // loading / error while fetching a task by id (when only `id` is passed)
+  const [, setLoading] = useState(false);
+  const [, setError] = useState(null);
 
   // Sync internal task state with prop
   useEffect(() => {
@@ -451,7 +453,7 @@ const EditTaskDialog = ({
         if (data) {
           setFieldTeams(data);
         }
-      } catch (error) {
+      } catch {
         // console.log("Error fetching field teams:", error); // Debugging: Log error
       }
     }
@@ -656,7 +658,6 @@ const EditTaskDialog = ({
               error={!!errors.customerFeedback}
               helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
               inputProps={{ dir: "auto" }}
-              sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
             />
 
             <TextField
@@ -935,7 +936,6 @@ const EditTaskDialog = ({
                   rows={4}
                   {...register('closureComment')}
                   inputProps={{ dir: "auto" }}
-                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
                 />
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <Autocomplete
@@ -984,7 +984,6 @@ const EditTaskDialog = ({
                   value={categoryOfDissatisfaction}
                   onChange={(e) => setCategoryOfDissatisfaction(e.target.value)}
                   inputProps={{ dir: "auto" }}
-                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
                 />
               </Stack>
             </Box>
@@ -1062,7 +1061,6 @@ const EditTaskDialog = ({
                     value={secondCallCategory}
                     onChange={(e) => setSecondCallCategory(e.target.value)}
                     inputProps={{ dir: "auto" }}
-                    sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
                   />
                 </Stack>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

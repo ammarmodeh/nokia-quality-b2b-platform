@@ -1,6 +1,6 @@
 import { alpha } from "../../theme/colorFns";
 import { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box, Chip, Stack, Button, Tooltip } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Box, Chip, Stack, Button, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { MdHistory, MdContentCopy } from 'react-icons/md';
 import api from '../../api/api';
@@ -111,13 +111,13 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
             }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <MdHistory size={24} color="var(--accent-text)" />
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography variant="h6" fontWeight={600}>
                         Q-Ops Transaction Log
                     </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
                     <Tooltip title="Copy Full Log">
-                        <IconButton onClick={handleCopyAll} sx={{ color: 'var(--accent-text)', '&:hover': { bgcolor: alpha('#7b68ee', 0.1) } }}>
+                        <IconButton onClick={handleCopyAll} sx={{ color: 'var(--accent-text)', '&:hover': { bgcolor: alpha('#6C47FF', 0.1) } }}>
                             <MdContentCopy />
                         </IconButton>
                     </Tooltip>
@@ -130,7 +130,7 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
             <DialogContent sx={{ p: 0, bgcolor: 'var(--surface)', display: 'flex', flexDirection: 'column', height: '70vh' }}>
                 {task && (
                     <Box sx={{ p: 2, bgcolor: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-                        <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 700, letterSpacing: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontSize: '0.7rem', fontWeight: 600, letterSpacing: 1 }}>
                             Target Case
                         </Typography>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -178,12 +178,12 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                     <Table size="small" stickyHeader>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', width: 50 }}>Action</TableCell>
-                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Execution Date</TableCell>
-                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Type / State</TableCell>
-                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Agent / Participant</TableCell>
-                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', width: '40%' }}>Detailed Technical Log</TableCell>
-                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Unf. Reason</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', width: 50 }}>Action</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Execution Date</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Type / State</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Agent / Participant</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.75rem', borderBottom: '1px solid var(--border)', width: '40%' }}>Detailed Technical Log</TableCell>
+                                <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.75rem', borderBottom: '1px solid var(--border)' }}>Unf. Reason</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -226,9 +226,9 @@ ${gaiaInfo.length ? gaiaInfo.join('\n') + '\n' : ''}============================
                                                 label={ticket.transactionType || ticket.mainCategory}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: alpha('#7b68ee', 0.2),
+                                                    bgcolor: alpha('#6C47FF', 0.2),
                                                     color: '#9c8cf5',
-                                                    fontWeight: 700,
+                                                    fontWeight: 600,
                                                     fontSize: '0.7rem',
                                                     height: 20
                                                 }}

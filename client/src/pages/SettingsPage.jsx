@@ -425,7 +425,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
     '& .MuiOutlinedInput-root': {
       '& fieldset': { borderColor: editMode ? 'var(--border)' : 'transparent' },
       '&:hover fieldset': { borderColor: editMode ? 'var(--border-strong)' : 'transparent' },
-      '&.Mui-focused fieldset': { borderColor: '#1976d2' },
+      '&.Mui-focused fieldset': { borderColor: '#2563EB' },
       backgroundColor: editMode ? 'var(--surface)' : 'transparent',
     },
     '& .Mui-disabled': {
@@ -567,7 +567,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
                       onClick={() => handleMove(index, 'up')}
                       disabled={isReorderDisabled || index === 0}
                       size="small"
-                      sx={{ color: isReorderDisabled ? '#444' : '#90caf9' }}
+                      sx={{ color: isReorderDisabled ? 'var(--border-strong)' : '#90caf9' }}
                     >
                       <ArrowUpward fontSize="small" />
                     </IconButton>
@@ -575,7 +575,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
                       onClick={() => handleMove(index, 'down')}
                       disabled={isReorderDisabled || index === fields.length - 1}
                       size="small"
-                      sx={{ color: isReorderDisabled ? '#444' : '#90caf9' }}
+                      sx={{ color: isReorderDisabled ? 'var(--border-strong)' : '#90caf9' }}
                     >
                       <ArrowDownward fontSize="small" />
                     </IconButton>
@@ -605,7 +605,7 @@ const ScoringKeysEditor = ({ control, register, errors, editMode }) => {
             // Optionally clear filters to show the new item, but user might find that annoying.
             // For now, let's keep filters.
           }}
-          sx={{ mt: 2, color: '#1976d2', borderColor: '#1976d2' }}
+          sx={{ mt: 2, color: '#2563EB', borderColor: '#2563EB' }}
           variant="outlined"
         >
           Add Key

@@ -11,16 +11,12 @@ import {
   Select,
   FormControl,
   InputLabel,
-  FormHelperText,
   Stack,
   Box,
   Autocomplete,
   Checkbox,
   FormControlLabel,
   Grid,
-  Radio,
-  RadioGroup,
-  FormLabel,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 // import { useSelector } from 'react-redux';
@@ -40,7 +36,7 @@ const yesNoOptions = ["Yes", "No", "Not specified"];
 const UnifiedRCARows = ({ rcaRows, dropdownOptions, handleAdd, handleRemove, handleChange }) => {
   return (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main', fontSize: '1rem' }}>
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: '600', color: 'primary.main', fontSize: '1rem' }}>
         RCA & Responsibility
       </Typography>
       <Stack spacing={2}>
@@ -214,7 +210,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
         if (data) {
           setFieldTeams(data);
         }
-      } catch (error) {
+      } catch {
         // console.log(error);
       }
     }
@@ -545,7 +541,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
             error={!!errors.customerFeedback}
             helperText={errors.customerFeedback ? errors.customerFeedback.message : ''}
             inputProps={{ dir: 'auto' }}
-            sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
           />
 
           {/* New Row: Dashboard Short Note */}
@@ -670,7 +665,7 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
             }
             label={
               <Box>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>Quality of Service (QoS)</Typography>
+                <Typography variant="body1" sx={{ fontWeight: '600' }}>Quality of Service (QoS)</Typography>
                 <Typography variant="caption" color="textSecondary">Flag this task for higher weighting in team performance rankings</Typography>
               </Box>
             }
@@ -853,7 +848,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
                 rows={4}
                 {...register('closureComment')}
                 inputProps={{ dir: "auto" }}
-                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
               />
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Autocomplete
@@ -902,7 +896,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
                 value={categoryOfDissatisfaction}
                 onChange={(e) => setCategoryOfDissatisfaction(e.target.value)}
                 inputProps={{ dir: "auto" }}
-                sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
               />
             </Stack>
           </Box>
@@ -980,7 +973,6 @@ const AddTask = ({ open, setOpen, setUpdateRefetchTasks, initialValues, onCreate
                   value={secondCallCategory}
                   onChange={(e) => setSecondCallCategory(e.target.value)}
                   inputProps={{ dir: "auto" }}
-                  sx={{ '& .MuiInputBase-input': { textAlign: 'start' } }}
                 />
               </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

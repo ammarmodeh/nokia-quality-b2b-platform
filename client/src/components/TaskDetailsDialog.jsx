@@ -1,6 +1,6 @@
 import { alpha } from "../theme/colorFns";
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Paper, Typography, Box, Divider, Chip, Stack, IconButton, Tooltip, Avatar, Grid, useTheme, useMediaQuery, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Paper, Typography, Box, Divider, Chip, Stack, IconButton, Tooltip, Grid, useTheme, useMediaQuery, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress } from '@mui/material';
 import * as XLSX from 'xlsx';
 import {
   MdClose,
@@ -63,7 +63,7 @@ const SectionHeader = ({ title, icon }) => (
     <Box sx={{ p: 0.5, borderRadius: 1, bgcolor: 'primary.main', color: 'white', display: 'flex' }}>
       {icon}
     </Box>
-    <Typography variant="subtitle2" fontWeight="700" color="text.primary">
+    <Typography variant="subtitle2" fontWeight="600" color="text.primary">
       {title}
     </Typography>
   </Stack>
@@ -222,7 +222,6 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
 
       textToCopy += `Progress & Logs:\n`;
       // Combine logs if available, else subtasks
-      const logsToExport = qopsLogs.length > 0 ? qopsLogs : (task.subTasks || []);
 
       if (qopsLogs.length > 0) {
         textToCopy += `--- Q-Ops Transaction Log ---\n`;
@@ -379,7 +378,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
               <MdAssignment size={24} />
             </Box>
             <Box>
-              <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold" color="var(--text)">
+              <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="600" color="var(--text)">
                 {displayTitle}
               </Typography>
               <Typography variant="caption" color="gray">
@@ -421,7 +420,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                 sx={{
                   p: 0,
                   bgcolor: 'var(--surface)',
-                  borderRadius: '16px',
+                  borderRadius: "10px",
                   border: '1px solid var(--border)',
                   overflow: 'hidden',
                   transition: 'transform 0.2s',
@@ -448,12 +447,12 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                       size="small"
                       sx={{
                         borderRadius: '8px',
-                        fontWeight: 'bold',
+                        fontWeight: '600',
                         bgcolor: theme.palette.primary.main,
                         color: 'var(--text)'
                       }}
                     />
-                    <Typography variant="subtitle1" fontWeight="bold" color="var(--text)">
+                    <Typography variant="subtitle1" fontWeight="600" color="var(--text)">
                       Request #{task.requestNumber}
                     </Typography>
                     {task.interviewDate && (
@@ -462,7 +461,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                         size="small"
                         sx={{
                           borderRadius: '8px',
-                          fontWeight: 'bold',
+                          fontWeight: '600',
                           bgcolor: alpha(theme.palette.secondary.main, 0.2),
                           color: theme.palette.secondary.main,
                           border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`
@@ -532,10 +531,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                                 task.evaluationScore >= 7 ? 'Neutral' : 'Detractor'})`}
                               size="small"
                               sx={{
-                                fontWeight: 'bold',
+                                fontWeight: '600',
                                 color: 'var(--text)',
-                                bgcolor: task.evaluationScore >= 9 ? '#10b981' :
-                                  task.evaluationScore >= 7 ? '#64748b' : '#ef4444'
+                                bgcolor: task.evaluationScore >= 9 ? '#16A34A' :
+                                  task.evaluationScore >= 7 ? '#64748b' : '#DC2626'
                               }}
                             />
                           }
@@ -566,9 +565,9 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                               label={task.validationStatus || 'Not Validated'}
                               size="small"
                               sx={{
-                                bgcolor: task.validationStatus === 'Validated' ? alpha('#10b981', 0.2) : alpha('#ef4444', 0.2),
-                                color: task.validationStatus === 'Validated' ? '#10b981' : '#ef4444',
-                                fontWeight: 'bold'
+                                bgcolor: task.validationStatus === 'Validated' ? alpha('#16A34A', 0.2) : alpha('#DC2626', 0.2),
+                                color: task.validationStatus === 'Validated' ? '#16A34A' : '#DC2626',
+                                fontWeight: '600'
                               }}
                             />
                           }
@@ -586,7 +585,7 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                         <Grid item xs={12} md={4}>
                           <Stack spacing={2}>
                             <DetailItem label="GAIA Check" value={task.gaiaCheck || "N/A"}
-                              valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: 'bold' }
+                              valueStyle={task.gaiaCheck === 'Yes' ? { color: 'green', fontWeight: '600' }
                                 : {}}
                             />
                             <DetailItem label="GAIA Content" value={task.gaiaContent || "N/A"} />
@@ -605,10 +604,10 @@ export const TaskDetailsDialog = ({ open, onClose, tasks, title, teamName, onTas
                               <Table size="small" stickyHeader>
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Execution Date</TableCell>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Type / State</TableCell>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Agent</TableCell>
-                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 'bold' }}>Note</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Execution Date</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Type / State</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Agent</TableCell>
+                                    <TableCell sx={{ bgcolor: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: '600' }}>Note</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>

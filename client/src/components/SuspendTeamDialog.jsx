@@ -40,7 +40,7 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
         reset();
         setUpdateTeamStatus(prev => !prev);
       }
-    } catch (error) {
+    } catch {
       alert("Failed to suspend team.");
     }
   };
@@ -110,28 +110,6 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 inputProps={{
                   max: endDate || format(new Date(), "yyyy-MM-dd"),
                 }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: 'var(--border)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'var(--accent)',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'var(--accent)',
-                    },
-                  },
-                  '& .MuiInputBase-input': {
-                    color: 'var(--text)',
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: 'var(--text-secondary)',
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#f44336',
-                  },
-                }}
               />
             )}
           />
@@ -158,28 +136,6 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 inputProps={{
                   min: startDate || format(new Date(), "yyyy-MM-dd"),
                 }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: 'var(--border)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'var(--accent)',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'var(--accent)',
-                    },
-                  },
-                  '& .MuiInputBase-input': {
-                    color: 'var(--text)',
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: 'var(--text-secondary)',
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#f44336',
-                  },
-                }}
               />
             )}
           />
@@ -197,28 +153,6 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
                 margin="normal"
                 error={!!error}
                 helperText={error ? error.message : null}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: 'var(--border)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'var(--accent)',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: 'var(--accent)',
-                    },
-                  },
-                  '& .MuiInputBase-input': {
-                    color: 'var(--text)',
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: 'var(--text-secondary)',
-                  },
-                  '& .MuiFormHelperText-root': {
-                    color: '#f44336',
-                  },
-                }}
               />
             )}
           />
@@ -251,7 +185,7 @@ export const SuspendTeamDialog = ({ open, onClose, teamId, setUpdateTeamStatus }
             backgroundColor: 'var(--accent)',
             color: '#f9fafb',
             '&:hover': {
-              backgroundColor: '#1d4ed8'
+              backgroundColor: '#2563EB'
             }
           }}
         >

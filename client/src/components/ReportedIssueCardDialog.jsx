@@ -212,7 +212,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   mr: 1,
                   color: 'var(--accent-text)',
                   '&:hover': {
-                    backgroundColor: 'rgba(62, 166, 255, 0.1)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
                   }
                 }}
               >
@@ -231,7 +231,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   sx={{
                     color: 'var(--accent-text)',
                     '&:hover': {
-                      backgroundColor: 'rgba(62, 166, 255, 0.1)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     }
                   }}
                 >
@@ -384,7 +384,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   label={selectedIssue.solved === 'yes' ? 'Solved' : 'Unresolved'}
                   size={isMobile ? "small" : "medium"}
                   sx={{
-                    backgroundColor: selectedIssue.solved === 'yes' ? '#4caf50' : '#6a1b1b',
+                    backgroundColor: selectedIssue.solved === 'yes' ? '#16A34A' : '#6a1b1b',
                     color: 'var(--text)',
                     fontWeight: 500
                   }}
@@ -485,9 +485,9 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                   onClick={exportToExcel}
                   size={isMobile ? "small" : "medium"}
                   sx={{
-                    color: '#4caf50',
+                    color: '#16A34A',
                     '&:hover': {
-                      backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                      backgroundColor: 'rgba(22, 163, 74, 0.1)',
                     }
                   }}
                 >
@@ -568,7 +568,7 @@ export const ReportedIssueCardDialog = ({ open, onClose, teamIssues, teamName })
                             label={issue.solved === 'yes' ? 'Solved' : 'Unresolved'}
                             size={isMobile ? "small" : "medium"}
                             sx={{
-                              backgroundColor: issue.solved === 'yes' ? '#4caf50' : '#6a1b1b',
+                              backgroundColor: issue.solved === 'yes' ? '#16A34A' : '#6a1b1b',
                               color: 'var(--text)',
                               fontWeight: 500
                             }}

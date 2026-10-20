@@ -10,12 +10,11 @@ import {
   Box,
   Typography,
   InputAdornment,
-  useMediaQuery,
   useTheme,
   Stack,
-  Divider
+  Divider,
 } from '@mui/material';
-import { AccountCircle, Phone, Add } from '@mui/icons-material';
+import { Phone, Add } from '@mui/icons-material';
 
 // Fallback constants removed. Powered by dynamic API data.
 import api from '../api/api';
@@ -24,7 +23,6 @@ import { useEffect, useState } from 'react';
 const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [fieldTeamsCompany, setFieldTeamsCompany] = useState([]);
   const user = useSelector((state) => state.auth.user);
 
@@ -71,14 +69,14 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
       sx={{
         bgcolor: 'var(--bg)',
         p: 3,
-        borderRadius: 3,
+        borderRadius: "10px",
         border: '1px solid var(--border)',
         height: '100%',
         display: 'flex',
         flexDirection: 'column'
       }}
     >
-      <Typography variant="h6" sx={{ color: 'var(--text)', mb: 1, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Typography variant="h6" sx={{ color: 'var(--text)', mb: 1, fontWeight: '600', display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box sx={{ width: 4, height: 20, bgcolor: 'var(--accent)', borderRadius: 1 }} />
         Add New Team
       </Typography>
@@ -143,7 +141,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           {...register('teamCode', { required: true })}
           sx={sharedInputSx}
           helperText="Auto-generates Quiz Code"
-          FormHelperTextProps={{ sx: { color: '#555', fontSize: '0.7rem' } }}
+          FormHelperTextProps={{ sx: { color: 'var(--border-strong)', fontSize: '0.7rem' } }}
         />
 
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -154,7 +152,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         <Divider sx={{ borderColor: '#222' }} />
 
         {/* Section 4: Employment & Safety Certifications */}
-        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', display: 'block' }}>
+        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: '600', display: 'block' }}>
           Employment & Certifications
         </Typography>
 
@@ -182,7 +180,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         </FormControl>
 
         <Box sx={{ bgcolor: 'var(--bg)', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
-          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mb: 1, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 600, mb: 1, display: 'block' }}>
             EXPERIENCE DURATION (YEARS / MONTHS / DAYS)
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
@@ -217,7 +215,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         </Box>
 
         <Box sx={{ bgcolor: 'var(--bg)', p: 1.5, borderRadius: 1.5, border: '1px solid #282828' }}>
-          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 700, mb: 1, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'var(--text-secondary)', fontWeight: 600, mb: 1, display: 'block' }}>
             SAFETY & COMPLIANCE CERTIFICATES
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
@@ -234,7 +232,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
                   type="checkbox"
                   {...register(cert.id)}
                   id={`add-${cert.id}`}
-                  style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.1)' }}
+                  style={{ marginRight: '8px', accentColor: '#6C47FF', transform: 'scale(1.1)' }}
                 />
                 <label htmlFor={`add-${cert.id}`} style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer' }}>
                   {cert.label}
@@ -247,14 +245,14 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         <Divider sx={{ borderColor: '#222' }} />
 
         {/* Section 5: Role Expertise */}
-        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: 'bold', display: 'block' }}>
+        <Typography variant="overline" sx={{ color: 'var(--accent-text)', fontWeight: '600', display: 'block' }}>
           Role Expertise
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-              <input type="checkbox" {...register('isNewToInstallation')} id="new-install" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+              <input type="checkbox" {...register('isNewToInstallation')} id="new-install" style={{ marginRight: '8px', accentColor: '#6C47FF', transform: 'scale(1.2)' }} />
               <label htmlFor="new-install" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>New to Installation</label>
             </Box>
             <TextField
@@ -269,7 +267,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-              <input type="checkbox" {...register('isNewToActivation')} id="new-activation" style={{ marginRight: '8px', accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+              <input type="checkbox" {...register('isNewToActivation')} id="new-activation" style={{ marginRight: '8px', accentColor: '#6C47FF', transform: 'scale(1.2)' }} />
               <label htmlFor="new-activation" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>New to Activation</label>
             </Box>
             <TextField
@@ -283,13 +281,13 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <input type="checkbox" {...register('replaceExisting')} id="replace-existing" style={{ accentColor: '#7b68ee', transform: 'scale(1.2)' }} />
+            <input type="checkbox" {...register('replaceExisting')} id="replace-existing" style={{ accentColor: '#6C47FF', transform: 'scale(1.2)' }} />
             <label htmlFor="replace-existing" style={{ color: 'var(--text)', fontSize: '0.9rem', cursor: 'pointer' }}>
               Replace existing active team with this code
             </label>
           </Box>
 
-          <Typography variant="caption" sx={{ color: '#555', fontStyle: 'italic' }}>
+          <Typography variant="caption" sx={{ color: 'var(--border-strong)', fontStyle: 'italic' }}>
             * If not checked, team is considered a Rich Expert.
           </Typography>
         </Box>
@@ -299,11 +297,11 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
         <Box sx={{
           mt: 2,
           p: 1.5,
-          bgcolor: 'rgba(244, 67, 54, 0.1)',
-          border: '1px solid #f44336',
+          bgcolor: 'rgba(220, 38, 38, 0.1)',
+          border: '1px solid #DC2626',
           borderRadius: 2
         }}>
-          <Typography variant="caption" sx={{ color: '#ffb74d', fontWeight: 600, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600, display: 'block' }}>
             Submission Error:
           </Typography>
           <Typography variant="body2" sx={{ color: 'var(--text)' }}>
@@ -323,7 +321,7 @@ const AddTeamForm = ({ onAddTeam, loading, errorMessage }) => {
           bgcolor: 'var(--accent)',
           color: 'var(--text)',
           py: 1.2,
-          fontWeight: 'bold',
+          fontWeight: '600',
           '&:hover': { bgcolor: '#6652e0' },
           '&.Mui-disabled': { bgcolor: 'var(--surface-hover)', color: 'var(--text-muted)' }
         }}

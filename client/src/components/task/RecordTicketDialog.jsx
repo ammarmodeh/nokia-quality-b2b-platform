@@ -17,18 +17,18 @@ const isArabicText = (text) => {
 
 const QUICK_PRESETS = [
     // FLOW: Initial & Engagement
-    { label: "Contacted: No Answer", type: "CONTACT", state: "NO_ANSWER", status: "In Progress", note: "Called customer; no answer.", color: "#FF9800" },
-    { label: "Contacted: Appt Set / Visit Scheduled", type: "CONTACT", state: "APPT_SET", status: "In Progress", note: "Customer contacted; appointment scheduled for visit.", color: "#06b6d4" },
-    { label: "Contacted: Awaiting Reply", type: "CONTACT", state: "AWAITING_REPLY", status: "In Progress", note: "Customer contacted; awaiting customer to check and get back to us.", color: "#8b5cf6" },
-    { label: "Contacted: Refused", type: "CONTACT", state: "REFUSED", status: "In Progress", note: "Customer refused the introduced solutions.", color: "#ef4444" },
+    { label: "Contacted: No Answer", type: "CONTACT", state: "NO_ANSWER", status: "In Progress", note: "Called customer; no answer.", color: "#D97706" },
+    { label: "Contacted: Appt Set / Visit Scheduled", type: "CONTACT", state: "APPT_SET", status: "In Progress", note: "Customer contacted; appointment scheduled for visit.", color: "#2563EB" },
+    { label: "Contacted: Awaiting Reply", type: "CONTACT", state: "AWAITING_REPLY", status: "In Progress", note: "Customer contacted; awaiting customer to check and get back to us.", color: "#6C47FF" },
+    { label: "Contacted: Refused", type: "CONTACT", state: "REFUSED", status: "In Progress", note: "Customer refused the introduced solutions.", color: "#DC2626" },
 
     // FLOW: Dispatch & Visit
     { label: "Reflected to Team / Visit Scheduled", type: "REFLECT", state: "APPT_SET", status: "In Progress", note: "Task reflected to field team for visit.", color: "#6366f1" },
-    { label: "Reflect: ONT Relocation / Follow-up", type: "REFLECT", state: "NEED_SCHEDULE", status: "In Progress", note: "Visit occurred but issue unresolved; task reflected to team to schedule an appointment for ONT relocation.", color: "#f59e0b" },
-    { label: "Visit: Success", type: "VISIT", state: "VISIT_OK", status: "In Progress", note: "Technician visited site; visit successful.", color: "#8b5cf6" },
-    { label: "Visit: Resolved", type: "VISIT", state: "ISSUE_RESOLVED", status: "Closed", note: "Customer visited and issue fully resolved.", color: "#10b981" },
+    { label: "Reflect: ONT Relocation / Follow-up", type: "REFLECT", state: "NEED_SCHEDULE", status: "In Progress", note: "Visit occurred but issue unresolved; task reflected to team to schedule an appointment for ONT relocation.", color: "#D97706" },
+    { label: "Visit: Success", type: "VISIT", state: "VISIT_OK", status: "In Progress", note: "Technician visited site; visit successful.", color: "#6C47FF" },
+    { label: "Visit: Resolved", type: "VISIT", state: "ISSUE_RESOLVED", status: "Closed", note: "Customer visited and issue fully resolved.", color: "#16A34A" },
 
-    { label: "Resolved by Phone", type: "CONTACT", state: "SOLVED_REMOTE", status: "Closed", reason: "202", note: "Issue solved and closed by phone.", color: "#10b981" },
+    { label: "Resolved by Phone", type: "CONTACT", state: "SOLVED_REMOTE", status: "Closed", reason: "202", note: "Issue solved and closed by phone.", color: "#16A34A" },
     { label: "Ticket Closed", type: "RESOLVE", state: "ISSUE_RESOLVED", status: "Closed", reason: "206", note: "Issue fully resolved; ticket closed.", color: "#4f46e5" },
 ];
 
@@ -290,7 +290,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                 fullWidth
                 PaperProps={{
                     sx: {
-                        borderRadius: 3,
+                        borderRadius: "10px",
                         bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1c1c1c' : '#ffffff',
                     }
                 }}
@@ -306,7 +306,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <MdHistory size={26} color="var(--accent-text)" />
-                        <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: -0.5 }}>
+                        <Typography variant="h6" fontWeight={600} sx={{ letterSpacing: -0.5 }}>
                             {editingTicket ? "Technical Realignment" : "QOPS Transaction Log"}
                         </Typography>
                     </Stack>
@@ -324,7 +324,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                         px: 2,
                         minHeight: 50,
                         '& .MuiTab-root': {
-                            fontWeight: 800,
+                            fontWeight: 600,
                             textTransform: 'uppercase',
                             fontSize: '0.75rem',
                             letterSpacing: 1,
@@ -344,8 +344,8 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                 <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05), borderStyle: 'dashed' }}>
                                     <Grid container spacing={2}>
                                         <Grid item xs={6}>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 1 }}>TARGET SUBSCRIBER</Typography>
-                                            <Typography variant="body1" fontWeight={900} sx={{ color: 'primary.main' }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ letterSpacing: 1 }}>TARGET SUBSCRIBER</Typography>
+                                            <Typography variant="body1" fontWeight={600} sx={{ color: 'primary.main' }}>
                                                 {task?.customerName || "SYSTEM ORDER"}
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mt: 0.5 }}>
@@ -353,8 +353,8 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                             </Typography>
                                         </Grid>
                                         <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ letterSpacing: 1 }}>PRIMARY SLID / CASE</Typography>
-                                            <Typography variant="body1" fontWeight={900}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ letterSpacing: 1 }}>PRIMARY SLID / CASE</Typography>
+                                            <Typography variant="body1" fontWeight={600}>
                                                 {task?.slid} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>• #{task?.requestNumber}</span>
                                             </Typography>
                                         </Grid>
@@ -362,7 +362,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                 </Paper>
 
                                 <Box>
-                                    <Typography variant="overline" sx={{ fontWeight: 900, color: 'text.secondary', mb: 1, display: 'block' }}>
+                                    <Typography variant="overline" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
                                         Quick E2E Presets
                                     </Typography>
                                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -375,7 +375,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                 sx={{
                                                     borderRadius: 2,
                                                     fontSize: '0.65rem',
-                                                    fontWeight: 900,
+                                                    fontWeight: 600,
                                                     color: preset.color,
                                                     borderColor: alpha(preset.color, 0.5),
                                                     '&:hover': {
@@ -391,7 +391,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                 </Box>
 
                                 <Box>
-                                    <Typography variant="overline" sx={{ fontWeight: 900, color: 'text.secondary', mb: 2, display: 'block' }}>
+                                    <Typography variant="overline" sx={{ fontWeight: 600, color: 'text.secondary', mb: 2, display: 'block' }}>
                                         Technical Parameters
                                     </Typography>
                                     <Grid container spacing={2}>
@@ -406,7 +406,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                             >
                                                 {dropdowns.TRANSACTION_TYPE.map(opt => (
                                                     <MenuItem key={opt._id} value={opt.value} sx={{ py: 1 }}>
-                                                        <Typography variant="subtitle2" sx={{ fontWeight: 900, mr: 1, color: 'primary.main' }}>{opt.value}</Typography>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mr: 1, color: 'primary.main' }}>{opt.value}</Typography>
                                                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>{opt.label}</Typography>
                                                     </MenuItem>
                                                 ))}
@@ -423,7 +423,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                             >
                                                 {dropdowns.TRANSACTION_STATE.map(opt => (
                                                     <MenuItem key={opt._id} value={opt.value} sx={{ py: 1 }}>
-                                                        <Typography variant="subtitle2" sx={{ fontWeight: 900, mr: 1 }}>{opt.value}</Typography>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mr: 1 }}>{opt.value}</Typography>
                                                         <Typography variant="caption" sx={{ color: 'text.secondary' }}>{opt.label}</Typography>
                                                     </MenuItem>
                                                 ))}
@@ -449,7 +449,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                         onChange={(e) => setIsNaDate(e.target.checked)}
                                                         style={{ cursor: 'pointer' }}
                                                     />
-                                                    <label htmlFor="na-date" style={{ fontSize: '0.7rem', fontWeight: 800, marginLeft: '4px', cursor: 'pointer', color: isNaDate ? '#7b68ee' : '#666' }}>
+                                                    <label htmlFor="na-date" style={{ fontSize: '0.7rem', fontWeight: 600, marginLeft: '4px', cursor: 'pointer', color: isNaDate ? '#6C47FF' : 'var(--text-muted)' }}>
                                                         NOT APPLICABLE (N/A)
                                                     </label>
                                                 </Box>
@@ -481,7 +481,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                 <MenuItem value=""><em>-- NO REASON CODE --</em></MenuItem>
                                                 {dropdowns.UNF_REASON_CODE.map(opt => (
                                                     <MenuItem key={opt._id} value={opt.value} sx={{ py: 1 }}>
-                                                        <Typography variant="subtitle2" sx={{ fontWeight: 900, mr: 1, color: '#FF5722' }}>{opt.value}</Typography>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mr: 1, color: '#D97706' }}>{opt.value}</Typography>
                                                         <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{opt.label}</Typography>
                                                     </MenuItem>
                                                 ))}
@@ -497,10 +497,10 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                 onChange={(e) => setStatus(e.target.value)}
                                             >
                                                 {dropdowns.SYSTEM_FLOW_STATUS.map(opt => (
-                                                    <MenuItem key={opt._id} value={opt.value} sx={{ fontWeight: 800 }}>{opt.label}</MenuItem>
+                                                    <MenuItem key={opt._id} value={opt.value} sx={{ fontWeight: 600 }}>{opt.label}</MenuItem>
                                                 ))}
                                                 {dropdowns.SYSTEM_FLOW_STATUS.length === 0 && ["Todo", "In Progress", "Closed", "Completed"].map(s => (
-                                                    <MenuItem key={s} value={s} sx={{ fontWeight: 800 }}>{s}</MenuItem>
+                                                    <MenuItem key={s} value={s} sx={{ fontWeight: 600 }}>{s}</MenuItem>
                                                 ))}
                                             </TextField>
                                         </Grid>
@@ -523,7 +523,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                 }}
                                                 options={teams}
                                                 getOptionLabel={(option) => typeof option === 'string' ? option : option.inputValue}
-                                                renderOption={(props, option) => <li {...props} style={{ fontWeight: 700 }}>{option.title || option}</li>}
+                                                renderOption={(props, option) => <li {...props} style={{ fontWeight: 600 }}>{option.title || option}</li>}
                                                 freeSolo
                                                 size="small"
                                                 renderInput={(params) => (
@@ -542,14 +542,6 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
                                     placeholder="Enter exhaustive technical or logistic details..."
-                                    sx={{
-                                        '& textarea': {
-                                            fontSize: '0.9rem',
-                                            fontWeight: 500,
-                                            direction: isArabicText(note) ? 'rtl' : 'ltr',
-                                            textAlign: isArabicText(note) ? 'right' : 'left'
-                                        }
-                                    }}
                                 />
                             </Stack>
                         </Box>
@@ -557,23 +549,23 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                         <TableContainer sx={{ borderTop: '1px solid', borderColor: 'divider', minHeight: 400, overflowX: 'auto' }}>
                             <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', minWidth: 1300 }}>
                                 <TableHead>
-                                    <TableRow sx={{ bgcolor: alpha('#7b68ee', 0.05) }}>
-                                        <TableCell sx={{ width: '130px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket ID</TableCell>
-                                        <TableCell sx={{ width: '120px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Execution Date</TableCell>
-                                        <TableCell sx={{ width: '180px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Agent / Participant</TableCell>
-                                        <TableCell sx={{ width: '150px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Type / State</TableCell>
-                                        <TableCell sx={{ width: '110px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Unf. Reason</TableCell>
-                                        <TableCell sx={{ width: '100px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket Status</TableCell>
-                                        <TableCell sx={{ width: '250px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Detailed Technical Log</TableCell>
-                                        <TableCell sx={{ width: '160px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Metadata</TableCell>
-                                        <TableCell sx={{ width: '100px', fontWeight: 900, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase' }} align="center">Actions</TableCell>
+                                    <TableRow sx={{ bgcolor: alpha('#6C47FF', 0.05) }}>
+                                        <TableCell sx={{ width: '130px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket ID</TableCell>
+                                        <TableCell sx={{ width: '120px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Execution Date</TableCell>
+                                        <TableCell sx={{ width: '180px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Agent / Participant</TableCell>
+                                        <TableCell sx={{ width: '150px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Type / State</TableCell>
+                                        <TableCell sx={{ width: '110px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Unf. Reason</TableCell>
+                                        <TableCell sx={{ width: '100px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Ticket Status</TableCell>
+                                        <TableCell sx={{ width: '250px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Detailed Technical Log</TableCell>
+                                        <TableCell sx={{ width: '160px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase', borderRight: '1px solid', borderColor: 'divider' }}>Metadata</TableCell>
+                                        <TableCell sx={{ width: '100px', fontWeight: 600, py: 1.5, fontSize: '0.7rem', color: 'text.secondary', textTransform: 'uppercase' }} align="center">Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {tickets.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={9} align="center" sx={{ py: 10, bgcolor: alpha('#eee', 0.2) }}>
-                                                <Typography variant="caption" sx={{ fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 2 }}>
+                                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 2 }}>
                                                     NO DATASTREAM RECOERDED FOR THIS CASE
                                                 </Typography>
                                             </TableCell>
@@ -583,9 +575,9 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                             <TableRow key={ticket._id} hover sx={{ bgcolor: index % 2 === 0 ? 'inherit' : alpha('#f0f0f0', 0.5) }}>
                                                 <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-                                                        <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: 'var(--accent-text)', flex: 1 }}>{ticket.ticketId}</Typography>
+                                                        <Typography variant="caption" noWrap sx={{ fontWeight: 600, color: 'var(--accent-text)', flex: 1 }}>{ticket.ticketId}</Typography>
                                                         {ticket.ticketId?.length > 10 && (
-                                                            <Button size="small" onClick={() => showCellValue("TICKET IDENTIFIER", ticket.ticketId, "#7b68ee")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("TICKET IDENTIFIER", ticket.ticketId, "#6C47FF")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 600, color: 'var(--accent-text)' }}>View</Button>
                                                         )}
                                                         <IconButton size="small" onClick={() => copyToClipboard(ticket.ticketId)} sx={{ opacity: 0.5 }}>
                                                             <MdContentCopy size={10} />
@@ -610,7 +602,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                             variant="caption"
                                                             noWrap
                                                             sx={{
-                                                                fontWeight: 900,
+                                                                fontWeight: 600,
                                                                 color: 'var(--accent-text)',
                                                                 flex: 1
                                                             }}
@@ -618,7 +610,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                             {`${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`}
                                                         </Typography>
                                                         {(`${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`).length > 15 && (
-                                                            <Button size="small" onClick={() => showCellValue("PARTICIPANT DETAILS", `${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("PARTICIPANT DETAILS", `${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 600, color: 'var(--accent-text)' }}>View</Button>
                                                         )}
                                                         <IconButton size="small" onClick={() => copyToClipboard(`${ticket.recordedBy?.name || "System"} / ${ticket.agentName || "—"}`)} sx={{ opacity: 0.5 }}>
                                                             <MdContentCopy size={10} />
@@ -628,12 +620,12 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                 <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
                                                     <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
                                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                            <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: 'var(--accent-text)', display: 'block' }}>
+                                                            <Typography variant="caption" noWrap sx={{ fontWeight: 600, color: 'var(--accent-text)', display: 'block' }}>
                                                                 {`${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`}
                                                             </Typography>
                                                         </Box>
                                                         {(`${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`).length > 15 && (
-                                                            <Button size="small" onClick={() => showCellValue("TRANSACTION TYPE/STATE", `${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("TRANSACTION TYPE/STATE", `${ticket.transactionType || ticket.mainCategory} | ${ticket.transactionState || "VA"}`)} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 600, color: 'var(--accent-text)' }}>View</Button>
                                                         )}
                                                         <IconButton size="small" onClick={() => copyToClipboard(`${ticket.transactionType || ticket.mainCategory} - ${ticket.transactionState || "VA"}`)} sx={{ opacity: 0.5 }}>
                                                             <MdContentCopy size={10} />
@@ -644,9 +636,9 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                     {ticket.unfReasonCode ? (
                                                         <Stack direction="row" alignItems="center" spacing={1}>
                                                             <Tooltip title={getMeaning('UNF_REASON_CODE', ticket.unfReasonCode)}>
-                                                                <Typography variant="caption" noWrap sx={{ color: '#FF5722', fontWeight: 900 }}>{ticket.unfReasonCode}</Typography>
+                                                                <Typography variant="caption" noWrap sx={{ color: '#D97706', fontWeight: 600 }}>{ticket.unfReasonCode}</Typography>
                                                             </Tooltip>
-                                                            <Button size="small" onClick={() => showCellValue("REASON CODE", `${ticket.unfReasonCode} - ${getMeaning('UNF_REASON_CODE', ticket.unfReasonCode)}`, "#FF5722")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}>View</Button>
+                                                            <Button size="small" onClick={() => showCellValue("REASON CODE", `${ticket.unfReasonCode} - ${getMeaning('UNF_REASON_CODE', ticket.unfReasonCode)}`, "#D97706")} sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 600, color: 'var(--accent-text)' }}>View</Button>
                                                             <IconButton size="small" onClick={() => copyToClipboard(ticket.unfReasonCode)} sx={{ opacity: 0.5 }}>
                                                                 <MdContentCopy size={10} />
                                                             </IconButton>
@@ -659,7 +651,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                             variant="caption"
                                                             noWrap
                                                             sx={{
-                                                                fontWeight: 900,
+                                                                fontWeight: 600,
                                                                 color: 'text.primary'
                                                             }}
                                                         >
@@ -695,7 +687,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                                     p: 0,
                                                                     color: 'var(--accent-text)',
                                                                     fontSize: '0.7rem',
-                                                                    fontWeight: 900,
+                                                                    fontWeight: 600,
                                                                     textTransform: 'none'
                                                                 }}
                                                             >
@@ -717,7 +709,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                                                         <Button
                                                             size="small"
                                                             onClick={() => showCellValue("TECHNICAL LOG TIMESTAMPS", `CREATED: ${format(new Date(ticket.createdAt), "dd MMM yyyy HH:mm:ss")}\nUPDATED: ${format(new Date(ticket.updatedAt), "dd MMM yyyy HH:mm:ss")}`, "#999")}
-                                                            sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-text)' }}
+                                                            sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem', fontWeight: 600, color: 'var(--accent-text)' }}
                                                         >
                                                             View
                                                         </Button>
@@ -758,7 +750,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                 </DialogContent>
 
                 <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: alpha('#f0f0f0', 0.5) }}>
-                    <Button onClick={editingTicket ? resetForm : onClose} sx={{ fontWeight: 900, color: 'text.secondary', px: 3, borderRadius: 2 }}>
+                    <Button onClick={editingTicket ? resetForm : onClose} sx={{ fontWeight: 600, color: 'text.secondary', px: 3, borderRadius: 2 }}>
                         {editingTicket ? "DISCARD CHANGES" : "CLOSE LOG"}
                     </Button>
                     {tabValue === 0 && (
@@ -766,7 +758,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                             variant="contained"
                             onClick={handleSubmit}
                             disabled={loading}
-                            sx={{ borderRadius: 2, fontWeight: 900, bgcolor: 'var(--accent)', px: 4, '&:hover': { bgcolor: '#6854d9' } }}
+                            sx={{ borderRadius: 2, fontWeight: 600, bgcolor: 'var(--accent)', px: 4, '&:hover': { bgcolor: '#6854d9' } }}
                         >
                             {loading ? "TRANSMITTING..." : (editingTicket ? "UPDATE RECORD" : "COMMIT TRANSACTION")}
                         </Button>
@@ -775,11 +767,11 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
             </Dialog>
 
             {/* Sub-Dialog: Detailed View */}
-            <Dialog open={!!viewingTicket} onClose={() => setViewingTicket(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
+            <Dialog open={!!viewingTicket} onClose={() => setViewingTicket(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "10px", p: 1 } }}>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <MdVisibility color="#7bc" size={24} />
-                        <Typography variant="h6" fontWeight={900}>Detailed Transaction Payload</Typography>
+                        <Typography variant="h6" fontWeight={600}>Detailed Transaction Payload</Typography>
                     </Stack>
                     <IconButton onClick={() => setViewingTicket(null)} size="small"><MdClose /></IconButton>
                 </DialogTitle>
@@ -787,34 +779,34 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                     {viewingTicket && (
                         <Grid container spacing={3} sx={{ mt: 1 }}>
                             <Grid item xs={6}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={800}>TICKET IDENTIFIER</Typography>
-                                <Typography variant="h6" fontWeight={900} color="primary">{viewingTicket.ticketId}</Typography>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>TICKET IDENTIFIER</Typography>
+                                <Typography variant="h6" fontWeight={600} color="primary">{viewingTicket.ticketId}</Typography>
                             </Grid>
                             <Grid item xs={6} sx={{ textAlign: 'right' }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={800}>STATUS / DATE</Typography>
-                                <Typography variant="body1" fontWeight={700}>{getMeaning('SYSTEM_FLOW_STATUS', viewingTicket.status)} • {format(new Date(viewingTicket.eventDate), "yyyy-MM-dd")}</Typography>
+                                <Typography variant="caption" color="text.secondary" fontWeight={600}>STATUS / DATE</Typography>
+                                <Typography variant="body1" fontWeight={600}>{getMeaning('SYSTEM_FLOW_STATUS', viewingTicket.status)} • {format(new Date(viewingTicket.eventDate), "yyyy-MM-dd")}</Typography>
                             </Grid>
                             <Grid item xs={12} sx={{ mt: -2 }}><Divider /></Grid>
                             <Grid item xs={12}>
                                 <Stack spacing={2}>
                                     <Box>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={800}>TRANSACTION TYPE / STATE</Typography>
-                                        <Typography variant="body1" fontWeight={700}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>TRANSACTION TYPE / STATE</Typography>
+                                        <Typography variant="body1" fontWeight={600}>
                                             {getMeaning('TRANSACTION_TYPE', viewingTicket.transactionType)} ({viewingTicket.transactionType}) • {getMeaning('TRANSACTION_STATE', viewingTicket.transactionState)} ({viewingTicket.transactionState})
                                         </Typography>
                                     </Box>
                                     <Box>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={800}>UNFULFILLED REASON</Typography>
-                                        <Typography variant="body1" fontWeight={700} sx={{ color: '#FF5722' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>UNFULFILLED REASON</Typography>
+                                        <Typography variant="body1" fontWeight={600} sx={{ color: '#D97706' }}>
                                             {viewingTicket.unfReasonCode ? `${viewingTicket.unfReasonCode} - ${getMeaning('UNF_REASON_CODE', viewingTicket.unfReasonCode)}` : "EXECUTION SUCCESSFUL"}
                                         </Typography>
                                     </Box>
                                     <Box>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={800}>RESPONSIBLE AGENT / TEAM</Typography>
-                                        <Typography variant="body1" fontWeight={700}>{viewingTicket.agentName?.toUpperCase() || "UNASSIGNED"}</Typography>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>RESPONSIBLE AGENT / TEAM</Typography>
+                                        <Typography variant="body1" fontWeight={600}>{viewingTicket.agentName?.toUpperCase() || "UNASSIGNED"}</Typography>
                                     </Box>
-                                    <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha('#eee', 0.3), borderRadius: 3 }}>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ mb: 1, display: 'block' }}>AGENT REMARKS</Typography>
+                                    <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha('#eee', 0.3), borderRadius: "10px" }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block' }}>AGENT REMARKS</Typography>
                                         <Typography
                                             variant="body2"
                                             sx={{
@@ -842,7 +834,7 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="body2" sx={{ mb: 3 }}>
-                        Initiating deletion for protocol <span style={{ fontWeight: 900, color: '#000' }}>{deletingTicket?.ticketId}</span>. This will purge all associated metadata and technical logs.
+                        Initiating deletion for protocol <span style={{ fontWeight: 600, color: '#000' }}>{deletingTicket?.ticketId}</span>. This will purge all associated metadata and technical logs.
                     </Typography>
                     <TextField
                         fullWidth
@@ -855,27 +847,27 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                     />
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setDeletingTicket(null)} color="inherit" sx={{ fontWeight: 800 }}>ABORT</Button>
-                    <Button onClick={confirmDelete} variant="contained" color="error" disabled={confirmId !== deletingTicket?.ticketId || loading} sx={{ fontWeight: 900 }}>
+                    <Button onClick={() => setDeletingTicket(null)} color="inherit" sx={{ fontWeight: 600 }}>ABORT</Button>
+                    <Button onClick={confirmDelete} variant="contained" color="error" disabled={confirmId !== deletingTicket?.ticketId || loading} sx={{ fontWeight: 600 }}>
                         {loading ? "PURGING..." : "CONFIRM PURGE"}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Specific Cell Content Viewer */}
-            <Dialog open={cellViewer.open} onClose={() => setCellViewer({ ...cellViewer, open: false })} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+            <Dialog open={cellViewer.open} onClose={() => setCellViewer({ ...cellViewer, open: false })} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: "10px", p: 1 } }}>
                 <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-                    <Typography variant="subtitle2" fontWeight={900} color="text.secondary">{cellViewer.title}</Typography>
+                    <Typography variant="subtitle2" fontWeight={600} color="text.secondary">{cellViewer.title}</Typography>
                     <IconButton onClick={() => setCellViewer({ ...cellViewer, open: false })} size="small"><MdClose /></IconButton>
                 </DialogTitle>
                 <DialogContent>
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(cellViewer.color || '#7b68ee', 0.05), borderRadius: 2, border: `1px solid ${alpha(cellViewer.color || 'var(--accent)', 0.2)}` }}>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(cellViewer.color || '#6C47FF', 0.05), borderRadius: 2, border: `1px solid ${alpha(cellViewer.color || 'var(--accent)', 0.2)}` }}>
                         <Typography
                             variant="body2"
                             sx={{
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
-                                fontWeight: 700,
+                                fontWeight: 600,
                                 color: cellViewer.color || 'text.primary',
                                 direction: isArabicText(cellViewer.value) ? 'rtl' : 'ltr',
                                 textAlign: isArabicText(cellViewer.value) ? 'right' : 'left'
@@ -886,8 +878,8 @@ const RecordTicketDialog = ({ open, onClose, task, taskType = "Task", onTicketAd
                     </Paper>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => copyToClipboard(cellViewer.value)} size="small" startIcon={<MdContentCopy />} sx={{ fontWeight: 900 }}>COPY CONTENT</Button>
-                    <Button onClick={() => setCellViewer({ ...cellViewer, open: false })} size="small" sx={{ fontWeight: 900, color: 'text.secondary' }}>CLOSE</Button>
+                    <Button onClick={() => copyToClipboard(cellViewer.value)} size="small" startIcon={<MdContentCopy />} sx={{ fontWeight: 600 }}>COPY CONTENT</Button>
+                    <Button onClick={() => setCellViewer({ ...cellViewer, open: false })} size="small" sx={{ fontWeight: 600, color: 'text.secondary' }}>CLOSE</Button>
                 </DialogActions>
             </Dialog>
         </>

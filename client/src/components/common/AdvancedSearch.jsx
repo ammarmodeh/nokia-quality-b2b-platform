@@ -11,7 +11,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
             fullWidth
             PaperProps={{
                 sx: {
-                    borderRadius: 3,
+                    borderRadius: "10px",
                     bgcolor: 'var(--surface)',
                     border: '1px solid var(--border)',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
@@ -23,11 +23,11 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                bgcolor: alpha('#7b68ee', 0.05)
+                bgcolor: alpha('#6C47FF', 0.05)
             }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <MdSearch color="var(--accent-text)" size={24} />
-                    <Typography variant="h6" fontWeight={900}>Advanced Audit Engine</Typography>
+                    <Typography variant="h6" fontWeight={600}>Advanced Audit Engine</Typography>
                 </Stack>
                 <IconButton onClick={onClose} size="small" sx={{ color: 'var(--text-secondary)' }}>
                     <MdClose />
@@ -35,7 +35,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
             </DialogTitle>
             <DialogContent sx={{ mt: 2 }}>
                 <Stack spacing={3} sx={{ mt: 1 }}>
-                    <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'var(--accent-text)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
                         Search Parameters
                     </Typography>
                     <Grid container spacing={2}>
@@ -48,13 +48,6 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 onChange={(e) => setFields({ ...fields, slid: e.target.value })}
                                 variant="outlined"
                                 size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'var(--text)',
-                                        '& fieldset': { borderColor: 'var(--border)' },
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
-                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -66,13 +59,6 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 onChange={(e) => setFields({ ...fields, gaiaId: e.target.value })}
                                 variant="outlined"
                                 size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'var(--text)',
-                                        '& fieldset': { borderColor: 'var(--border)' },
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
-                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -84,13 +70,6 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 onChange={(e) => setFields({ ...fields, requestNumber: e.target.value })}
                                 variant="outlined"
                                 size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'var(--text)',
-                                        '& fieldset': { borderColor: 'var(--border)' },
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
-                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -102,13 +81,6 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 onChange={(e) => setFields({ ...fields, customerName: e.target.value })}
                                 variant="outlined"
                                 size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'var(--text)',
-                                        '& fieldset': { borderColor: 'var(--border)' },
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
-                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -120,13 +92,6 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 onChange={(e) => setFields({ ...fields, contactNumber: e.target.value })}
                                 variant="outlined"
                                 size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'var(--text)',
-                                        '& fieldset': { borderColor: 'var(--border)' },
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
-                                }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -138,13 +103,6 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                                 onChange={(e) => setFields({ ...fields, teamName: e.target.value })}
                                 variant="outlined"
                                 size="small"
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'var(--text)',
-                                        '& fieldset': { borderColor: 'var(--border)' },
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'var(--text-secondary)' }
-                                }}
                             />
                         </Grid>
                     </Grid>
@@ -153,7 +111,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
             <DialogActions sx={{ p: 3, borderTop: '1px solid var(--border)', bgcolor: alpha('#000', 0.2) }}>
                 <Button
                     onClick={onClear}
-                    sx={{ color: 'var(--text-secondary)', fontWeight: 900 }}
+                    sx={{ color: 'var(--text-secondary)', fontWeight: 600 }}
                 >
                     CLEAR ENGINE
                 </Button>
@@ -163,7 +121,7 @@ const AdvancedSearch = ({ open, onClose, fields, setFields, onInitiate, onClear 
                     onClick={onInitiate}
                     sx={{
                         bgcolor: 'var(--accent)',
-                        fontWeight: 900,
+                        fontWeight: 600,
                         px: 4,
                         '&:hover': { bgcolor: '#6854d9' }
                     }}

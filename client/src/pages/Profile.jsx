@@ -187,12 +187,12 @@ const Profile = ({ embedded = false } = {}) => {
         borderColor: editMode ? '#e5e7eb' : 'transparent',
       },
       '&:hover fieldset': {
-        borderColor: editMode ? '#666' : 'transparent',
+        borderColor: editMode ? 'var(--text-muted)' : 'transparent',
       },
       '&.Mui-focused fieldset': {
         borderColor: 'var(--accent)',
       },
-      backgroundColor: editMode ? '#252525' : 'transparent',
+      backgroundColor: editMode ? 'var(--border)' : 'transparent',
       borderRadius: '4px',
     },
     '& .MuiFormHelperText-root': {
@@ -206,22 +206,22 @@ const Profile = ({ embedded = false } = {}) => {
   const buttonStyles = {
     backgroundColor: 'var(--accent)',
     color: 'var(--text)',
-    fontWeight: 'bold',
+    fontWeight: '600',
     '&:hover': {
       backgroundColor: 'var(--accent-hover)',
     },
     '&:disabled': {
-      backgroundColor: '#555',
+      backgroundColor: 'var(--border-strong)',
       color: 'var(--text-muted)'
     }
   };
 
   const cancelButtonStyles = {
     color: 'var(--text)',
-    backgroundColor: '#555',
-    fontWeight: 'bold',
+    backgroundColor: 'var(--border-strong)',
+    fontWeight: '600',
     '&:hover': {
-      backgroundColor: '#666',
+      backgroundColor: 'var(--text-muted)',
     },
     "& span": {
       mr: 0
@@ -333,7 +333,7 @@ const Profile = ({ embedded = false } = {}) => {
             >
               {getInitials(user?.name)}
             </Avatar>
-            <Typography variant={isMobile ? 'h6' : 'h5'} component="h1" sx={{ color: 'var(--text)', fontWeight: 'bold' }}>
+            <Typography variant={isMobile ? 'h6' : 'h5'} component="h1" sx={{ color: 'var(--text)', fontWeight: '600' }}>
               {user?.name}
             </Typography>
             <Typography variant={isMobile ? 'body2' : 'body1'} sx={{ color: 'var(--text-secondary)' }}>
@@ -493,7 +493,7 @@ const Profile = ({ embedded = false } = {}) => {
           variant="filled"
           sx={{
             width: '100%',
-            backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : 'var(--accent)',
+            backgroundColor: snackbarSeverity === 'error' ? '#DC2626' : 'var(--accent)',
             color: 'var(--text)',
             '& .MuiAlert-icon': {
               color: 'var(--text)'
