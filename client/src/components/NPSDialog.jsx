@@ -162,7 +162,7 @@ export default function NPSDialog({ open, handleClose, name }) {
             Fairness Measures Considerations:
           </Typography>
           <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
-            • <strong>Customer Issue Validation:</strong> Before penalizing a team, confirm whether the customer’s issue resulted from an actual violation or external factors (e.g., unresolved technical issues).
+            • <strong>Snag / complaint validation:</strong> Before penalizing a team, confirm whether the customer’s issue resulted from an actual violation or external factors (e.g., unresolved technical issues).
           </Typography>
           <Typography gutterBottom className="dark:text-[var(--text-secondary)]">
             • <strong>Impact Scaling:</strong> Every three passive customer cases will be considered equivalent to one detractor.

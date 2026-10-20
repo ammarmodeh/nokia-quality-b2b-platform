@@ -93,7 +93,7 @@ export const mapItemToExcelRow = (item, type) => {
     }
 
     return {
-      'Type': type === 'task' ? 'NPS Ticket' : 'Customer Issue',
+      'Type': type === 'task' ? 'NPS Ticket' : 'OJO Snag',
       'SLID': item.slid,
       'Customer': item.customerName || 'N/A',
       'Status': item.validationStatus || (item.solved === 'yes' ? 'Solved' : 'Open'),

@@ -173,7 +173,7 @@ const ViolationEvaluationDialog = ({ open, onClose }) => {
             </Typography>
             <List dense sx={{ pl: 2, mb: 2, listStyleType: 'disc' }}>
               <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
-                <ListItemText primary="Customer Issue Validation: Before penalizing a team, confirm whether the customer's issue resulted from an actual violation or external factors (e.g., unresolved technical issues)" />
+                <ListItemText primary="Snag / complaint validation: Before penalizing a team, confirm whether the customer's issue resulted from an actual violation or external factors (e.g., unresolved technical issues)" />
               </ListItem>
               <ListItem sx={{ display: 'list-item', p: 0, color: 'var(--text)' }}>
                 <ListItemText primary="Impact Scaling: Every three passive customer cases will be considered equivalent to one detractor" />
