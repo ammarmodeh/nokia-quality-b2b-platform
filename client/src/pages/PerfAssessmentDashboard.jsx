@@ -884,7 +884,7 @@ const PerfAssessmentDashboard = () => {
           )}
 
           {loading ? (
-            <PageLoader minHeight={240} />
+            <PageLoader minHeight={240} variant="table" rows={5} />
           ) : teamId ? (
             <DataGrid
               rows={results}

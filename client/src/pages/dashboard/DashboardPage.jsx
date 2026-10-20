@@ -201,13 +201,13 @@ const DashboardPage = () => {
       {error && <ErrorState title="The dashboard didn't load" message={error} onRetry={() => { setLoading(true); setRefresh((r) => r + 1); }} sx={{ mb: 3 }} />}
 
       {loading ? (
-        <PageLoader minHeight={420} />
+        <PageLoader minHeight={420} variant="cards" />
       ) : (
         !error && (
           <>
             <NpsPerformance tasks={scopedTasks} samples={samples} settings={settings} period={resolved} teamFilter={teamFilter} />
             <NpsTrends tasks={scopedTasks} samples={samples} settings={settings} grain={grain} onGrainChange={(g) => setQuery({ grain: g })} />
-            <Suspense fallback={<PageLoader minHeight={240} />}>
+            <Suspense fallback={<PageLoader minHeight={240} variant="table" rows={5} />}>
               <TeamViolationTracker tasks={tasks} initialFieldTeams={teams} teamFilter={teamFilter} customSummary={customSummary} period={resolved.current} onTaskUpdated={() => setRefresh((r) => r + 1)} />
             </Suspense>
           </>

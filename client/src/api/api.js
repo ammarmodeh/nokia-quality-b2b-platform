@@ -1,6 +1,7 @@
 import axios from "axios";
 import store from "../redux/store";
 import { logout } from "../redux/slices/authSlice";
+import { activity } from "./activity";
 
 // console.log('import.meta.env.VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
 
@@ -44,6 +45,8 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // drive the top loading bar unless the caller opted out (background polling)
+    if (!config.silentProgress && !config._activityDone) config._activityDone = activity.start();
     return config;
   },
   (error) => Promise.reject(error)
@@ -51,9 +54,14 @@ api.interceptors.request.use(
 
 // Response interceptor (handles token expiry)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.config?._activityDone?.();
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    originalRequest?._activityDone?.();
+    if (originalRequest) originalRequest._activityDone = undefined;
 
     // Check for 401 and specific conditions
     if (error.response?.status === 401) {

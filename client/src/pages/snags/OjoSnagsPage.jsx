@@ -203,8 +203,10 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
       }
       setRefresh((r) => r + 1);
       window.dispatchEvent(new CustomEvent("dashboard-refresh"));
-    } catch {
-      toast.error(id ? "Failed to update snag" : "Failed to report snag");
+      return true;
+    } catch (e) {
+      toast.error(`${id ? "Couldn’t save the snag" : "Couldn’t report the snag"}: ${e?.response?.data?.message || "check your connection and try again"}. Your entries are kept.`);
+      return false;
     }
   };
 
@@ -299,9 +301,9 @@ const OjoSnagsPage = ({ tracker = "OJO Snags" }) => {
       )}
 
       {loading ? (
-        <PageLoader />
+        <PageLoader variant="table" />
       ) : f.view === "analytics" ? (
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<PageLoader variant="cards" />}>
           <CustomerIssuesAnalytics issues={rows} />
         </Suspense>
       ) : (

@@ -1,5 +1,6 @@
 import { Box, CircularProgress } from '@mui/material';
 import PropTypes from 'prop-types';
+import PageLoader from '../ui/PageLoader';
 
 /**
  * Unified Loading Spinner Component
@@ -26,8 +27,11 @@ const LoadingSpinner = ({ variant = 'inline', size, color = 'var(--accent-text)'
 
   const spinnerSize = getSize();
 
-  // For page variant, wrap in centered container
+  // Page loads use the shared skeleton so every page loads the same way
   if (variant === 'page') {
+    return <PageLoader />;
+  }
+  if (variant === 'legacy-page') {
     return (
       <Box
         display="flex"

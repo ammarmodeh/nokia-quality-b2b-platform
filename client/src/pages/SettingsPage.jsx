@@ -244,7 +244,7 @@ const SettingsPage = () => {
           {isWorkspaceTab && !isAdmin && (
             <Note>Only admins can change workspace settings. You can view the current values below.</Note>
           )}
-          {isWorkspaceTab && loading && <PageLoader minHeight={240} />}
+          {isWorkspaceTab && loading && <PageLoader minHeight={240} variant="table" rows={5} />}
 
           <Box component="form" onSubmit={handleSubmit(submitHandler)} sx={{ display: isWorkspaceTab && !loading ? "flex" : "none", flexDirection: "column", gap: 2, mt: isAdmin ? 0 : 2 }}>
             {tab === "general" && (

@@ -8,6 +8,7 @@ const MainStats = lazy(() => import("./pages/MainStats"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 import appTheme from "./theme/appTheme";
 import PageLoader from "./components/ui/PageLoader";
+import TopLoadingBar, { RouteActivity } from "./components/ui/TopLoadingBar";
 
 // Pages outside the redesign scope stay in the codebase but are not shown.
 // Flip to true to make them reachable again.
@@ -104,7 +105,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 };
 
 // Suspense Fallback
-const Loading = () => <PageLoader fullScreen />;
+const Loading = () => <RouteActivity><PageLoader fullScreen /></RouteActivity>;
 
 // Wraps an out-of-scope page: rendered only when SHOW_OUT_OF_SCOPE_PAGES is on.
 const Hidden = ({ children }) => (SHOW_OUT_OF_SCOPE_PAGES ? children : <Navigate to="/dashboard" replace />);
@@ -240,6 +241,7 @@ const App = () => {
 
   return (
     <ThemeProvider theme={appTheme} defaultMode="light" disableTransitionOnChange>
+      <TopLoadingBar />
       <Suspense fallback={<Loading />}>
         <RouterProvider router={router} />
       </Suspense>

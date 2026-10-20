@@ -1035,7 +1035,7 @@ const FieldTeamForm = () => {
           />
         )}
         {loading && !teams.length ? (
-          <PageLoader />
+          <PageLoader variant="table" />
         ) : (
           <TeamsTable
             rows={visibleTeams}

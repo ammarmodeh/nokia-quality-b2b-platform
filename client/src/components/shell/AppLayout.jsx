@@ -8,6 +8,7 @@ import AppSidebar from "./AppSidebar";
 import TopBar from "./TopBar";
 import CommandPalette from "./CommandPalette";
 import PageLoader from "../ui/PageLoader";
+import { RouteActivity } from "../ui/TopLoadingBar";
 import api from "../../api/api";
 
 const CalendarDialog = lazy(() => import("../calendar/GlobalCalendarDialog"));
@@ -64,9 +65,10 @@ const AppLayout = () => {
       setSnagOpen(false);
       window.dispatchEvent(new CustomEvent("cin-refresh"));
       window.dispatchEvent(new CustomEvent("dashboard-refresh"));
+      return true;
     } catch (error) {
-      console.error("Error submitting issue:", error);
-      toast.error("Failed to report snag");
+      toast.error(`Couldn’t report the snag: ${error?.response?.data?.message || "check your connection and try again"}. Your entries are kept.`);
+      return false;
     }
   };
 
@@ -93,7 +95,7 @@ const AppLayout = () => {
         />
         <Box component="main" id="main" sx={{ flex: 1, minWidth: 0, px: { xs: 2, md: 3, xl: 4 }, py: { xs: 2, md: 3 } }}>
           <Box sx={{ maxWidth: 1600, mx: "auto", width: "100%" }}>
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<RouteActivity><PageLoader /></RouteActivity>}>
               <Outlet key={paintKey} />
             </Suspense>
           </Box>

@@ -311,7 +311,7 @@ const TasksPage = () => {
       )}
 
       {loading ? (
-        <PageLoader />
+        <PageLoader variant="table" />
       ) : f.view === "table" ? (
         <TaskTable tasks={filtered} selection={selection} onSelectionChange={setSelection} onOpen={(t) => setOpenId(t._id)} />
       ) : f.view === "calendar" ? (
