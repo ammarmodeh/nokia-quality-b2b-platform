@@ -1,44 +1,33 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
-  Typography,
-  Paper,
+  Box,
+  Button,
+  InputAdornment,
+  MenuItem,
+  Select,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Box,
-  Select,
-  MenuItem,
-  FormControl,
-  Button,
-  CircularProgress,
   Tabs,
-  Tab,
-  Chip,
-  Stack,
   TextField,
-  InputAdornment
+  Tooltip,
+  Typography
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  Search as SearchIcon,
-  Groups as GroupsIcon,
-  CheckCircle as CheckCircleIcon
-} from '@mui/icons-material';
+import { Search as SearchIcon } from '@mui/icons-material';
 import {
   startOfYear,
   endOfYear,
   eachWeekOfInterval
 } from 'date-fns';
+import { toast } from 'sonner';
 
 import api from '../api/api';
 import { getCustomWeekNumber } from '../utils/helpers';
+import { AppDialog, Badge, ConfirmDialog } from './ui';
 
 // Month 1=101, Month 2=102 ... Month 12=112
 const MONTH_WEEK_OFFSET = 100;
@@ -58,85 +47,139 @@ const MONTHS = [
   { month: 12, name: 'December',  short: 'Dec' },
 ];
 
+const fmt = (n) => (Number(n) || 0).toLocaleString();
+
+// ─── Shared bits ────────────────────────────────────────────────────────────
+// Compact input for table cells; `tone` colours the value (success / danger).
+const cellInputSx = {
+  width: '100%',
+  height: 30,
+  px: 1,
+  border: '1px solid var(--border)',
+  borderRadius: '6px',
+  backgroundColor: 'var(--surface)',
+  color: 'var(--text)',
+  font: 'inherit',
+  fontSize: 13,
+  fontVariantNumeric: 'tabular-nums',
+  outline: 'none',
+  transition: 'border-color .15s, box-shadow .15s',
+  '&::placeholder': { color: 'var(--text-muted)' },
+  '&:hover': { borderColor: 'var(--border-strong)' },
+  '&:focus': { borderColor: 'var(--accent)', boxShadow: '0 0 0 3px var(--accent-ring)' },
+  MozAppearance: 'textfield',
+  '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+};
+
+const CellInput = ({ tone, sx, ...props }) => (
+  <Box
+    component="input"
+    sx={{ ...cellInputSx, ...(tone && { color: `var(--${tone})`, fontWeight: 600 }), ...sx }}
+    {...props}
+  />
+);
+
+const numCell = { fontVariantNumeric: 'tabular-nums' };
+const headSx = { '& th': { whiteSpace: 'nowrap' } };
+
+// Month picker with a small count under each month.
+const MonthStrip = ({ value, onChange, meta, label }) => (
+  <Box
+    role="radiogroup"
+    aria-label={label}
+    sx={{
+      display: 'flex', gap: '2px', p: '2px', borderRadius: '8px', overflowX: 'auto',
+      backgroundColor: 'var(--surface-active)', border: '1px solid var(--border)'
+    }}
+  >
+    {MONTHS.map(m => {
+      const active = m.month === value;
+      const { text, hint, filled } = meta(m.month);
+      const btn = (
+        <Box
+          key={m.month}
+          component="button"
+          type="button"
+          role="radio"
+          aria-checked={active}
+          onClick={() => onChange(m.month)}
+          sx={{
+            flex: '1 0 64px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px',
+            py: 0.625, border: 0, borderRadius: '6px', cursor: 'pointer', font: 'inherit',
+            color: active ? 'var(--text)' : 'var(--text-secondary)',
+            backgroundColor: active ? 'var(--surface)' : 'transparent',
+            boxShadow: active ? 'var(--shadow-xs)' : 'none',
+            '&:hover': { color: 'var(--text)' },
+            '&:focus-visible': { outline: '2px solid var(--focus-ring)', outlineOffset: 1 },
+          }}
+        >
+          <Box component="span" sx={{ fontSize: 12.5, fontWeight: 500 }}>{m.short}</Box>
+          <Box component="span" sx={{ fontSize: 11, ...numCell, color: filled ? 'var(--success)' : 'var(--text-muted)' }}>{text}</Box>
+        </Box>
+      );
+      return hint ? <Tooltip key={m.month} title={hint}>{btn}</Tooltip> : btn;
+    })}
+  </Box>
+);
+
+const Intro = ({ children }) => (
+  <Typography sx={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, mb: 2, maxWidth: 760 }}>
+    {children}
+  </Typography>
+);
+
+const Toolbar = ({ title, caption, children }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, my: 2 }}>
+    <Box sx={{ minWidth: 0 }}>
+      <Typography sx={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{title}</Typography>
+      {caption && <Typography sx={{ fontSize: 12, color: 'var(--text-muted)' }}>{caption}</Typography>}
+    </Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>{children}</Box>
+  </Box>
+);
+
+const SearchField = ({ value, onChange, placeholder, width = 200 }) => (
+  <TextField
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    placeholder={placeholder}
+    sx={{ width }}
+    slotProps={{
+      input: { startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18 }} /></InputAdornment> },
+      htmlInput: { 'aria-label': placeholder }
+    }}
+  />
+);
+
+const NotSet = () => <Typography component="span" sx={{ fontSize: 12, color: 'var(--text-muted)' }}>Not set</Typography>;
+
 // ─── Memoized Week Row ──────────────────────────────────────────────────────
 const WeekRow = React.memo(({ row, index, onChange }) => {
-  const inputStyle = {
-    width: '100%',
-    background: 'transparent',
-    border: 'none',
-    color: 'var(--text)',
-    textAlign: 'center',
-    fontSize: '0.875rem',
-    outline: 'none',
-    padding: '4px 0',
-    borderBottom: '1px solid transparent'
-  };
-
-  const getPromoterColor = (val) => {
-    if (val === '') return '#fff';
-    return parseFloat(val) >= 75 ? '#16A34A' : '#fff';
-  };
-
-  const getDetractorColor = (val) => {
-    if (val === '') return '#fff';
-    const num = parseFloat(val);
-    return num <= 9 ? '#16A34A' : '#DC2626';
-  };
-
+  const promoterTone = row.promoters === '' ? undefined : parseFloat(row.promoters) >= 75 ? 'success' : undefined;
+  const detractorTone = row.detractors === '' ? undefined : parseFloat(row.detractors) <= 9 ? 'success' : 'danger';
   const handleInputChange = (field, value) => onChange(index, field, value);
 
   return (
-    <TableRow hover sx={{ '&:hover': { backgroundColor: 'var(--surface-hover)' } }}>
-      <TableCell sx={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', py: 1, px: 2 }}>
-        week {row.weekNum}
+    <TableRow hover>
+      <TableCell sx={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Week {row.weekNum}</TableCell>
+      <TableCell>
+        <CellInput tone={promoterTone} value={row.promoters} onChange={(e) => handleInputChange('promoters', e.target.value)} type="number" placeholder="%" aria-label={`Week ${row.weekNum} promoters %`} />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
-        <input
-          style={{ ...inputStyle, color: getPromoterColor(row.promoters), fontWeight: parseFloat(row.promoters) >= 75 ? 'bold' : 'normal' }}
-          value={row.promoters}
-          onChange={(e) => handleInputChange('promoters', e.target.value)}
-          type="number"
-          placeholder="%"
-        />
+      <TableCell>
+        <CellInput tone={detractorTone} value={row.detractors} onChange={(e) => handleInputChange('detractors', e.target.value)} type="number" placeholder="%" aria-label={`Week ${row.weekNum} detractors %`} />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
-        <input
-          style={{ ...inputStyle, color: getDetractorColor(row.detractors), fontWeight: parseFloat(row.detractors) > 9 ? 'bold' : 'normal' }}
-          value={row.detractors}
-          onChange={(e) => handleInputChange('detractors', e.target.value)}
-          type="number"
-          placeholder="%"
-        />
+      <TableCell align="right" sx={{ ...numCell, fontWeight: 600 }}>{row.nps}</TableCell>
+      <TableCell>
+        <CellInput value={row.itnRelated} onChange={(e) => handleInputChange('itnRelated', e.target.value)} type="number" aria-label={`Week ${row.weekNum} ITN related`} />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', color: 'var(--text)', textAlign: 'center', py: 1 }}>
-        {row.nps}
+      <TableCell align="right" sx={{ ...numCell, color: 'var(--text-secondary)' }}>
+        {row.itnRelatedPercent !== '' ? `${row.itnRelatedPercent}%` : ''}
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
-        <input
-          style={inputStyle}
-          value={row.itnRelated}
-          onChange={(e) => handleInputChange('itnRelated', e.target.value)}
-          type="number"
-        />
+      <TableCell>
+        <CellInput value={row.sampleSize} onChange={(e) => handleInputChange('sampleSize', e.target.value)} type="number" aria-label={`Week ${row.weekNum} sample size`} />
       </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', color: 'var(--text)', textAlign: 'center', py: 1 }}>
-        {row.itnRelatedPercent ? `${row.itnRelatedPercent}%` : ''}
-      </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
-        <input
-          style={inputStyle}
-          value={row.sampleSize}
-          onChange={(e) => handleInputChange('sampleSize', e.target.value)}
-          type="number"
-        />
-      </TableCell>
-      <TableCell sx={{ borderBottom: '1px solid var(--border)', p: 0 }}>
-        <input
-          style={{ ...inputStyle, textAlign: 'left', paddingLeft: '8px' }}
-          value={row.note}
-          onChange={(e) => handleInputChange('note', e.target.value)}
-          type="text"
-        />
+      <TableCell>
+        <CellInput value={row.note} onChange={(e) => handleInputChange('note', e.target.value)} type="text" aria-label={`Week ${row.weekNum} note`} sx={{ fontVariantNumeric: 'normal' }} />
       </TableCell>
     </TableRow>
   );
@@ -152,6 +195,7 @@ const WeekRow = React.memo(({ row, index, onChange }) => {
     p.note === n.note
   );
 });
+WeekRow.displayName = 'WeekRow';
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 const SamplesTokenDialog = ({ open, onClose }) => {
@@ -177,6 +221,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [confirm, setConfirm] = useState(null); // { title, description, confirmLabel, danger, onConfirm }
+  const [fillValue, setFillValue] = useState('');
 
   // Fetch settings
   useEffect(() => {
@@ -406,17 +452,24 @@ const SamplesTokenDialog = ({ open, onClose }) => {
 
   // Quick clear all days in active month
   const handleClearMonthDailyOnline = () => {
-    if (window.confirm(`Clear all daily entries for ${MONTHS[selectedOnlineMonth - 1].name}?`)) {
-      const numDays = new Date(selectedYear, selectedOnlineMonth, 0).getDate();
-      setDailyOnlineData(prev => {
-        const next = { ...prev };
-        for (let d = 1; d <= numDays; d++) {
-          const dateStr = `${selectedYear}-${String(selectedOnlineMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          delete next[dateStr];
-        }
-        return next;
-      });
-    }
+    const monthName = MONTHS[selectedOnlineMonth - 1].name;
+    setConfirm({
+      title: `Clear ${monthName}?`,
+      description: `Removes every daily online, DVOC and note entry for ${monthName} ${selectedYear}. Nothing is saved until you click Save.`,
+      confirmLabel: 'Clear month',
+      danger: true,
+      onConfirm: () => {
+        const numDays = new Date(selectedYear, selectedOnlineMonth, 0).getDate();
+        setDailyOnlineData(prev => {
+          const next = { ...prev };
+          for (let d = 1; d <= numDays; d++) {
+            const dateStr = `${selectedYear}-${String(selectedOnlineMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            delete next[dateStr];
+          }
+          return next;
+        });
+      }
+    });
   };
 
   // ── Grand total (sum of all monthly totals entered) ─────────────────────
@@ -430,20 +483,25 @@ const SamplesTokenDialog = ({ open, onClose }) => {
     const julMap = teamMonthlyData[7] || {};
     const julCount = Object.keys(julMap).filter(k => julMap[k] !== '' && julMap[k] !== null && julMap[k] !== undefined).length;
     if (julCount === 0) {
-      alert('No team samples found in July (Month 7) to transfer.');
+      toast.info('July has no team samples to move.');
       return;
     }
 
-    if (window.confirm(`Are you sure you want to transfer all ${julCount} team sample entries from July to August? (July entries will be cleared and August will be populated)`)) {
-      setTeamMonthlyData(prev => {
-        const next = { ...prev };
-        next[8] = { ...(next[8] || {}), ...julMap };
-        next[7] = {};
-        return next;
-      });
-      setSelectedTeamMonth(8);
-      alert('Successfully transferred July team samples to August! Please click the green "Save" button to save these changes to the database.');
-    }
+    setConfirm({
+      title: 'Move July samples to August?',
+      description: `Moves ${julCount} team sample ${julCount === 1 ? 'entry' : 'entries'} from July into August and clears July. Nothing is saved until you click Save.`,
+      confirmLabel: 'Move to August',
+      onConfirm: () => {
+        setTeamMonthlyData(prev => {
+          const next = { ...prev };
+          next[8] = { ...(next[8] || {}), ...julMap };
+          next[7] = {};
+          return next;
+        });
+        setSelectedTeamMonth(8);
+        toast.success('July samples moved to August. Click Save to keep the change.');
+      }
+    });
   }, [teamMonthlyData]);
 
   // ── Team monthly totals and grand total ─────────────────────────────────
@@ -464,7 +522,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   const filteredFieldTeams = useMemo(() => {
     if (!teamSearchQuery.trim()) return fieldTeams;
     const q = teamSearchQuery.toLowerCase();
-    return fieldTeams.filter(t => (t.teamName || '').toLowerCase().includes(q));
+    return fieldTeams.filter(t => `${t.teamName || ''} ${t.teamCode || ''}`.toLowerCase().includes(q));
   }, [fieldTeams, teamSearchQuery]);
 
   // ── Daily Online & Samples Month Totals and Grand Total ─────────────────
@@ -652,888 +710,393 @@ const SamplesTokenDialog = ({ open, onClose }) => {
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (error) {
       console.error('Error saving samples:', error);
-      alert('Failed to save. Please try again.');
+      toast.error('Couldn’t save the samples. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{
-        sx: { minHeight: '80vh' }
-      }}
-    >
-      {/* ── Header ── */}
-      <DialogTitle component="div" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="h6" component="div">Samples Token</Typography>
-          <FormControl size="small" variant="standard" sx={{ minWidth: 80 }}>
-            <Select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              sx={{
-                color: 'var(--text)',
-                '.MuiSelect-icon': { color: 'var(--text)' },
-                '&:before': { borderBottomColor: 'var(--text-secondary)' },
-                '&:after':  { borderBottomColor: 'var(--accent)' }
-              }}
-            >
-              {years.map(year => (
-                <MenuItem key={year} value={year}>{year}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Button
-            variant="contained"
-            onClick={handleManualSave}
-            disabled={saving}
-            sx={{ '&:hover': { backgroundColor: saveSuccess ? '#45a049' : '#1565c0' }, minWidth: '100px' }}
-          >
-            {saving ? <CircularProgress size={20} sx={{ color: 'var(--text)' }} /> : saveSuccess ? '✓ Saved' : 'Save'}
-          </Button>
-          <IconButton onClick={onClose} sx={{ color: 'var(--text-muted)' }}>
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </DialogTitle>
+  const selectedOnlineMonthName = MONTHS[selectedOnlineMonth - 1]?.name;
+  const selectedTeamMonthName = MONTHS[selectedTeamMonth - 1]?.name;
+  const teamsWithSamples = Object.keys(teamMonthlyData[selectedTeamMonth] || {}).length;
 
-      {/* ── Tabs ── */}
-      <Box sx={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          TabIndicatorProps={{ style: { backgroundColor: 'var(--accent)' } }}
+  const footerSummary = [
+    <>Weekly sample size <strong>{fmt(weeksData.reduce((s, r) => s + (parseFloat(r.sampleSize) || 0), 0))}</strong></>,
+    <>Year total <strong>{fmt(grandMonthlyTotal)}</strong> samples</>,
+    <>Year total <strong>{fmt(grandTeamSamplesTotal)}</strong> team samples</>,
+    <>Year total <strong>{fmt(grandDailySamplesTokenTotal)}</strong> DVOC · <strong>{fmt(grandDailyOnlineTotal)}</strong> online</>
+  ][tab];
+
+  const tabLabel = (text, ...badges) => (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+      {text}
+      {badges.filter(b => b && b.value > 0).map(b => (
+        <Badge key={b.tone} tone={b.tone} sx={{ height: 18, fontSize: 11, px: 0.625, ...numCell }}>{b.label || fmt(b.value)}</Badge>
+      ))}
+    </Box>
+  );
+
+  return (
+    <>
+      <AppDialog
+        open={open}
+        onClose={onClose}
+        size="xl"
+        title="Survey samples"
+        description="Sample sizes behind NPS: weekly results, official monthly totals, per-team tokens and daily DVOC / online counts."
+        bodySx={{ p: 0, display: 'flex', flexDirection: 'column', minHeight: { sm: 'min(720px, calc(100vh - 210px))' } }}
+        secondary={{ label: 'Close' }}
+        primary={{ label: saveSuccess ? 'Saved' : 'Save', loadingLabel: 'Saving…', onClick: handleManualSave, loading: saving }}
+        extraActions={
+          <Typography sx={{ fontSize: 13, color: 'var(--text-secondary)', ...numCell, '& strong': { color: 'var(--text)', fontWeight: 600 } }}>
+            {footerSummary}
+          </Typography>
+        }
+      >
+        {/* ── Tabs + year ── */}
+        <Box
           sx={{
-            '& .MuiTab-root': { color: 'var(--text-secondary)', textTransform: 'none', fontWeight: 600 },
-            '& .Mui-selected': { color: 'var(--text)' }
+            position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'center', gap: 2,
+            px: 2.5, backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)'
           }}
         >
-          <Tab label="📊 Weekly Data" />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                📅 Monthly Totals
-                {grandMonthlyTotal > 0 && (
-                  <Chip
-                    label={grandMonthlyTotal.toLocaleString()}
-                    size="small"
-                    sx={{ backgroundColor: '#6C47FF33', color: 'var(--accent-text)', fontWeight: '600', height: 18, fontSize: '0.65rem' }}
-                  />
-                )}
-              </Box>
-            }
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                👥 Team Monthly Samples
-                {grandTeamSamplesTotal > 0 && (
-                  <Chip
-                    label={grandTeamSamplesTotal.toLocaleString()}
-                    size="small"
-                    sx={{ backgroundColor: '#16A34A33', color: '#16A34A', fontWeight: '600', height: 18, fontSize: '0.65rem' }}
-                  />
-                )}
-              </Box>
-            }
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                📅 Daily DVOC & Online Samples
-                {grandDailySamplesTokenTotal > 0 && (
-                  <Chip
-                    label={`${grandDailySamplesTokenTotal.toLocaleString()} DVOC`}
-                    size="small"
-                    sx={{ backgroundColor: '#16A34A33', color: '#34d399', fontWeight: '600', height: 18, fontSize: '0.65rem' }}
-                  />
-                )}
-                {grandDailyOnlineTotal > 0 && (
-                  <Chip
-                    label={`${grandDailyOnlineTotal.toLocaleString()} Online`}
-                    size="small"
-                    sx={{ backgroundColor: '#2563EB33', color: '#38bdf8', fontWeight: '600', height: 18, fontSize: '0.65rem' }}
-                  />
-                )}
-              </Box>
-            }
-          />
-        </Tabs>
-      </Box>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            variant="scrollable"
+            scrollButtons={false}
+            sx={{ flex: 1, minWidth: 0, borderBottom: 0 }}
+          >
+            <Tab label="Weekly results" />
+            <Tab label={tabLabel('Monthly totals', { tone: 'accent', value: grandMonthlyTotal })} />
+            <Tab label={tabLabel('Team samples', { tone: 'success', value: grandTeamSamplesTotal })} />
+            <Tab
+              label={tabLabel(
+                'Daily DVOC & online',
+                { tone: 'success', value: grandDailySamplesTokenTotal, label: `${fmt(grandDailySamplesTokenTotal)} DVOC` },
+                { tone: 'info', value: grandDailyOnlineTotal, label: `${fmt(grandDailyOnlineTotal)} online` }
+              )}
+            />
+          </Tabs>
+          <Select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            inputProps={{ 'aria-label': 'Year' }}
+            sx={{ minWidth: 96, flexShrink: 0 }}
+          >
+            {years.map(year => (
+              <MenuItem key={year} value={year}>{year}</MenuItem>
+            ))}
+          </Select>
+        </Box>
 
-      <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
+        <Box sx={{ flex: 1, px: 2.5, py: 2 }}>
+          {/* ══ TAB 0: Weekly results ══════════════════════════════════════ */}
+          {tab === 0 && (
+            <>
+              <Intro>
+                Weekly survey results. NPS is promoters minus detractors; ITN % is ITN-related over sample size.
+                Targets: promoters ≥ 75%, detractors ≤ 9%.
+              </Intro>
+              <TableContainer>
+                <Table size="small" sx={{ minWidth: 880 }}>
+                  <TableHead sx={headSx}>
+                    <TableRow>
+                      <TableCell sx={{ width: 90 }}>Week</TableCell>
+                      <TableCell sx={{ width: 120 }}>Promoters % <Box component="span" sx={{ color: 'var(--text-muted)' }}>≥ 75</Box></TableCell>
+                      <TableCell sx={{ width: 120 }}>Detractors % <Box component="span" sx={{ color: 'var(--text-muted)' }}>≤ 9</Box></TableCell>
+                      <TableCell align="right" sx={{ width: 70 }}>NPS</TableCell>
+                      <TableCell sx={{ width: 110 }}>ITN related</TableCell>
+                      <TableCell align="right" sx={{ width: 80 }}>ITN %</TableCell>
+                      <TableCell sx={{ width: 110 }}>Sample size</TableCell>
+                      <TableCell>Note</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {weeksData.map((row, index) => (
+                      <WeekRow
+                        key={row.weekKey}
+                        row={row}
+                        index={index}
+                        onChange={handleCellChange}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
 
-        {/* ══ TAB 0: Weekly Data ══════════════════════════════════════════ */}
-        {tab === 0 && (
-          <TableContainer component={Paper} sx={{ backgroundColor: 'transparent', backgroundImage: 'none', boxShadow: 'none' }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ backgroundColor: 'var(--surface)', color: 'var(--text)', fontWeight: '600' }}>Week#</TableCell>
-                  <TableCell sx={{ backgroundColor: '#90EE90', color: '#000', fontWeight: '600' }}>Promoters (%) (&ge;75%)</TableCell>
-                  <TableCell sx={{ backgroundColor: '#FF6347', color: '#fff', fontWeight: '600' }}>Detractors (%) (&le;9%)</TableCell>
-                  <TableCell sx={{ backgroundColor: '#FFFFE0', color: '#000', fontWeight: '600' }}>NPS</TableCell>
-                  <TableCell sx={{ backgroundColor: '#FFFFE0', color: '#000', fontWeight: '600' }}>ITN Related</TableCell>
-                  <TableCell sx={{ backgroundColor: '#FFFFE0', color: '#000', fontWeight: '600' }}>ITN Related%</TableCell>
-                  <TableCell sx={{ backgroundColor: '#D3D3D3', color: '#000', fontWeight: '600' }}>Sample Size</TableCell>
-                  <TableCell sx={{ backgroundColor: '#FFFFE0', color: '#000', fontWeight: '600', width: '30%' }}>Note</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {weeksData.map((row, index) => (
-                  <WeekRow
-                    key={row.weekKey}
-                    row={row}
-                    index={index}
-                    onChange={handleCellChange}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-
-        {/* ══ TAB 1: Monthly Totals ════════════════════════════════════════ */}
-        {tab === 1 && (
-          <Box sx={{ p: 3 }}>
-            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2, lineHeight: 1.7 }}>
-              Enter the <strong style={{ color: 'var(--text)' }}>official monthly total samples</strong> for each month.
-              When NPS Performance is filtered by <strong style={{ color: 'var(--accent-text)' }}>Month</strong>, it will use these values
-              instead of summing weekly sample sizes.
-            </Typography>
-
-            <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 160 }}>Month</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                      Total Monthly Samples
-                    </TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 120, textAlign: 'center' }}>
-                      Status
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {monthlyTotals.map((m, idx) => {
-                    const val = parseFloat(m.totalSamples) || 0;
-                    const hasData = m.totalSamples !== '';
-                    return (
-                      <TableRow
-                        key={m.month}
-                        hover
-                        sx={{
-                          '&:hover': { backgroundColor: 'var(--surface-hover)' },
-                          backgroundColor: idx % 2 === 0 ? 'var(--border)' : '#2a2a2a'
-                        }}
-                      >
-                        <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 600, py: 1.5, fontSize: '0.9rem' }}>
-                          {m.name}
-                        </TableCell>
-                        <TableCell sx={{ py: 1 }}>
-                          <input
-                            type="number"
-                            min="0"
-                            value={m.totalSamples}
-                            onChange={(e) => handleMonthlyChange(idx, e.target.value)}
-                            placeholder="Enter total samples…"
-                            style={{
-                              background: 'var(--surface)',
-                              border: `1px solid ${hasData ? 'var(--accent)' : 'var(--border)'}`,
-                              borderRadius: 6,
-                              color: hasData ? '#fff' : 'var(--text-muted)',
-                              fontSize: '0.9rem',
-                              fontWeight: hasData ? 600 : 400,
-                              padding: '6px 12px',
-                              outline: 'none',
-                              width: '100%',
-                              maxWidth: 240,
-                              transition: 'border-color 0.2s'
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ textAlign: 'center', py: 1 }}>
-                          {hasData ? (
-                            <Chip
-                              label={`${val.toLocaleString()} samples`}
-                              size="small"
-                              sx={{
-                                backgroundColor: 'rgba(22, 163, 74, 0.15)',
-                                color: '#16A34A',
-                                fontWeight: '600',
-                                border: '1px solid #16A34A',
-                                fontSize: '0.72rem'
-                              }}
+          {/* ══ TAB 1: Monthly totals ══════════════════════════════════════ */}
+          {tab === 1 && (
+            <>
+              <Intro>
+                The official total samples for each month. When NPS performance is viewed by month, these totals are used
+                instead of adding up the weekly sample sizes.
+              </Intro>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead sx={headSx}>
+                    <TableRow>
+                      <TableCell sx={{ width: 180 }}>Month</TableCell>
+                      <TableCell>Total samples</TableCell>
+                      <TableCell align="right" sx={{ width: 160 }}>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {monthlyTotals.map((m, idx) => {
+                      const hasData = m.totalSamples !== '';
+                      return (
+                        <TableRow key={m.month} hover>
+                          <TableCell sx={{ fontWeight: 500 }}>{m.name}</TableCell>
+                          <TableCell>
+                            <CellInput
+                              type="number"
+                              min="0"
+                              value={m.totalSamples}
+                              onChange={(e) => handleMonthlyChange(idx, e.target.value)}
+                              placeholder="Total samples"
+                              aria-label={`${m.name} total samples`}
+                              sx={{ maxWidth: 220 }}
                             />
-                          ) : (
-                            <Typography variant="caption" sx={{ color: 'var(--border-strong)' }}>Not set</Typography>
-                          )}
+                          </TableCell>
+                          <TableCell align="right">
+                            {hasData ? <Badge tone="success" sx={numCell}>{fmt(m.totalSamples)} samples</Badge> : <NotSet />}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+
+          {/* ══ TAB 2: Team samples ════════════════════════════════════════ */}
+          {tab === 2 && (
+            <>
+              <Intro>
+                The sample tokens each team received per month. They feed the NPS analysis & feedback export, where
+                non-accountable detractors and passives are deducted to give the final samples, promoters and NPS.
+              </Intro>
+
+              <MonthStrip
+                label="Month"
+                value={selectedTeamMonth}
+                onChange={setSelectedTeamMonth}
+                meta={(m) => {
+                  const total = teamMonthTotals[m] || 0;
+                  return { text: total > 0 ? fmt(total) : '—', filled: total > 0 };
+                }}
+              />
+
+              <Toolbar
+                title={`${selectedTeamMonthName} ${selectedYear}`}
+                caption={`${filteredFieldTeams.length} teams · ${teamsWithSamples} with samples`}
+              >
+                <SearchField value={teamSearchQuery} onChange={setTeamSearchQuery} placeholder="Search teams" />
+                <Button variant="outlined" onClick={handleTransferJulToAug}>Move July to August</Button>
+                <Badge tone="success" sx={{ height: 32, px: 1.25, fontSize: 13, ...numCell }}>
+                  {fmt(teamMonthTotals[selectedTeamMonth])} samples this month
+                </Badge>
+              </Toolbar>
+
+              <TableContainer>
+                <Table size="small" sx={{ minWidth: 720 }}>
+                  <TableHead sx={headSx}>
+                    <TableRow>
+                      <TableCell sx={{ width: 56 }}>#</TableCell>
+                      <TableCell>Team</TableCell>
+                      <TableCell sx={{ width: 140 }}>Code</TableCell>
+                      <TableCell sx={{ width: 160 }}>Company</TableCell>
+                      <TableCell sx={{ width: 170 }}>Sample size</TableCell>
+                      <TableCell align="right" sx={{ width: 150 }}>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredFieldTeams.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'var(--text-muted)' }}>
+                          {fieldTeams.length === 0 ? 'No field teams yet.' : 'No team matches your search.'}
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {/* Grand Total Banner */}
-            {grandMonthlyTotal > 0 && (
-              <Stack
-                direction="row"
-                justifyContent="flex-end"
-                alignItems="center"
-                spacing={1.5}
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  borderRadius: 2,
-                  backgroundColor: 'rgba(108, 71, 255, 0.1)',
-                  border: '1px solid rgba(108, 71, 255, 0.3)'
-                }}
-              >
-                <Typography variant="body2" sx={{ color: 'var(--text-secondary)' }}>Year Total (all months entered):</Typography>
-                <Typography variant="h6" sx={{ color: 'var(--accent-text)', fontWeight: 600 }}>
-                  {grandMonthlyTotal.toLocaleString()} samples
-                </Typography>
-              </Stack>
-            )}
-          </Box>
-        )}
-
-        {/* ══ TAB 2: Team Monthly Samples ═════════════════════════════════ */}
-        {tab === 2 && (
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ mb: 2.5 }}>
-              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.5, lineHeight: 1.7 }}>
-                Enter the <strong style={{ color: 'var(--text)' }}>total sample token for each team</strong> per month.
-                These team tokens are directly reflected in the <strong style={{ color: '#16A34A' }}>NPS Analysis and Feedback</strong> Excel export,
-                where non-accountable detractors and neutrals will be deducted from the sample tokens to compute final total samples, promoters, and NPS.
-              </Typography>
-
-              {/* Month Pills Navigation */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  overflowX: 'auto',
-                  pb: 1,
-                  pt: 0.5,
-                  '&::-webkit-scrollbar': { height: 6 },
-                  '&::-webkit-scrollbar-thumb': { backgroundColor: 'var(--surface-hover)', borderRadius: "10px" }
-                }}
-              >
-                {MONTHS.map(m => {
-                  const isSelected = selectedTeamMonth === m.month;
-                  const monthTotal = teamMonthTotals[m.month] || 0;
-                  return (
-                    <Button
-                      key={m.month}
-                      variant={isSelected ? 'contained' : 'outlined'}
-                      size="small"
-                      onClick={() => setSelectedTeamMonth(m.month)}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 1.8,
-                        py: 0.8,
-                        minWidth: 80,
-                        backgroundColor: isSelected ? '#6C47FF' : 'var(--border)',
-                        borderColor: isSelected ? '#6C47FF' : 'var(--border-strong)',
-                        color: isSelected ? '#fff' : '#ccc',
-                        '&:hover': {
-                          backgroundColor: isSelected ? '#6a58de' : 'var(--border)',
-                          borderColor: 'var(--accent)'
-                        },
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 0.2
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                        {m.short}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: '0.65rem',
-                          color: isSelected ? '#e0d8ff' : monthTotal > 0 ? '#16A34A' : 'var(--text-muted)'
-                        }}
-                      >
-                        {monthTotal > 0 ? `${monthTotal.toLocaleString()}s` : '0'}
-                      </Typography>
-                    </Button>
-                  );
-                })}
-              </Box>
-            </Box>
-
-            {/* Controls Bar: Active Month Title, Search, and Month KPI */}
-            <Paper
-              sx={{
-                p: 2,
-                mb: 2,
-                backgroundColor: 'var(--surface)',
-                borderRadius: 2,
-                border: '1px solid var(--border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: 2
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <GroupsIcon sx={{ color: 'var(--accent-text)', fontSize: 28 }} />
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'var(--text)' }}>
-                    {MONTHS.find(m => m.month === selectedTeamMonth)?.name} {selectedYear} — Team Samples
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                    {filteredFieldTeams.length} teams listed | {Object.keys(teamMonthlyData[selectedTeamMonth] || {}).length} configured
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleTransferJulToAug}
-                  sx={{
-                    color: '#D97706',
-                    borderColor: '#D97706',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    height: 36,
-                    px: 1.5,
-                    borderRadius: 2,
-                    '&:hover': {
-                      backgroundColor: 'rgba(217, 119, 6, 0.12)',
-                      borderColor: '#D97706'
-                    }
-                  }}
-                >
-                  🔄 Transfer Jul Samples → Aug
-                </Button>
-
-                <TextField
-                  size="small"
-                  placeholder="Search team…"
-                  value={teamSearchQuery}
-                  onChange={(e) => setTeamSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon sx={{ color: 'var(--text-muted)', fontSize: 18 }} />
-                      </InputAdornment>
-                    ),
-                    sx: {
-                      backgroundColor: 'var(--surface)',
-                      color: 'var(--text)',
-                      borderRadius: 2,
-                      fontSize: '0.85rem',
-                      '& fieldset': { borderColor: 'var(--border)' },
-                      '&:hover fieldset': { borderColor: 'var(--accent)' },
-                      '&.Mui-focused fieldset': { borderColor: 'var(--accent)' },
-                      height: 36
-                    }
-                  }}
-                  sx={{ width: 200 }}
-                />
-
-                <Chip
-                  icon={<CheckCircleIcon sx={{ fontSize: '16px !important', color: '#16A34A !important' }} />}
-                  label={`Month Total: ${(teamMonthTotals[selectedTeamMonth] || 0).toLocaleString()} samples`}
-                  sx={{
-                    backgroundColor: 'rgba(22, 163, 74, 0.12)',
-                    color: '#16A34A',
-                    fontWeight: 600,
-                    border: '1px solid rgba(22, 163, 74, 0.3)',
-                    height: 36,
-                    fontSize: '0.8rem'
-                  }}
-                />
-              </Box>
-            </Paper>
-
-            {/* Team Samples Table */}
-            <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: '60px' }}>#</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: '220px' }}>Team Name</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: '130px' }}>Team Code</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: '130px' }}>Company</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: '180px' }}>Monthly Sample Size</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: '120px', textAlign: 'center' }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredFieldTeams.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: 'var(--text-muted)' }}>
-                        {fieldTeams.length === 0 ? 'No field teams loaded from database.' : 'No teams found matching search.'}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredFieldTeams.map((team, idx) => {
-                      const curVal = (teamMonthlyData[selectedTeamMonth] || {})[team.teamName] ?? '';
-                      const hasVal = curVal !== '' && curVal !== null && curVal !== undefined;
-                      const numVal = parseFloat(curVal) || 0;
-                      return (
-                        <TableRow
-                          key={team._id || team.teamName || idx}
-                          hover
-                          sx={{
-                            '&:hover': { backgroundColor: 'var(--surface-hover)' },
-                            backgroundColor: idx % 2 === 0 ? 'var(--border)' : '#2a2a2a'
-                          }}
-                        >
-                          <TableCell sx={{ color: 'var(--text-muted)', fontWeight: 600, py: 1 }}>
-                            {idx + 1}
-                          </TableCell>
-                          <TableCell sx={{ color: 'var(--text)', fontWeight: 600, py: 1 }}>
-                            {team.teamName}
-                          </TableCell>
-                          <TableCell sx={{ color: 'var(--text-secondary)', py: 1, fontSize: '0.82rem' }}>
-                            {team.teamLeader || '—'}
-                          </TableCell>
-                          <TableCell sx={{ color: 'var(--text-secondary)', py: 1, fontSize: '0.82rem' }}>
-                            {team.subcontractor || '—'}
-                          </TableCell>
-                          <TableCell sx={{ py: 1 }}>
-                            <input
-                              type="number"
-                              min="0"
-                              value={curVal}
-                              onChange={(e) => handleTeamSampleChange(selectedTeamMonth, team.teamName, e.target.value)}
-                              placeholder="Sample size"
-                              style={{
-                                background: 'var(--surface)',
-                                border: `1px solid ${hasVal ? '#16A34A' : 'var(--border)'}`,
-                                borderRadius: "10px",
-                                color: hasVal ? '#fff' : 'var(--text-muted)',
-                                fontSize: '0.85rem',
-                                fontWeight: hasVal ? 700 : 400,
-                                padding: '4px 8px',
-                                outline: 'none',
-                                width: '140px',
-                                transition: 'border-color 0.2s'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ textAlign: 'center', py: 1 }}>
-                            {hasVal ? (
-                              <Chip
-                                label={`${numVal.toLocaleString()} samples`}
-                                size="small"
-                                sx={{
-                                  backgroundColor: 'rgba(22, 163, 74, 0.15)',
-                                  color: '#16A34A',
-                                  fontWeight: '600',
-                                  border: '1px solid #16A34A',
-                                  fontSize: '0.72rem'
-                                }}
+                    ) : (
+                      filteredFieldTeams.map((team, idx) => {
+                        const curVal = (teamMonthlyData[selectedTeamMonth] || {})[team.teamName] ?? '';
+                        const hasVal = curVal !== '' && curVal !== null && curVal !== undefined;
+                        return (
+                          <TableRow key={team._id || team.teamName || idx} hover>
+                            <TableCell sx={{ color: 'var(--text-muted)', ...numCell }}>{idx + 1}</TableCell>
+                            <TableCell sx={{ fontWeight: 500 }}>{team.teamName}</TableCell>
+                            <TableCell sx={{ color: 'var(--text-secondary)' }}>{team.teamCode || '—'}</TableCell>
+                            <TableCell sx={{ color: 'var(--text-secondary)' }}>{team.teamCompany || '—'}</TableCell>
+                            <TableCell>
+                              <CellInput
+                                type="number"
+                                min="0"
+                                value={curVal}
+                                onChange={(e) => handleTeamSampleChange(selectedTeamMonth, team.teamName, e.target.value)}
+                                placeholder="Sample size"
+                                aria-label={`${team.teamName} sample size`}
+                                sx={{ maxWidth: 140 }}
                               />
-                            ) : (
-                              <Typography variant="caption" sx={{ color: 'var(--border-strong)' }}>Not set</Typography>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                            </TableCell>
+                            <TableCell align="right">
+                              {hasVal ? <Badge tone="success" sx={numCell}>{fmt(curVal)} samples</Badge> : <NotSet />}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
 
-            {/* Grand Total Summary Footer */}
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{
-                mt: 2,
-                p: 2,
-                borderRadius: 2,
-                backgroundColor: 'rgba(22, 163, 74, 0.08)',
-                border: '1px solid rgba(22, 163, 74, 0.25)'
-              }}
-            >
-              <Box>
-                <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Year Grand Total Team Samples ({selectedYear}):</Typography>
-                <Typography variant="h6" sx={{ color: '#16A34A', fontWeight: 600 }}>
-                  {grandTeamSamplesTotal.toLocaleString()} team sample tokens across 12 months
-                </Typography>
-              </Box>
+          {/* ══ TAB 3: Daily DVOC & online ═════════════════════════════════ */}
+          {tab === 3 && (
+            <>
+              <Intro>
+                Daily online transaction volume and daily DVOC samples taken (token on PIS basis). The export uses them to
+                compare daily volume with sample size and DVOC cases.
+              </Intro>
 
-              <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                Tip: Click "Save" at the top right to persist all weekly, monthly, and team monthly tokens.
-              </Typography>
-            </Stack>
-          </Box>
-        )}
+              <MonthStrip
+                label="Month"
+                value={selectedOnlineMonth}
+                onChange={setSelectedOnlineMonth}
+                meta={(m) => {
+                  const dvoc = dailySamplesTokenMonthTotals[m] || 0;
+                  const online = dailyOnlineMonthTotals[m] || 0;
+                  return {
+                    text: dvoc > 0 ? fmt(dvoc) : '—',
+                    filled: dvoc > 0,
+                    hint: dvoc || online ? `${fmt(dvoc)} DVOC · ${fmt(online)} online` : null
+                  };
+                }}
+              />
 
-        {/* ══ TAB 3: Daily Online & Samples Data ═══════════════════════════ */}
-        {tab === 3 && (
-          <Box sx={{ p: 3 }}>
-            <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 2, lineHeight: 1.7 }}>
-              Enter the <strong style={{ color: '#38bdf8' }}>Daily Online transaction volume</strong> and the <strong style={{ color: '#16A34A' }}>Daily Samples Taken (Token on PIS Basis)</strong> for each day.
-              This allows correlating daily online volume with daily sample token size and actual DVOC incidents in the exported Excel sheet.
-            </Typography>
-
-            {/* Month Selection Bar */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2.5, p: 1.5, backgroundColor: 'var(--surface)', borderRadius: 2 }}>
-              {MONTHS.map(m => {
-                const isSelected = selectedOnlineMonth === m.month;
-                const mOnline = dailyOnlineMonthTotals[m.month] || 0;
-                const mSamples = dailySamplesTokenMonthTotals[m.month] || 0;
-                return (
-                  <Button
-                    key={m.month}
-                    variant={isSelected ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => setSelectedOnlineMonth(m.month)}
-                    sx={{
-                      textTransform: 'none',
-                      fontWeight: isSelected ? 700 : 500,
-                      backgroundColor: isSelected ? '#0891b2' : 'transparent',
-                      color: isSelected ? '#fff' : 'var(--text-secondary)',
-                      borderColor: isSelected ? '#0891b2' : 'var(--border-strong)',
-                      '&:hover': {
-                        backgroundColor: isSelected ? '#0e7490' : 'var(--border)',
-                        borderColor: '#0891b2'
-                      },
-                      minWidth: 85,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 0.25,
-                      alignItems: 'center',
-                      py: 0.75
-                    }}
-                  >
-                    <span style={{ fontWeight: '600' }}>{m.short}</span>
-                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
-                      {mOnline > 0 && (
-                        <Chip
-                          label={mOnline.toLocaleString()}
-                          size="small"
-                          sx={{
-                            height: 15,
-                            fontSize: '0.58rem',
-                            fontWeight: '600',
-                            backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(8,145,178,0.25)',
-                            color: isSelected ? '#fff' : '#38bdf8',
-                            pointerEvents: 'none'
-                          }}
-                        />
-                      )}
-                      {mSamples > 0 && (
-                        <Chip
-                          label={mSamples.toLocaleString()}
-                          size="small"
-                          sx={{
-                            height: 15,
-                            fontSize: '0.58rem',
-                            fontWeight: '600',
-                            backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(22, 163, 74,0.25)',
-                            color: isSelected ? '#fff' : '#34d399',
-                            pointerEvents: 'none'
-                          }}
-                        />
-                      )}
-                    </Stack>
-                  </Button>
-                );
-              })}
-            </Box>
-
-            {/* Quick Actions & Search */}
-            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Typography variant="subtitle1" sx={{ color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <span>{MONTHS[selectedOnlineMonth - 1]?.name} {selectedYear}</span>
-                </Typography>
-                <Chip
-                  label={`Online: ${(dailyOnlineMonthTotals[selectedOnlineMonth] || 0).toLocaleString()}`}
-                  size="small"
-                  sx={{ backgroundColor: '#0891b222', color: '#38bdf8', border: '1px solid #0891b2', fontWeight: 600 }}
-                />
-                <Chip
-                  label={`Samples Token: ${(dailySamplesTokenMonthTotals[selectedOnlineMonth] || 0).toLocaleString()}`}
-                  size="small"
-                  sx={{ backgroundColor: '#16A34A22', color: '#34d399', border: '1px solid #16A34A', fontWeight: 600 }}
-                />
-              </Box>
-
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Toolbar
+                title={`${selectedOnlineMonthName} ${selectedYear}`}
+                caption={`${fmt(dailySamplesTokenMonthTotals[selectedOnlineMonth])} DVOC samples · ${fmt(dailyOnlineMonthTotals[selectedOnlineMonth])} online`}
+              >
+                <SearchField value={onlineSearchQuery} onChange={setOnlineSearchQuery} placeholder="Filter days" width={160} />
                 <TextField
-                  size="small"
-                  placeholder="Filter day/date..."
-                  value={onlineSearchQuery}
-                  onChange={(e) => setOnlineSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon sx={{ color: 'var(--text-muted)', fontSize: 18 }} />
-                      </InputAdornment>
-                    ),
-                    sx: {
-                      backgroundColor: 'var(--surface)',
-                      color: 'var(--text)',
-                      fontSize: '0.85rem',
-                      height: 36,
-                      borderRadius: 1.5,
-                      '& fieldset': { borderColor: 'var(--border)' },
-                      '&:hover fieldset': { borderColor: '#0891b2' },
-                      '&.Mui-focused fieldset': { borderColor: '#0891b2' }
-                    }
-                  }}
-                  sx={{ width: 160 }}
+                  type="number"
+                  value={fillValue}
+                  onChange={(e) => setFillValue(e.target.value)}
+                  placeholder="Value"
+                  sx={{ width: 96 }}
+                  slotProps={{ htmlInput: { 'aria-label': 'Value to fill every day', min: 0 } }}
                 />
+                <Tooltip title={`Set online volume for every day in ${selectedOnlineMonthName}`}>
+                  <span>
+                    <Button variant="outlined" disabled={fillValue === ''} onClick={() => handleFillMonthDailyOnline(fillValue.trim())}>Fill online</Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title={`Set DVOC samples for every day in ${selectedOnlineMonthName}`}>
+                  <span>
+                    <Button variant="outlined" disabled={fillValue === ''} onClick={() => handleFillMonthDailySamplesToken(fillValue.trim())}>Fill DVOC</Button>
+                  </span>
+                </Tooltip>
+                <Button variant="outlined" color="error" onClick={handleClearMonthDailyOnline}>Clear month</Button>
+              </Toolbar>
 
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => {
-                    const val = prompt(`Enter daily ONLINE volume to fill all days in ${MONTHS[selectedOnlineMonth - 1].name}:`);
-                    if (val !== null && val.trim() !== '') {
-                      handleFillMonthDailyOnline(val.trim());
-                    }
-                  }}
-                  sx={{ color: '#38bdf8', borderColor: '#0891b2', textTransform: 'none', height: 36, fontSize: '0.78rem' }}
-                >
-                  ⚡ Fill Online
-                </Button>
-
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => {
-                    const val = prompt(`Enter daily SAMPLES TOKEN to fill all days in ${MONTHS[selectedOnlineMonth - 1].name}:`);
-                    if (val !== null && val.trim() !== '') {
-                      handleFillMonthDailySamplesToken(val.trim());
-                    }
-                  }}
-                  sx={{ color: '#34d399', borderColor: '#16A34A', textTransform: 'none', height: 36, fontSize: '0.78rem' }}
-                >
-                  ⚡ Fill Samples Token
-                </Button>
-
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="error"
-                  onClick={handleClearMonthDailyOnline}
-                  sx={{ textTransform: 'none', height: 36, fontSize: '0.78rem' }}
-                >
-                  🗑️ Clear
-                </Button>
-              </Stack>
-            </Stack>
-
-            {/* Daily Online & Samples Table */}
-            <TableContainer component={Paper} sx={{ backgroundColor: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 70 }}>Day #</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 110 }}>Date</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 75 }}>Day</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 180 }}>Daily Online Volume</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 180 }}>Daily Samples Token (PIS)</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600' }}>Notes / Context</TableCell>
-                    <TableCell sx={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', fontWeight: '600', width: 140, textAlign: 'center' }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {daysInSelectedOnlineMonth.length === 0 ? (
+              <TableContainer>
+                <Table size="small" sx={{ minWidth: 860 }}>
+                  <TableHead sx={headSx}>
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4, color: 'var(--text-muted)' }}>
-                        No days found matching search.
-                      </TableCell>
+                      <TableCell sx={{ width: 64 }}>Day</TableCell>
+                      <TableCell sx={{ width: 110 }}>Date</TableCell>
+                      <TableCell sx={{ width: 64 }}>Weekday</TableCell>
+                      <TableCell sx={{ width: 150 }}>Online volume</TableCell>
+                      <TableCell sx={{ width: 150 }}>DVOC samples (PIS)</TableCell>
+                      <TableCell>Note</TableCell>
+                      <TableCell align="right" sx={{ width: 130 }}>Status</TableCell>
                     </TableRow>
-                  ) : (
-                    daysInSelectedOnlineMonth.map((dayObj, idx) => {
-                      const hasOnline = dayObj.onlineSamples !== '' && dayObj.onlineSamples !== null && dayObj.onlineSamples !== undefined;
-                      const hasSamples = dayObj.samplesToken !== '' && dayObj.samplesToken !== null && dayObj.samplesToken !== undefined;
-                      const numOnline = parseFloat(dayObj.onlineSamples) || 0;
-                      const numSamples = parseFloat(dayObj.samplesToken) || 0;
-                      return (
-                        <TableRow
-                          key={dayObj.dateStr}
-                          hover
-                          sx={{
-                            '&:hover': { backgroundColor: 'var(--surface-hover)' },
-                            backgroundColor: dayObj.isWeekend
-                              ? 'rgba(255, 255, 255, 0.03)'
-                              : (idx % 2 === 0 ? 'var(--border)' : '#2a2a2a')
-                          }}
-                        >
-                          <TableCell sx={{ color: 'var(--text-muted)', fontWeight: 600, py: 1 }}>
-                            Day {String(dayObj.day).padStart(2, '0')}
-                          </TableCell>
-                          <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: 600, py: 1, fontSize: '0.85rem' }}>
-                            {dayObj.dateStr}
-                          </TableCell>
-                          <TableCell sx={{ color: dayObj.isWeekend ? '#fbbf24' : 'var(--text-secondary)', fontWeight: 500, py: 1 }}>
-                            {dayObj.dayOfWeek}
-                          </TableCell>
-                          <TableCell sx={{ py: 1 }}>
-                            <input
-                              type="number"
-                              min="0"
-                              value={dayObj.onlineSamples}
-                              onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'onlineSamples', e.target.value)}
-                              placeholder="Online volume..."
-                              style={{
-                                background: 'var(--surface)',
-                                border: `1px solid ${hasOnline ? '#0891b2' : 'var(--border)'}`,
-                                borderRadius: 6,
-                                color: hasOnline ? '#fff' : 'var(--text-muted)',
-                                fontSize: '0.85rem',
-                                fontWeight: hasOnline ? 700 : 400,
-                                padding: '5px 10px',
-                                outline: 'none',
-                                width: '100%',
-                                maxWidth: 160,
-                                transition: 'border-color 0.2s'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ py: 1 }}>
-                            <input
-                              type="number"
-                              min="0"
-                              value={dayObj.samplesToken}
-                              onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'samplesToken', e.target.value)}
-                              placeholder="Samples taken..."
-                              style={{
-                                background: 'var(--surface)',
-                                border: `1px solid ${hasSamples ? '#16A34A' : 'var(--border)'}`,
-                                borderRadius: 6,
-                                color: hasSamples ? '#fff' : 'var(--text-muted)',
-                                fontSize: '0.85rem',
-                                fontWeight: hasSamples ? 700 : 400,
-                                padding: '5px 10px',
-                                outline: 'none',
-                                width: '100%',
-                                maxWidth: 160,
-                                transition: 'border-color 0.2s'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ py: 1 }}>
-                            <input
-                              type="text"
-                              value={dayObj.note}
-                              onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'note', e.target.value)}
-                              placeholder="Optional note..."
-                              style={{
-                                background: 'var(--surface)',
-                                border: '1px solid var(--border)',
-                                borderRadius: 6,
-                                color: 'var(--text-secondary)',
-                                fontSize: '0.85rem',
-                                padding: '5px 10px',
-                                outline: 'none',
-                                width: '100%'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ textAlign: 'center', py: 1 }}>
-                            <Stack spacing={0.5} alignItems="center">
-                              {hasOnline ? (
-                                <Chip
-                                  label={`${numOnline.toLocaleString()} online`}
-                                  size="small"
-                                  sx={{
-                                    backgroundColor: 'rgba(8, 145, 178, 0.15)',
-                                    color: '#38bdf8',
-                                    fontWeight: '600',
-                                    border: '1px solid #0891b2',
-                                    fontSize: '0.7rem',
-                                    height: 20
-                                  }}
-                                />
-                              ) : null}
-                              {hasSamples ? (
-                                <Chip
-                                  label={`${numSamples.toLocaleString()} samples`}
-                                  size="small"
-                                  sx={{
-                                    backgroundColor: 'rgba(22, 163, 74, 0.15)',
-                                    color: '#34d399',
-                                    fontWeight: '600',
-                                    border: '1px solid #16A34A',
-                                    fontSize: '0.7rem',
-                                    height: 20
-                                  }}
-                                />
-                              ) : null}
-                              {!hasOnline && !hasSamples && (
-                                <Typography variant="caption" sx={{ color: 'var(--border-strong)' }}>Not set</Typography>
-                              )}
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {daysInSelectedOnlineMonth.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'var(--text-muted)' }}>
+                          No day matches your filter.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      daysInSelectedOnlineMonth.map((dayObj) => {
+                        const hasOnline = dayObj.onlineSamples !== '' && dayObj.onlineSamples !== null && dayObj.onlineSamples !== undefined;
+                        const hasSamples = dayObj.samplesToken !== '' && dayObj.samplesToken !== null && dayObj.samplesToken !== undefined;
+                        return (
+                          <TableRow
+                            key={dayObj.dateStr}
+                            hover
+                            sx={dayObj.isWeekend ? { backgroundColor: 'var(--surface-subtle)' } : undefined}
+                          >
+                            <TableCell sx={{ color: 'var(--text-muted)', ...numCell }}>{String(dayObj.day).padStart(2, '0')}</TableCell>
+                            <TableCell sx={{ color: 'var(--text-secondary)', ...numCell }}>{dayObj.dateStr}</TableCell>
+                            <TableCell sx={{ color: dayObj.isWeekend ? 'var(--warning)' : 'var(--text-secondary)' }}>{dayObj.dayOfWeek}</TableCell>
+                            <TableCell>
+                              <CellInput
+                                type="number"
+                                min="0"
+                                value={dayObj.onlineSamples}
+                                onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'onlineSamples', e.target.value)}
+                                placeholder="Online"
+                                aria-label={`${dayObj.dateStr} online volume`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <CellInput
+                                type="number"
+                                min="0"
+                                value={dayObj.samplesToken}
+                                onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'samplesToken', e.target.value)}
+                                placeholder="Samples"
+                                aria-label={`${dayObj.dateStr} DVOC samples`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <CellInput
+                                type="text"
+                                value={dayObj.note}
+                                onChange={(e) => handleDailyOnlineChange(dayObj.dateStr, 'note', e.target.value)}
+                                placeholder="Optional note"
+                                aria-label={`${dayObj.dateStr} note`}
+                                sx={{ fontVariantNumeric: 'normal' }}
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              {hasOnline || hasSamples ? (
+                                <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                                  {hasSamples && <Badge tone="success" sx={numCell}>{fmt(dayObj.samplesToken)} DVOC</Badge>}
+                                  {hasOnline && <Badge tone="info" sx={numCell}>{fmt(dayObj.onlineSamples)} online</Badge>}
+                                </Box>
+                              ) : <NotSet />}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </Box>
+      </AppDialog>
 
-            {/* Grand Total Summary Footer */}
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{
-                mt: 2,
-                p: 2,
-                borderRadius: 2,
-                backgroundColor: 'rgba(8, 145, 178, 0.1)',
-                border: '1px solid rgba(8, 145, 178, 0.3)'
-              }}
-            >
-              <Stack direction="row" spacing={4}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Year Total Daily Online ({selectedYear}):</Typography>
-                  <Typography variant="h6" sx={{ color: '#38bdf8', fontWeight: 600 }}>
-                    {grandDailyOnlineTotal.toLocaleString()} online
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'var(--text-secondary)' }}>Year Total Samples Taken ({selectedYear}):</Typography>
-                  <Typography variant="h6" sx={{ color: '#34d399', fontWeight: 600 }}>
-                    {grandDailySamplesTokenTotal.toLocaleString()} samples taken
-                  </Typography>
-                </Box>
-              </Stack>
-
-              <Typography variant="caption" sx={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                Tip: Click "Save" at the top right to persist all weekly, monthly, team, and daily tokens.
-              </Typography>
-            </Stack>
-          </Box>
-        )}
-
-      </DialogContent>
-    </Dialog>
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title={confirm?.title}
+        description={confirm?.description}
+        confirmLabel={confirm?.confirmLabel}
+        danger={confirm?.danger}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { confirm?.onConfirm(); setConfirm(null); }}
+      />
+    </>
   );
 };
 
