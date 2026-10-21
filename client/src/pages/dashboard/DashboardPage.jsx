@@ -14,6 +14,7 @@ import PageLoader from "../../components/ui/PageLoader";
 import NpsPerformance from "./NpsPerformance";
 import NpsTrends from "./NpsTrends";
 import { PERIODS, resolvePeriod, yearsNeeded } from "./npsPeriods";
+import { ACCOUNTABILITY_OPTIONS, accountabilityOf, filterByAccountability } from "../../utils/accountability";
 
 const TeamViolationTracker = lazy(() => import("../../components/TeamViolationTracker"));
 const SamplesTokenDialog = lazy(() => import("../../components/SamplesTokenDialog"));
@@ -73,6 +74,7 @@ const DashboardPage = () => {
   const to = params.get("to") || "";
   const grain = params.get("grain") || "week";
   const teamFilter = useMemo(() => (params.get("team") ? params.get("team").split(",").filter(Boolean) : []), [params]);
+  const accFilter = useMemo(() => (params.get("acc") ? params.get("acc").split(",").filter(Boolean) : []), [params]);
 
   const setQuery = useCallback(
     (patch) =>
@@ -153,7 +155,14 @@ const DashboardPage = () => {
       cancelled = true;
     };
   }, [settings, rangeFrom, rangeTo, teamKey, refresh, periodLabel]);
-  const scopedTasks = useMemo(() => (teamFilter.length ? tasks.filter((t) => teamFilter.includes(t.teamName)) : tasks), [tasks, teamFilter]);
+  // accountability applies to every section; the field-team filter as before
+  const accTasks = useMemo(() => filterByAccountability(tasks, accFilter), [tasks, accFilter]);
+  const scopedTasks = useMemo(() => (teamFilter.length ? accTasks.filter((t) => teamFilter.includes(t.teamName)) : accTasks), [accTasks, teamFilter]);
+  const accOptions = useMemo(() => {
+    const c = {};
+    for (const t of teamFilter.length ? tasks.filter((x) => teamFilter.includes(x.teamName)) : tasks) c[accountabilityOf(t)] = (c[accountabilityOf(t)] || 0) + 1;
+    return ACCOUNTABILITY_OPTIONS.map((o) => ({ ...o, hint: c[o.value] || 0 }));
+  }, [tasks, teamFilter]);
 
   const teamOptions = useMemo(() => {
     const counts = new Map();
@@ -190,8 +199,9 @@ const DashboardPage = () => {
       >
         <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", alignItems: "center" }}>
           <FilterChip label="Field team" options={teamOptions} value={teamFilter} onChange={(v) => setQuery({ team: v })} searchable />
-          {teamFilter.length > 0 && (
-            <Button variant="text" size="small" onClick={() => setQuery({ team: [] })} sx={{ color: "var(--text-secondary)", height: 28 }}>
+          <FilterChip label="Accountability" options={accOptions} value={accFilter} onChange={(v) => setQuery({ acc: v })} />
+          {(teamFilter.length > 0 || accFilter.length > 0) && (
+            <Button variant="text" size="small" onClick={() => setQuery({ team: [], acc: [] })} sx={{ color: "var(--text-secondary)", height: 28 }}>
               Clear
             </Button>
           )}
@@ -208,7 +218,7 @@ const DashboardPage = () => {
             <NpsPerformance tasks={scopedTasks} samples={samples} settings={settings} period={resolved} teamFilter={teamFilter} />
             <NpsTrends tasks={scopedTasks} samples={samples} settings={settings} grain={grain} onGrainChange={(g) => setQuery({ grain: g })} />
             <Suspense fallback={<PageLoader minHeight={240} variant="table" rows={5} />}>
-              <TeamViolationTracker tasks={tasks} initialFieldTeams={teams} teamFilter={teamFilter} customSummary={customSummary} period={resolved.current} onTaskUpdated={() => setRefresh((r) => r + 1)} />
+              <TeamViolationTracker tasks={accTasks} initialFieldTeams={teams} teamFilter={teamFilter} customSummary={customSummary} period={resolved.current} onTaskUpdated={() => setRefresh((r) => r + 1)} />
             </Suspense>
           </>
         )

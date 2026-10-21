@@ -167,6 +167,18 @@ const ViolationTable = ({
         renderCell: ({ value }) => <Typography sx={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{value}</Typography>,
       },
       {
+        field: "accountableCount", headerName: "Accountable", width: 124, type: "number", align: "left", headerAlign: "left",
+        description: "Detractors and neutrals the team is accountable for · registered but not accountable",
+        renderCell: ({ row }) => (
+          <Tooltip title={`${row.accountableCount ?? 0} team-accountable · ${row.notAccountableCount ?? 0} not accountable`}>
+            <Box component="span" sx={{ fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
+              <strong>{row.accountableCount ?? 0}</strong>
+              <Box component="span" sx={{ color: "var(--text-muted)" }}> · {row.notAccountableCount ?? 0} not</Box>
+            </Box>
+          </Tooltip>
+        ),
+      },
+      {
         field: "byTracker", headerName: "By tracker", width: 190, sortable: false,
         description: "DVOC · Installation violations year to date, plus custom-table rows in the selected period",
         renderCell: ({ row }) => {

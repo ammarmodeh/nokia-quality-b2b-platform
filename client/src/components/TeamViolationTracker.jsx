@@ -7,6 +7,7 @@ import SessionDialogs from "./ViolationSessionDialogs";
 import api from "../api/api";
 import * as XLSX from 'xlsx';
 import ViolationTable from "./violations/ViolationTable";
+import { isTeamAccountable } from "../utils/accountability";
 
 const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, teamFilter = [], customSummary = null, period = null }) => {
   // The app shows toasts with sonner (no notistack provider is mounted).
@@ -329,6 +330,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
         // 'Neutral Rate (%)': `${row.neutralRate}%`,
 
         'Total Violations': row.totalViolations,
+        'Team Accountable': row.accountableCount,
+        'Not Accountable': row.notAccountableCount,
         'Low Impact Tickets': row.lowPriorityCount,
         'Medium Impact Tickets': row.mediumPriorityCount,
         'High Impact Tickets': row.highPriorityCount,
@@ -632,8 +635,14 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
           lowPriority: 0,    // New: Count of Low priority tickets
           mediumPriority: 0, // New: Count of Medium priority tickets
           highPriority: 0,   // New: Count of High priority tickets
+          accountable: 0,    // detractors / neutrals the team is accountable for
+          notAccountable: 0, // registered, but the team is not accountable
           violations: []
         };
+      }
+      if (evaluationScore >= 1 && evaluationScore <= 8) {
+        if (isTeamAccountable(task)) teamViolations[teamName].accountable += 1;
+        else teamViolations[teamName].notAccountable += 1;
       }
       teamViolations[teamName].violations.push({
         score: evaluationScore,
@@ -876,6 +885,8 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
         detractorCount: totalDetractors,
         neutralCount: totalNeutrals,
         totalViolations,
+        accountableCount: teamViolations.accountable || 0,
+        notAccountableCount: teamViolations.notAccountable || 0,
         equivalentDetractorCount: currentEquivalent,
         detractorRate, // Now uses YTD or global as fallback
         neutralRate,

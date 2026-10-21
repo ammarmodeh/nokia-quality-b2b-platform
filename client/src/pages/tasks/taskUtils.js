@@ -1,4 +1,5 @@
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval } from "date-fns";
+import { accountabilityOf } from "../../utils/accountability";
 
 // Columns follow the existing Task.status enum — no new statuses.
 export const STATUSES = [
@@ -66,6 +67,7 @@ export const filterTasks = (tasks, f, me) => {
     if (f.priority?.length && !f.priority.includes(t.priority || "Not specified")) return false;
     if (f.assignee?.length && !(t.assignedTo || []).some((u) => f.assignee.includes(idOf(u)))) return false;
     if (f.team?.length && !f.team.includes(t.teamName || "")) return false;
+    if (f.acc?.length && !f.acc.includes(accountabilityOf(t))) return false;
     if (f.type?.length) {
       const nt = npsType(t.evaluationScore)?.label;
       if (!f.type.includes(nt)) return false;

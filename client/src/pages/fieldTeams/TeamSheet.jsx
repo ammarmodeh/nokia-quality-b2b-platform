@@ -88,6 +88,7 @@ const TeamSheet = ({ team, open, onClose, metrics, periodLabel, tasks, isAdmin, 
           <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{m.requiredConsequence || "Compliant"}</Typography>
         </Box>
         <Field label="Accountable issues">{`${m.accDet ?? 0} detractor(s) · ${m.accNeu ?? 0} neutral(s) · ${m.points ?? 0} point(s)`}</Field>
+        <Field label="Not accountable">{`${m.nonAcc ?? 0} detractor / neutral ticket(s) registered, not counted against the team`}</Field>
         <Field label="Latest action">{team.escalationAction ? `${team.escalationAction} · ${team.escalationStatus || "Pending"} · ${fmtDate(team.escalationDate)}` : null}</Field>
         <Field label="Warning history">
           <Button size="small" variant="text" onClick={() => onEscalation(team, 1)} sx={{ p: 0, minHeight: 0, minWidth: 0 }}>

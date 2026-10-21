@@ -34,6 +34,7 @@ import TeamCodesDialog from '../components/teams/TeamCodesDialog';
 import QueryStatsOutlined from '@mui/icons-material/QueryStatsOutlined';
 import PinOutlined from '@mui/icons-material/PinOutlined';
 import { useNavigate } from 'react-router-dom';
+import { isTeamAccountable } from '../utils/accountability';
 
 // Every field of a team, for the backup taken before a permanent delete.
 const TEAM_BACKUP_COLUMNS = [
@@ -182,11 +183,20 @@ const FieldTeamForm = () => {
         return normalized > 60 && normalized <= 80 && t.teamAccountability?.includes('Yes');
       }).length;
 
+      // registered against the team, but the team is not accountable (excluded from escalation)
+      const nonAcc = matchedTasks.filter(t => {
+        const score = t.evaluationScore;
+        if (score === null || score === 'N/A' || score === undefined || score === '') return false;
+        const normalized = Number(score) <= 10 ? Number(score) * 10 : Number(score);
+        return normalized >= 0 && normalized <= 80 && !isTeamAccountable(t);
+      }).length;
+
       const consequenceObj = getEscalationConsequence(accDet, accNeu);
 
       map[team._id] = {
         accDet,
         accNeu,
+        nonAcc,
         points: consequenceObj.points,
         requiredConsequence: consequenceObj.text,
         consequenceLevel: consequenceObj.level,

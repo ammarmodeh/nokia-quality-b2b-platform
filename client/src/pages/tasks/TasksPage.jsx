@@ -26,6 +26,7 @@ import PageLoader from "../../components/ui/PageLoader";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
 import TaskBoard from "./TaskBoard";
 import TaskTable from "./TaskTable";
+import { ACCOUNTABILITY_OPTIONS, accountabilityOf } from "../../utils/accountability";
 import EventCalendar from "../../components/calendar/EventCalendar";
 import TaskSheet from "./TaskSheet";
 import useTaskActions from "./useTaskActions";
@@ -36,7 +37,7 @@ const AddTask = lazy(() => import("../../components/task/AddTask"));
 const EditTaskDialog = lazy(() => import("../../components/task/EditTaskDialog"));
 const RecordTicketDialog = lazy(() => import("../../components/task/RecordTicketDialog"));
 
-const LIST_KEYS = ["status", "priority", "type", "assignee", "team"];
+const LIST_KEYS = ["status", "priority", "type", "assignee", "team", "acc"];
 
 const useUrlState = () => {
   const [params, setParams] = useSearchParams();
@@ -179,6 +180,12 @@ const TasksPage = () => {
   }, [searchDraft, f.q, setF]);
 
   const filtered = useMemo(() => filterTasks(tasks, f, me?._id), [tasks, f, me?._id]);
+  // counts for the Accountability chip, with every other filter applied
+  const accCounts = useMemo(() => {
+    const c = {};
+    for (const t of filterTasks(tasks, { ...f, acc: [] }, me?._id)) c[accountabilityOf(t)] = (c[accountabilityOf(t)] || 0) + 1;
+    return c;
+  }, [tasks, f, me?._id]);
   const openTask = useMemo(() => tasks.find((t) => t._id === openId) || null, [tasks, openId]);
 
   const counts = useMemo(() => {
@@ -279,6 +286,7 @@ const TasksPage = () => {
         <FilterChip label="Priority" options={PRIORITIES.map((p) => ({ value: p.value, label: p.value }))} value={f.priority} onChange={(v) => setF({ priority: v })} />
         <FilterChip label="Assignee" options={userOptions} value={f.assignee} onChange={(v) => setF({ assignee: v })} searchable />
         <FilterChip label="Field team" options={teamOptions} value={f.team} onChange={(v) => setF({ team: v })} searchable />
+        <FilterChip label="Accountability" options={ACCOUNTABILITY_OPTIONS.map((o) => ({ ...o, hint: accCounts[o.value] || 0 }))} value={f.acc} onChange={(v) => setF({ acc: v })} />
         {f.from && f.to ? (
           <FilterChip label="Date" single options={[{ value: "custom", label: `${f.from} → ${f.to}` }]} value={["custom"]} onChange={() => setF({ from: "", to: "" })} />
         ) : (
