@@ -56,4 +56,14 @@ describe("TasksPage", () => {
       await waitFor(() => expect(screen.getByText(/of 30 tasks/)).toBeInTheDocument(), { timeout: 5000 });
     }, 15000);
   }
+
+  it("defaults date range selection to 'This week'", async () => {
+    renderAt("/tasks-list");
+    await waitFor(() => expect(screen.getByText("This week")).toBeInTheDocument(), { timeout: 5000 });
+  });
+
+  it("shows all tasks when range=all is specified", async () => {
+    renderAt("/tasks-list?range=all");
+    await waitFor(() => expect(screen.getByText("30 of 30 tasks")).toBeInTheDocument(), { timeout: 5000 });
+  });
 });

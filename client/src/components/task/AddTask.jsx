@@ -88,12 +88,16 @@ const SmallLabel = ({ children }) => (
   <Typography sx={{ fontSize: 12, color: 'var(--text-secondary)', mb: 0.5 }}>{children}</Typography>
 );
 
-const SelectField = ({ value, onChange, options, ariaLabel, placeholder }) => (
-  <TextField select {...field} value={value ?? ''} onChange={(e) => onChange(e.target.value)} slotProps={{ htmlInput: { 'aria-label': ariaLabel } }}
-    SelectProps={{ displayEmpty: true, renderValue: (v) => (v === '' || v === undefined ? <span style={{ color: 'var(--text-muted)' }}>{placeholder || 'Not specified'}</span> : options.find((o) => typeof o === 'object' && o.value === v)?.label ?? v) }}>
-    {options.map((o) => (typeof o === 'object' ? <MenuItem key={String(o.value)} value={o.value}>{o.label}</MenuItem> : <MenuItem key={o} value={o}>{o}</MenuItem>))}
-  </TextField>
-);
+const SelectField = ({ value, onChange, options, ariaLabel, placeholder }) => {
+  const safeValue = value ?? '';
+  const hasValueInOptions = !safeValue || options.some((o) => (typeof o === 'object' ? String(o.value) === String(safeValue) : String(o) === String(safeValue)));
+  return (
+    <TextField select {...field} value={hasValueInOptions ? safeValue : ''} onChange={(e) => onChange(e.target.value)} slotProps={{ htmlInput: { 'aria-label': ariaLabel } }}
+      SelectProps={{ displayEmpty: true, renderValue: (v) => (v === '' || v === undefined || v === 'Not specified' ? <span style={{ color: 'var(--text-muted)' }}>{placeholder || 'Not specified'}</span> : options.find((o) => typeof o === 'object' && String(o.value) === String(v))?.label ?? v) }}>
+      {options.map((o) => (typeof o === 'object' ? <MenuItem key={String(o.value)} value={o.value}>{o.label}</MenuItem> : <MenuItem key={o} value={o}>{o}</MenuItem>))}
+    </TextField>
+  );
+};
 
 const FreeAutocomplete = ({ options, value, onChange, ariaLabel, fallback = '' }) => (
   <Autocomplete

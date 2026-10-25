@@ -9,7 +9,7 @@ import { MdArrowBack } from "react-icons/md";
 import { alpha } from "../theme/colorFns";
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Button, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Stack, Grid, Autocomplete, Accordion, AccordionSummary, AccordionDetails, LinearProgress } from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Button, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Autocomplete, LinearProgress } from '@mui/material';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
   MdSearch,
@@ -96,6 +96,7 @@ const AllTasksList = () => {
     value: '',
     tasks: []
   });
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
 
   const handleDrillDownRowClick = (filters, customTitle) => {
     const drillTasks = filteredTasks.filter(t => {
@@ -10462,85 +10463,60 @@ const AllTasksList = () => {
         actions={<Button variant="outlined" component={RouterLink} to="/tasks-list" startIcon={<MdArrowBack />}>Back to tasks</Button>}
       />
 
-      {/* Advanced Analytics & Filter Section */}
-      <Box sx={{ mb: 2 }}>
-
-        {/* Consolidated Premium KPI Cards */}
-        {/* Comprehensive Statistics Dashboard */}
-        <Box sx={{ mb: 4 }}>
-
-          {/* Summary Stats Row */}
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
-            <StatBar
-              label="Total Samples"
-              value={loadingSamples ? "..." : totalSamples}
-              color="var(--accent-text)"
-              icon={<MdHistory />}
-            // subLabel={`Actual Audits: ${actualAudits}`}
-            />
-            <StatBar label="NPS Score" value={nps} color={nps >= 50 ? "#16A34A" : nps >= 0 ? "#D97706" : "#DC2626"} icon={<MdInsights />} />
-            <StatBar label="Promoters" value={`${promoterRate}%`} color="#16A34A" icon={<MdStar />} />
-            <StatBar label="Detractors" value={`${detractorRate}%`} color="#DC2626" icon={<MdError />} />
-            <StatBar label="Neutrals" value={`${neutralRate}%`} color="#D97706" icon={<MdRadioButtonUnchecked />} />
-          </Stack>
-
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-            <StatBar label="Total Tasks" value={totalTasks} color="var(--accent-text)" icon={<MdAssignmentTurnedIn />} />
-            <StatBar label="Total Issues" value={totalIssues} color="var(--accent-text)" icon={<MdAssignmentTurnedIn />} />
-            <StatBar label="Detractors" value={detractorsCount} color="#DC2626" icon={<MdError />} />
-            <StatBar label="Neutrals" value={neutralsCount} color="#D97706" icon={<MdRadioButtonUnchecked />} />
-          </Stack>
-
-          {/* Expandable Detailed Stats */}
-          <Accordion sx={{ bgcolor: 'var(--overlay-subtle)', color: 'var(--text)', '&:before': { display: 'none' }, boxShadow: 'none' }}>
-            <AccordionSummary expandIcon={<MdExpandMore style={{ color: 'var(--text)' }} />} sx={{ borderBottom: '1px solid var(--border)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MdBarChart style={{ color: 'var(--accent-text)' }} />
-                <Typography fontWeight="600">Detailed Breakdown (Top 5 Results)</Typography>
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Reasons" data={topReasons} color="#2563EB" category="reason" />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Sub-Reasons" data={topSubReasons} color="#6C47FF" category="subReason" />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Root Causes" data={topRootCauses} color="#DB2777" category="rootCause" />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Top Owners" data={topOwners} color="#2563EB" category="responsible" />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="ITN Related" data={topITN} color="#D97706" category="itnRelated" />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <MiniTable title="Subscription Related" data={topSubRel} color="#8bc34a" category="relatedToSubscription" />
-                </Grid>
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        </Box>
+      {/* KPI Cards */}
+      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", md: "repeat(5, 1fr)", lg: "repeat(9, 1fr)" }, mb: 2 }}>
+        <StatCard label="Total Samples" value={loadingSamples ? "…" : totalSamples} hint="Cumulative sample pool" />
+        <StatCard label="NPS Score" value={nps} hint={nps >= 50 ? "Excellent" : nps >= 0 ? "Needs work" : "Critical"} />
+        <StatCard label="Total Tasks" value={totalTasks} hint="Within selected range" />
+        <StatCard label="Total Issues" value={totalIssues} hint="Detractors + Neutrals" />
+        <StatCard label="Detractors" value={detractorsCount} hint={`${detractorRate}% of tasks`} />
+        <StatCard label="Neutrals" value={neutralsCount} hint={`${neutralRate}% of tasks`} />
+        <StatCard label="Promoters" value={`${promoterRate}%`} hint="Score ≥ 9" />
+        <StatCard label="Detractor rate" value={`${detractorRate}%`} hint="Score ≤ 6" />
+        <StatCard label="Neutral rate" value={`${neutralRate}%`} hint="Score 7–8" />
       </Box>
 
-      {/* Search and Export Bar */}
+      {/* Breakdown Section */}
+      <Box sx={{ mb: 2, borderRadius: "10px", border: "1px solid var(--border)", backgroundColor: "var(--surface)", overflow: "hidden" }}>
+        <Box
+          component="button"
+          onClick={() => setBreakdownOpen(v => !v)}
+          sx={{ width: "100%", display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5, border: "none", borderBottom: breakdownOpen ? "1px solid var(--border)" : "none", backgroundColor: "transparent", cursor: "pointer", color: "var(--text)", textAlign: "left" }}
+          aria-expanded={breakdownOpen}
+        >
+          <MdBarChart style={{ color: "var(--accent-text)", fontSize: 18 }} />
+          <Typography sx={{ fontSize: 13.5, fontWeight: 600, flex: 1 }}>Detailed Breakdown</Typography>
+          <MdExpandMore style={{ color: "var(--text-muted)", fontSize: 18, transform: breakdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .2s" }} />
+        </Box>
+        {breakdownOpen && (
+          <Box sx={{ p: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)" } }}>
+            <MiniTable title="Top Reasons" data={topReasons} color="#2563EB" category="reason" />
+            <MiniTable title="Top Sub-Reasons" data={topSubReasons} color="#6C47FF" category="subReason" />
+            <MiniTable title="Top Root Causes" data={topRootCauses} color="#DB2777" category="rootCause" />
+            <MiniTable title="Top Owners" data={topOwners} color="#2563EB" category="responsible" />
+            <MiniTable title="ITN Related" data={topITN} color="#D97706" category="itnRelated" />
+            <MiniTable title="Subscription Related" data={topSubRel} color="#16A34A" category="relatedToSubscription" />
+          </Box>
+        )}
+      </Box>
+
+      {/* Filter Toolbar */}
       <Box sx={{
         backgroundColor: 'var(--surface)',
-        p: 2,
-        borderRadius: '8px',
+        p: 1.5,
+        borderRadius: '10px',
         border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-xs)',
         mb: 2,
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
         flexWrap: 'wrap',
-        gap: 2,
+        gap: 1.5,
         alignItems: 'center',
         overflowX: 'auto',
         overflowY: 'hidden',
         '&::-webkit-scrollbar': { height: '4px' },
-        '&::-webkit-scrollbar-track': { background: 'var(--surface)' },
+        '&::-webkit-scrollbar-track': { background: 'var(--surface-subtle)' },
         '&::-webkit-scrollbar-thumb': { background: 'var(--border-strong)', borderRadius: '4px' }
       }}>
         {/* Date Filters Merged */}
@@ -11216,9 +11192,10 @@ const AllTasksList = () => {
         justifyContent: 'flex-start',
         mb: 1,
         p: 1,
-        borderRadius: 2,
-        backgroundColor: 'var(--overlay-subtle)',
+        borderRadius: "10px",
+        backgroundColor: 'var(--surface)',
         border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-xs)',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
           <Typography variant="subtitle2" sx={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Status Summary:</Typography>
@@ -11262,42 +11239,25 @@ const AllTasksList = () => {
           overflowX: 'auto',
           backgroundColor: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: '0px',
-          "& .MuiTable-root": {
-            backgroundColor: "var(--surface)",
-          },
+          borderRadius: '10px',
+          boxShadow: 'var(--shadow-xs)',
+          "& .MuiTable-root": { backgroundColor: "var(--surface)" },
           "& .MuiTableHead-root": {
-            backgroundColor: "var(--surface)",
             "& .MuiTableCell-root": {
+              backgroundColor: "var(--surface-subtle)",
               color: "var(--text-secondary)",
-              fontSize: "0.875rem",
-              fontWeight: "600",
+              fontSize: "0.8rem",
+              fontWeight: 600,
               borderBottom: "1px solid var(--border)",
             }
           },
-          "& .MuiTableBody-root": {
-            "& .MuiTableCell-root": {
-              borderBottom: "1px solid var(--border)",
-              color: "var(--text)",
-            },
-            // "& .MuiTableRow-root": {
-            //   backgroundColor: "var(--surface)",
-            //   "&:hover": {
-            //     backgroundColor: "var(--surface)",
-            //   },
-            // }
+          "& .MuiTableBody-root .MuiTableCell-root": {
+            borderBottom: "1px solid var(--border)",
+            color: "var(--text)",
           },
-          "&::-webkit-scrollbar": {
-            width: "8px",
-            height: "8px",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "var(--text-muted)",
-            borderRadius: "4px",
-          },
-          "&::-webkit-scrollbar-track": {
-            backgroundColor: "#e5e7eb",
-          },
+          "&::-webkit-scrollbar": { width: "6px", height: "6px" },
+          "&::-webkit-scrollbar-thumb": { backgroundColor: "var(--border-strong)", borderRadius: "4px" },
+          "&::-webkit-scrollbar-track": { backgroundColor: "var(--surface-subtle)" },
         }}
       >
         <Table size="small">
@@ -11452,13 +11412,11 @@ const AllTasksList = () => {
                       }}
                       sx={{
                         backgroundColor: task._id === selectedRowId
-                          ? 'rgba(108, 71, 255, 0.15) !important'
-                          : task.readBy?.includes(user?._id)
-                            ? '#f0f0f0'
-                            : '#ffffff',
-                        transition: '0.2s',
-                        borderLeft: task.readBy?.includes(user?._id) ? '6px solid #6C47FF' : '6px solid transparent',
-                        '&:hover': { backgroundColor: '#f5f5f5' }
+                          ? 'var(--accent-subtle) !important'
+                          : 'var(--surface)',
+                        transition: 'background-color 0.15s',
+                        borderLeft: task.readBy?.includes(user?._id) ? '3px solid var(--accent)' : '3px solid transparent',
+                        '&:hover': { backgroundColor: 'var(--surface-hover)' }
                       }}
                     >
                       <TableCell style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

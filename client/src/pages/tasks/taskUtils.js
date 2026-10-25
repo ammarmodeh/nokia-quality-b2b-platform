@@ -31,11 +31,11 @@ export const npsType = (score) => {
 export const taskDate = (t) => t.interviewDate || t.pisDate || t.createdAt;
 
 export const DATE_RANGES = [
-  { value: "all", label: "All time" },
   { value: "week", label: "This week" },
   { value: "month", label: "This month" },
   { value: "30d", label: "Last 30 days" },
   { value: "90d", label: "Last 90 days" },
+  { value: "all", label: "All time" },
 ];
 
 const rangeFor = (key) => {

@@ -71,16 +71,16 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [drag, setDrag] = useState(false);
-  // duplicate review (custom tables): one choice for all duplicates, per-row overrides, repeats in the file
   const [dupPolicy, setDupPolicy] = useState(null);
   const [decisions, setDecisions] = useState({}); // { [sheetIdx]: { [row]: action } }
   const [repeatPolicy, setRepeatPolicy] = useState("skip");
+  const [selectedColumns, setSelectedColumns] = useState(null); // null means all mapped columns
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (!open) {
       setStep(0); setFile(null); setSheets([]); setActive(0); setMode("create"); setKey(""); setValidation(null); setResult(null); setError(null); setLive(null);
-      setDupPolicy(null); setDecisions({}); setRepeatPolicy("skip");
+      setDupPolicy(null); setDecisions({}); setRepeatPolicy("skip"); setSelectedColumns(null);
     }
   }, [open]);
 
@@ -146,6 +146,23 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       })
     );
 
+  const handleToggleColumn = (colKey) => {
+    const curMapped = (sheets[active] || included[0])?.mapping?.filter(Boolean) || [];
+    const current = selectedColumns !== null ? [...selectedColumns] : curMapped;
+    if (current.includes(colKey)) {
+      setSelectedColumns(current.filter((k) => k !== colKey));
+    } else {
+      setSelectedColumns([...current, colKey]);
+    }
+  };
+  const handleSelectAllColumns = () => {
+    const curMapped = (sheets[active] || included[0])?.mapping?.filter(Boolean) || [];
+    setSelectedColumns(curMapped);
+  };
+  const handleDeselectAllColumns = () => {
+    setSelectedColumns([]);
+  };
+
   // ---- validation (client conversion + server dry run)
   const runChunks = useCallback(
     async (records, target, dryRun, onChunk, run) => {
@@ -155,7 +172,12 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       const size = Math.max(25, Math.min(CHUNK, Math.ceil(records.length / 25)));
       for (let i = 0; i < records.length; i += size) {
         const chunk = records.slice(i, i + size);
-        const opts = { mode: reviewDups ? "upsert" : mode, key: effectiveKey || undefined, dryRun };
+        const opts = {
+          mode: reviewDups ? "upsert" : mode,
+          key: effectiveKey || undefined,
+          dryRun,
+          columnsToUpdate: selectedColumns && selectedColumns.length ? selectedColumns : undefined,
+        };
         const data = importer
           ? await importer.send(chunk, { ...opts, run, final: i + size >= records.length })
           : (await api.post(`/import/${target}`, { rows: chunk.map((r) => toApiRow(target, r, context)), ...opts })).data;
@@ -164,7 +186,7 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
       }
       return results;
     },
-    [mode, effectiveKey, context, E, reviewDups]
+    [mode, effectiveKey, context, E, reviewDups, selectedColumns]
   );
 
   // shared progress bookkeeping for the dry run and the import
@@ -535,8 +557,22 @@ const ImportWizard = ({ open, onClose, entity: defaultEntity, allowed = [default
             {reviewDups && (dupsBySheet[active] || dupsBySheet[included[0]?.idx] || []).length > 0 && (() => {
               const idx = dupsBySheet[active] ? active : included[0]?.idx;
               return (
-                <DuplicateReview dups={dupsBySheet[idx]} fields={curFields} keyLabel={keyOptions.find((k) => k.value === effectiveKey)?.label || "the key"} targetLabel={`“${E[targets[0]].tableName || E[targets[0]].label}”`}
-                  policy={dupPolicy} onPolicy={choosePolicy} decisions={decisions[idx] || {}} onDecide={decide(idx)} repeatPolicy={repeatPolicy} onRepeatPolicy={setRepeatPolicy} />
+                <DuplicateReview
+                  dups={dupsBySheet[idx]}
+                  fields={curFields}
+                  keyLabel={keyOptions.find((k) => k.value === effectiveKey)?.label || "the key"}
+                  targetLabel={`“${E[targets[0]].tableName || E[targets[0]].label}”`}
+                  policy={dupPolicy}
+                  onPolicy={choosePolicy}
+                  decisions={decisions[idx] || {}}
+                  onDecide={decide(idx)}
+                  repeatPolicy={repeatPolicy}
+                  onRepeatPolicy={setRepeatPolicy}
+                  selectedColumns={selectedColumns}
+                  onToggleColumn={handleToggleColumn}
+                  onSelectAllColumns={handleSelectAllColumns}
+                  onDeselectAllColumns={handleDeselectAllColumns}
+                />
               );
             })()}
             {(() => {

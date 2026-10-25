@@ -45,7 +45,7 @@ const useUrlState = () => {
     const s = {
       view: params.get("view") || "board",
       q: params.get("q") || "",
-      range: params.get("range") || "all",
+      range: params.get("range") || "week",
       mine: params.get("mine") === "1",
       group: params.get("group") || "none",
       from: params.get("from") || "",
@@ -61,7 +61,7 @@ const useUrlState = () => {
           const next = new URLSearchParams(prev);
           for (const [k, v] of Object.entries(patch)) {
             const empty = v === "" || v === false || v == null || (Array.isArray(v) && !v.length);
-            const isDefault = (k === "view" && v === "board") || (k === "range" && v === "all") || (k === "group" && v === "none");
+            const isDefault = (k === "view" && v === "board") || (k === "range" && v === "week") || (k === "group" && v === "none");
             if (empty || isDefault) next.delete(k);
             else next.set(k, Array.isArray(v) ? v.join(",") : v === true ? "1" : String(v));
           }
@@ -290,7 +290,7 @@ const TasksPage = () => {
         {f.from && f.to ? (
           <FilterChip label="Date" single options={[{ value: "custom", label: `${f.from} → ${f.to}` }]} value={["custom"]} onChange={() => setF({ from: "", to: "" })} />
         ) : (
-          <FilterChip label="Date" single options={DATE_RANGES.filter((r) => r.value !== "all")} value={f.range === "all" ? [] : [f.range]} onChange={(v) => setF({ range: v[0] || "all" })} />
+          <FilterChip label="Date" single options={DATE_RANGES} value={f.range === "all" ? [] : [f.range]} onChange={(v) => setF({ range: v[0] || "all" })} />
         )}
         {activeFilters && (
           <Button variant="text" size="small" startIcon={<FilterAltOffOutlined sx={{ fontSize: 16 }} />} onClick={clearFilters} sx={{ color: "var(--text-secondary)", height: 28 }}>

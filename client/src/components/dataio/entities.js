@@ -12,7 +12,13 @@ export const ENTITIES = {
   tasks: {
     label: "Tasks (DVOC · Installation)",
     short: "Tasks",
-    keys: [{ value: "requestNumber", label: "Request number" }, { value: "slid", label: "SLID" }],
+    reviewDuplicates: true,
+    keys: [
+      { value: "slid", label: "SLID" },
+      { value: "requestNumber", label: "Request number" },
+      { value: "customerName", label: "Customer name" },
+      { value: "contactNumber", label: "Contact number" },
+    ],
     fetch: async () => {
       const { data } = await api.get("/tasks/get-all-tasks");
       return Array.isArray(data) ? data : data?.tasks || [];
@@ -49,7 +55,13 @@ export const ENTITIES = {
   snags: {
     label: "OJO Snags & complaints",
     short: "Snags",
-    keys: [{ value: "ticketId", label: "Ticket / case number" }, { value: "slid", label: "SLID" }],
+    reviewDuplicates: true,
+    keys: [
+      { value: "slid", label: "SLID" },
+      { value: "ticketId", label: "Ticket / case number" },
+      { value: "customerContact", label: "Customer contact" },
+      { value: "customerName", label: "Customer name" },
+    ],
     fetch: async () => {
       const { data } = await api.get("/customer-issues", { params: { limit: 10000 } });
       return data?.data || [];
@@ -90,7 +102,8 @@ export const ENTITIES = {
   fieldTeams: {
     label: "Field teams",
     short: "Field teams",
-    keys: [{ value: "teamCode", label: "Team code" }],
+    reviewDuplicates: true,
+    keys: [{ value: "teamCode", label: "Team code" }, { value: "teamName", label: "Team name" }],
     fetch: async () => (await api.get("/field-teams/get-field-teams")).data || [],
     fields: [
       T("teamCode", "Team code", "text", { required: true, synonyms: ["team code", "team id", "code", "sp code", "sp"] }),

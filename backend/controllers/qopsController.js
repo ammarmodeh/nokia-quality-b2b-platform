@@ -9,6 +9,8 @@ import { TaskSchema } from "../models/taskModel.js";
 import { LabAssessment } from "../models/labAssessmentModel.js";
 import { OnTheJobAssessment } from "../models/onTheJobAssessmentModel.js";
 import QuizResult from "../models/quizResultModel.js";
+import TeamSamplesToken from "../models/teamSamplesTokenModel.js";
+import TeamOnlineData from "../models/teamOnlineDataModel.js";
 import { BUILT_IN_CATEGORIES, taxonomyForIssue, TAXONOMY } from "../utils/taxonomy.js";
 import { reloadTrackers } from "../utils/trackers.js";
 import { EPOCH, findOverlap, makeResolver, normCode } from "../utils/teamCodes.js";
@@ -277,6 +279,36 @@ export const deleteEntry = async (req, res) => {
 const avg = (list) => (list.length ? Math.round(list.reduce((a, b) => a + b, 0) / list.length) : null);
 const inRange = (d, from, to) => d && d >= from && d <= to;
 
+const toList = (v) => {
+  if (Array.isArray(v)) return v.map((s) => String(s).trim()).filter(Boolean);
+  if (typeof v === "string" && v.trim()) return [v.trim()];
+  return [];
+};
+
+const isAccountable = (acc) => {
+  const v = toList(acc);
+  if (v.some((x) => String(x).toLowerCase() === "yes")) return "accountable";
+  if (v.length) return "not";
+  return "unset";
+};
+
+const tallyList = (items, total) => {
+  const counts = new Map();
+  for (const list of items) {
+    const uniqueInRecord = new Set(list);
+    for (const item of uniqueInRecord) {
+      counts.set(item, (counts.get(item) || 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({
+      name,
+      count,
+      pct: total ? Math.round((count / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+};
+
 /**
  * Everything attributed to field teams in [from, to]:
  * - custom-table rows: their stored team (team-code snapshot or a Field team field)
@@ -303,7 +335,17 @@ const collect = async (from, to, onlyTeam) => {
     records.push({ teamId: String(r.fieldTeamId), source: "table", category: t.issueCategory, sub: t.issueSubCategory, date: d, slid: r.slid || "", title: asText(r.data?.[t.primaryField]) || `#${r.autoNumber}`, tableId: t._id, tableName: t.name, link: `/tables/${t._id}?row=${r._id}`, code: r.teamResolution?.code || "" });
   }
 
-  const issues = await CustomerIssueSchema.find({ $or: [{ date: { $gte: from, $lte: to } }, { pisDate: { $gte: from, $lte: to } }, { createdAt: { $gte: from, $lte: to } }] }, { slid: 1, teamCode: 1, teamName: 1, issueCategory: 1, issueSubCategory: 1, fromMain: 1, fromSub: 1, from: 1, snagType: 1, date: 1, pisDate: 1, createdAt: 1, customerName: 1 }).lean();
+  let issueQ = { $or: [{ date: { $gte: from, $lte: to } }, { pisDate: { $gte: from, $lte: to } }, { createdAt: { $gte: from, $lte: to } }] };
+  if (onlyTeam) {
+    const targetTeam = teams[0];
+    const teamCodes = [targetTeam?.teamCode, ...(await TeamCodeAssignment.find({ fieldTeamId: onlyTeam }).distinct("code"))].filter(Boolean);
+    const conds = [];
+    if (teamCodes.length) conds.push({ teamCode: { $in: teamCodes } });
+    if (targetTeam?.teamName) conds.push({ teamName: targetTeam.teamName });
+    if (conds.length) issueQ = { $and: [{ $or: conds }, issueQ] };
+  }
+
+  const issues = await CustomerIssueSchema.find(issueQ, { slid: 1, teamCode: 1, teamName: 1, issueCategory: 1, issueSubCategory: 1, fromMain: 1, fromSub: 1, from: 1, snagType: 1, date: 1, pisDate: 1, createdAt: 1, customerName: 1 }).lean();
   for (const s of issues) {
     const d = s.date || s.pisDate || s.createdAt;
     if (!inRange(d, from, to)) continue;
@@ -316,13 +358,42 @@ const collect = async (from, to, onlyTeam) => {
     records.push({ teamId: String(teamId), source: "issue", category: tax.category, sub: tax.sub, date: d, slid: s.slid || "", title: s.customerName || s.slid || "Snag", link: `${path}?q=${encodeURIComponent(s.slid || "")}`, code: normCode(s.teamCode) });
   }
 
-  const tasks = await TaskSchema.find({ $or: [{ interviewDate: { $gte: from, $lte: to } }, { createdAt: { $gte: from, $lte: to } }] }, { slid: 1, teamId: 1, teamName: 1, issueCategory: 1, issueSubCategory: 1, interviewDate: 1, createdAt: 1, customerName: 1 }).lean();
+  let taskQ = { $or: [{ interviewDate: { $gte: from, $lte: to } }, { createdAt: { $gte: from, $lte: to } }] };
+  if (onlyTeam) {
+    const targetTeam = teams[0];
+    const conds = [{ teamId: onlyTeam }];
+    if (targetTeam?.teamName) conds.push({ teamName: targetTeam.teamName });
+    taskQ = { $and: [{ $or: conds }, taskQ] };
+  }
+
+  const tasks = await TaskSchema.find(taskQ, {
+    slid: 1, teamId: 1, teamName: 1, issueCategory: 1, issueSubCategory: 1, interviewDate: 1, createdAt: 1, customerName: 1,
+    rootCause: 1, reason: 1, subReason: 1, evaluationScore: 1, teamAccountability: 1, customerFeedback: 1, status: 1, priority: 1, validationStatus: 1
+  }).lean();
   for (const k of tasks) {
     const d = k.interviewDate || k.createdAt;
     if (!inRange(d, from, to)) continue;
     const teamId = k.teamId ? String(k.teamId) : k.teamName ? byName.get(k.teamName.trim().toLowerCase()) : null;
     if (!teamId) continue;
-    records.push({ teamId: String(teamId), source: "task", category: k.issueCategory || "DVOC", sub: k.issueCategory ? k.issueSubCategory : "Installation", date: d, slid: k.slid || "", title: k.customerName || k.slid || "Task", link: `/tasks-list?task=${k._id}` });
+    records.push({
+      teamId: String(teamId),
+      source: "task",
+      category: k.issueCategory || "DVOC",
+      sub: k.issueCategory ? k.issueSubCategory : "Installation",
+      date: d,
+      slid: k.slid || "",
+      title: k.customerName || k.slid || "Task",
+      link: `/tasks-list?task=${k._id}`,
+      rootCause: toList(k.rootCause),
+      reason: toList(k.reason),
+      subReason: toList(k.subReason),
+      evaluationScore: k.evaluationScore ?? null,
+      accountability: isAccountable(k.teamAccountability),
+      customerFeedback: k.customerFeedback || "",
+      status: k.status || "Todo",
+      priority: k.priority || "Normal",
+      validationStatus: k.validationStatus || "Not specified"
+    });
   }
 
   const [lab, ojt, quiz] = await Promise.all([
@@ -354,27 +425,105 @@ export const teamMatrix = async (req, res) => {
   const { teams, records, assess } = await collect(from, to, null);
   const by = new Map();
   for (const r of records) {
-    const x = by.get(r.teamId) || { total: 0, byCategory: {} };
+    const x = by.get(r.teamId) || {
+      total: 0,
+      dvocCount: 0,
+      accountableCount: 0,
+      notAccountableCount: 0,
+      byCategory: {},
+    };
     x.total++;
     x.byCategory[r.category] = (x.byCategory[r.category] || 0) + 1;
+    if (r.source === "task" || r.category === "DVOC") {
+      x.dvocCount++;
+      if (r.accountability === "accountable") {
+        x.accountableCount++;
+      } else {
+        x.notAccountableCount++;
+      }
+    }
     by.set(r.teamId, x);
   }
+
+  // Calculate team samples token from TeamSamplesToken
+  const allTeamSamples = await TeamSamplesToken.find({}).lean().catch(() => []);
+  const sampleByTeamId = new Map();
+  const sampleByTeamName = new Map();
+  for (const s of allTeamSamples) {
+    const mStart = new Date(Date.UTC(s.year, s.month - 1, 1));
+    const mEnd = new Date(Date.UTC(s.year, s.month, 0, 23, 59, 59, 999));
+    if (mEnd >= from && mStart <= to) {
+      const val = Number(s.sampleSize) || 0;
+      if (s.teamId) {
+        const idStr = String(s.teamId);
+        sampleByTeamId.set(idStr, (sampleByTeamId.get(idStr) || 0) + val);
+      }
+      if (s.teamName) {
+        const tn = s.teamName.trim().toLowerCase();
+        sampleByTeamName.set(tn, (sampleByTeamName.get(tn) || 0) + val);
+      }
+    }
+  }
+
+  // Calculate team online transactions from TeamOnlineData
+  const allTeamOnline = await TeamOnlineData.find({}).lean().catch(() => []);
+  const onlineByTeamName = new Map();
+  const onlineByTeamCode = new Map();
+  for (const o of allTeamOnline) {
+    const mStart = new Date(Date.UTC(o.year, o.month - 1, 1));
+    const mEnd = new Date(Date.UTC(o.year, o.month, 0, 23, 59, 59, 999));
+    if (mEnd >= from && mStart <= to) {
+      const val = Number(o.onlineTransactions) || 0;
+      if (o.teamName) {
+        const tn = o.teamName.trim().toLowerCase();
+        onlineByTeamName.set(tn, (onlineByTeamName.get(tn) || 0) + val);
+      }
+      if (o.teamCode) {
+        const tc = normCode(o.teamCode);
+        if (tc) onlineByTeamCode.set(tc, (onlineByTeamCode.get(tc) || 0) + val);
+      }
+    }
+  }
+
   res.json({
     from,
     to,
     categories: TAXONOMY.map((t) => t.category),
-    teams: teams.map((t) => ({
-      fieldTeamId: t._id,
-      teamName: t.teamName,
-      teamCode: t.teamCode,
-      teamCompany: t.teamCompany,
-      isTerminated: t.isTerminated,
-      total: by.get(String(t._id))?.total || 0,
-      byCategory: by.get(String(t._id))?.byCategory || {},
-      lab: assessOut(assess.lab, t._id),
-      ojt: assessOut(assess.ojt, t._id),
-      technical: assessOut(assess.quiz, t._id),
-    })),
+    teams: teams.map((t) => {
+      const tid = String(t._id);
+      const tname = t.teamName ? t.teamName.trim().toLowerCase() : "";
+      const tcode = t.teamCode ? normCode(t.teamCode) : "";
+      const samplesTotal = sampleByTeamId.get(tid) ?? (tname ? sampleByTeamName.get(tname) : 0) ?? 0;
+      const onlineTotal = (tname ? onlineByTeamName.get(tname) : 0) ?? (tcode ? onlineByTeamCode.get(tcode) : 0) ?? 0;
+
+      const teamStats = by.get(tid) || { total: 0, dvocCount: 0, accountableCount: 0, notAccountableCount: 0, byCategory: {} };
+      const dvocCount = teamStats.dvocCount || teamStats.byCategory["DVOC"] || 0;
+      const accountableCount = teamStats.accountableCount || 0;
+      const nonAccountableCount = Math.max(0, dvocCount - accountableCount);
+      const adjustedSamples = Math.max(0, samplesTotal - nonAccountableCount);
+      const dvocSamplePct = adjustedSamples > 0 ? +((accountableCount / adjustedSamples) * 100).toFixed(1) : null;
+      const dvocOnlinePct = onlineTotal > 0 ? +((accountableCount / onlineTotal) * 100).toFixed(2) : null;
+
+      return {
+        fieldTeamId: t._id,
+        teamName: t.teamName,
+        teamCode: t.teamCode,
+        teamCompany: t.teamCompany,
+        isTerminated: t.isTerminated,
+        total: teamStats.total,
+        samplesToken: samplesTotal,
+        dvoc: dvocCount,
+        accountable: accountableCount,
+        adjustedSamples,
+        dvocSamplePct,
+        onlineTotal,
+        dvocOnlinePct,
+        byCategory: teamStats.byCategory,
+        lab: assessOut(assess.lab, t._id),
+        ojt: assessOut(assess.ojt, t._id),
+        technical: assessOut(assess.quiz, t._id),
+      };
+    }),
   });
 };
 
@@ -385,6 +534,32 @@ export const teamDetail = async (req, res) => {
   const { teams, records, assess } = await collect(from, to, req.params.teamId);
   const team = teams[0];
   if (!team) return fail(res, 404, "Team not found");
+
+  // Fetch TeamSamplesToken recorded for this team
+  const sampleOr = [];
+  if (team._id) sampleOr.push({ teamId: team._id });
+  if (team.teamName) {
+    const escaped = team.teamName.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    sampleOr.push({ teamName: new RegExp(`^${escaped}$`, "i") });
+  }
+
+  const allTeamSamples = sampleOr.length ? await TeamSamplesToken.find({ $or: sampleOr }).lean().catch(() => []) : [];
+  
+  // Filter samples by date range [from, to]
+  const inRangeSamples = allTeamSamples.filter((s) => {
+    const mStart = new Date(Date.UTC(s.year, s.month - 1, 1));
+    const mEnd = new Date(Date.UTC(s.year, s.month, 0, 23, 59, 59, 999));
+    return mEnd >= from && mStart <= to;
+  });
+
+  const totalSamplesToken = inRangeSamples.reduce((sum, s) => sum + (Number(s.sampleSize) || 0), 0);
+
+  const samplesByMonth = {};
+  for (const s of inRangeSamples) {
+    const key = `${s.year}-${String(s.month).padStart(2, "0")}`;
+    samplesByMonth[key] = (samplesByMonth[key] || 0) + (Number(s.sampleSize) || 0);
+  }
+
   const trackers = new Map();
   for (const r of records) {
     const k = `${r.category}|${r.sub || ""}`;
@@ -393,24 +568,110 @@ export const teamDetail = async (req, res) => {
     if (r.tableId) x.tables[r.tableId] = { tableId: r.tableId, name: r.tableName, count: (x.tables[r.tableId]?.count || 0) + 1 };
     trackers.set(k, x);
   }
-  const months = {};
+
+  // Monthly breakdown map for performance chart
+  const monthMap = new Map();
+  const getMonthEntry = (m) => {
+    let entry = monthMap.get(m);
+    if (!entry) {
+      entry = {
+        month: m,
+        count: 0,
+        dvocCount: 0,
+        snagsCount: 0,
+        tableCount: 0,
+        accountableCount: 0,
+        notAccountableCount: 0,
+        samplesToken: samplesByMonth[m] || 0,
+      };
+      monthMap.set(m, entry);
+    }
+    return entry;
+  };
+
+  // Populate any months that have sample token targets
+  for (const m of Object.keys(samplesByMonth)) {
+    getMonthEntry(m);
+  }
+
+  // Populate from actual tracker records
   for (const r of records) {
     const m = new Date(r.date).toISOString().slice(0, 7);
-    months[m] = (months[m] || 0) + 1;
+    const entry = getMonthEntry(m);
+    entry.count++;
+    if (r.source === "task") {
+      entry.dvocCount++;
+      if (r.accountability === "accountable") entry.accountableCount++;
+      else if (r.accountability === "not") entry.notAccountableCount++;
+    } else if (r.source === "issue") {
+      entry.snagsCount++;
+    } else if (r.source === "table") {
+      entry.tableCount++;
+    }
   }
+
+  const sortedMonths = [...monthMap.values()].sort((a, b) => a.month.localeCompare(b.month));
+
   const slids = new Map();
   for (const r of records) if (r.slid) slids.set(r.slid, (slids.get(r.slid) || 0) + 1);
   const codes = await TeamCodeAssignment.find({ fieldTeamId: team._id }).sort({ from: -1 }).lean();
+
+  // DVOC deep dive analytics
+  const dvocRecords = records.filter((r) => r.source === "task");
+  const rootCauses = tallyList(dvocRecords.map((r) => r.rootCause), dvocRecords.length);
+  const reasons = tallyList(dvocRecords.map((r) => r.reason), dvocRecords.length);
+  const subReasons = tallyList(dvocRecords.map((r) => r.subReason), dvocRecords.length);
+
+  let accountableCount = 0;
+  let notAccountableCount = 0;
+  let unsetCount = 0;
+  for (const r of dvocRecords) {
+    if (r.accountability === "accountable") accountableCount++;
+    else if (r.accountability === "not") notAccountableCount++;
+    else unsetCount++;
+  }
+
+  const scores = dvocRecords.map((r) => Number(r.evaluationScore)).filter((s) => Number.isFinite(s) && s >= 0 && s <= 10);
+  const promoters = scores.filter((s) => s >= 9).length;
+  const passives = scores.filter((s) => s >= 7 && s <= 8).length;
+  const detractors = scores.filter((s) => s <= 6).length;
+  const avgScore = scores.length ? +(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : null;
+  const npsScore = scores.length ? Math.round(((promoters - detractors) / scores.length) * 100) : null;
+
+  const dvocAnalytics = {
+    totalDvoc: dvocRecords.length,
+    totalSamplesToken,
+    rootCauses,
+    reasons,
+    subReasons,
+    accountability: {
+      accountable: accountableCount,
+      not: notAccountableCount,
+      unset: unsetCount,
+      pct: dvocRecords.length ? Math.round((accountableCount / dvocRecords.length) * 100) : 0,
+    },
+    nps: {
+      avgScore,
+      promoters,
+      passives,
+      detractors,
+      totalWithScore: scores.length,
+      npsScore,
+    },
+  };
+
   res.json({
     team,
     from,
     to,
     total: records.length,
+    totalSamplesToken,
     trackers: [...trackers.values()].map((x) => ({ ...x, tables: Object.values(x.tables).sort((a, b) => b.count - a.count) })).sort((a, b) => b.count - a.count),
-    months: Object.entries(months).sort().map(([month, count]) => ({ month, count })),
+    months: sortedMonths,
     repeatSlids: [...slids.entries()].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([slid, count]) => ({ slid, count })),
     assessments: { lab: assessOut(assess.lab, team._id), ojt: assessOut(assess.ojt, team._id), technical: assessOut(assess.quiz, team._id) },
     codes: codes.length ? codes : [{ code: normCode(team.teamCode), from: null, to: null, implicit: true }],
+    dvocAnalytics,
     records: records.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 500),
   });
 };

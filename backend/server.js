@@ -30,9 +30,11 @@ import userNoteRoutes from "./routes/userNoteRoutes.js";
 import fieldAuditRoutes from "./routes/fieldAuditRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import importRoutes from "./routes/importRoutes.js";
+import slaRoutes from "./routes/slaRoutes.js";
 import { customTableRouter, tableTemplateRouter, storedFileRouter } from "./routes/customTableRoutes.js";
 import { mountBulkDelete } from "./routes/bulkDeleteRoutes.js";
 import { trackerRouter, teamCodeRouter, calendarEntryRouter, teamAnalyticsRouter } from "./routes/qopsRoutes.js";
+import teamOnlineRoutes from "./routes/teamOnlineRoutes.js";
 import { ensureTrackers } from "./utils/trackers.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
@@ -141,6 +143,7 @@ app.use("/api/audit", fieldAuditRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/import", importRoutes);
 app.use("/api/custom-tables", customTableRouter);
+app.use("/api/sla", slaRoutes);
 app.use("/api/trackers", trackerRouter);
 app.use("/api/team-codes", teamCodeRouter);
 app.use("/api/calendar-entries", calendarEntryRouter);
@@ -148,6 +151,7 @@ app.use("/api/team-analytics", teamAnalyticsRouter);
 app.use("/api/table-templates", tableTemplateRouter);
 app.use("/api/stored-files", storedFileRouter);
 app.use("/api/training-sessions", trainingSessionRoutes);
+app.use("/api/team-online", teamOnlineRoutes);
 
 // Static Uploads Folder
 const __dirname = path.resolve();

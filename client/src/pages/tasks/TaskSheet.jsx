@@ -8,6 +8,7 @@ import ContentCopy from "@mui/icons-material/ContentCopy";
 import { toast } from "sonner";
 import Sheet from "../../components/ui/Sheet";
 import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
+import SlaBadgeButton from "../../components/sla/SlaBadgeButton";
 import Badge from "../../components/ui/Badge";
 import { UserAvatar } from "../../components/ui/AvatarGroup";
 import { taxonomyOfTask } from "../../constants/taxonomy";
@@ -35,7 +36,7 @@ const Chips = ({ values }) => {
   if (!list.length) return null;
   return (
     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-      {list.map((v) => <Badge key={v} outline>{v}</Badge>)}
+      {list.map((v, i) => <Badge key={`${v}-${i}`} outline>{v}</Badge>)}
     </Box>
   );
 };
@@ -71,7 +72,12 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
           </Box>
         }
         actions={
-          <>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <SlaBadgeButton
+              target={{ kind: "task", id: task._id }}
+              title={`Request #${task.requestNumber || "—"} · ${task.customerName || "Task"}`}
+              slid={task.slid}
+            />
             <Tooltip title="More actions">
               <IconButton size="small" onClick={(e) => setMenu(e.currentTarget)} aria-label="More actions" sx={{ color: "var(--text-muted)" }}>
                 <MoreHoriz fontSize="small" />
@@ -97,7 +103,7 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
                 </MenuItem>
               )}
             </Menu>
-          </>
+          </Box>
         }
         footer={
           <>
@@ -142,7 +148,7 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
             renderOption={(props, o) => {
               const { key, ...rest } = props;
               return (
-                <li key={key} {...rest}>
+                <li key={o._id || key} {...rest}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <UserAvatar user={o} size={22} />
                     <Box>
@@ -165,6 +171,11 @@ const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket
 
         <Section title="Survey">
           <Field label="Evaluation score">{nps ? <Badge tone={nps.tone}>{nps.label} · {task.evaluationScore}</Badge> : null}</Field>
+          <Field label="Request date">{task.contractDate ? fmtDate(task.contractDate) : null}</Field>
+          <Field label="Creation date">{task.feDate ? fmtDate(task.feDate) : null}</Field>
+          <Field label="Dispatch date">{task.inDate || task.appDate ? fmtDate(task.inDate || task.appDate) : null}</Field>
+          <Field label="Completion date">{task.closeDate ? fmtDate(task.closeDate) : null}</Field>
+          <Field label="PIS date">{task.pisDate ? fmtDate(task.pisDate) : null}</Field>
           <Field label="Interview date">{task.interviewDate ? fmtDate(task.interviewDate) : null}</Field>
           <Field label="Technical team">{task.technicalTeamEvaluation ?? null}</Field>
           <Field label="Service">{task.serviceEvaluation ?? null}</Field>

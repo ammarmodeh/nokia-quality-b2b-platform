@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import api from "../../api/api";
 import Sheet from "../../components/ui/Sheet";
 import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
+import SlaBadgeButton from "../../components/sla/SlaBadgeButton";
 import Badge from "../../components/ui/Badge";
 import { fmt, reportedDate, snagTypeOf, sourceOf, statusOf } from "./snagUtils";
 
@@ -87,7 +88,12 @@ const SnagSheet = ({ snag, open, onClose, isAdmin, onPatch, onEdit, onRecordTick
           </Box>
         }
         actions={
-          <>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <SlaBadgeButton
+              target={{ kind: "issue", id: snag._id }}
+              title={`Snag #${snag.slid || snag._id} · ${snag.customerName || "Customer"}`}
+              slid={snag.slid}
+            />
             <IconButton size="small" aria-label="More actions" onClick={(e) => setMenu(e.currentTarget)} sx={{ color: "var(--text-muted)" }}>
               <MoreHoriz fontSize="small" />
             </IconButton>
@@ -105,7 +111,7 @@ const SnagSheet = ({ snag, open, onClose, isAdmin, onPatch, onEdit, onRecordTick
                 </MenuItem>
               )}
             </Menu>
-          </>
+          </Box>
         }
         footer={
           <>

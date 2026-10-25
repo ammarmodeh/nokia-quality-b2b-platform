@@ -30,9 +30,9 @@ export const tableEntity = (table, group = null) => {
         const named = Object.fromEntries(mapping.map((k, i) => [header[i] || `Column ${i + 1}`, k]).filter(([, k]) => k));
         return { fileId, sheet, mapping: named, batchId: null };
       },
-      send: async (records, { mode, key, dryRun, run = {}, final }) => {
+      send: async (records, { mode, key, dryRun, run = {}, final, columnsToUpdate }) => {
         const rows = records.map(({ __row, __action, ...data }) => ({ __row, data, ...(__action ? { action: __action } : {}) }));
-        const out = await tablesApi.importRows(table._id, { rows, mode, matchField: key, dryRun, batchId: run.batchId || undefined, fileId: run.fileId, sheet: run.sheet, mapping: run.mapping, final, ...(group ? { groups: [group.key] } : {}) });
+        const out = await tablesApi.importRows(table._id, { rows, mode, matchField: key, dryRun, batchId: run.batchId || undefined, fileId: run.fileId, sheet: run.sheet, mapping: run.mapping, final, columnsToUpdate, ...(group ? { groups: [group.key] } : {}) });
         if (!dryRun && out.batchId) run.batchId = out.batchId;
         return out;
       },

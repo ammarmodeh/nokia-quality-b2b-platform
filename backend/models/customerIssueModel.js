@@ -101,5 +101,8 @@ customerIssueSchema.index({ pisDate: -1 });
 customerIssueSchema.index({ createdAt: -1 });
 customerIssueSchema.index({ area: 1 });
 customerIssueSchema.index({ callerName: 1 });
+customerIssueSchema.index({ date: -1 });
+customerIssueSchema.index({ teamCode: 1, date: -1 });
+customerIssueSchema.index({ issueCategory: 1, issueSubCategory: 1 });
 
 export const CustomerIssueSchema = mongoose.model('CustomerIssue', customerIssueSchema);

@@ -858,6 +858,22 @@ export const getAllTasks = async (req, res) => {
           from: "tasktickets",
           localField: "_id",
           foreignField: "taskId",
+          pipeline: [
+            {
+              $project: {
+                ticketId: 1,
+                status: 1,
+                mainCategory: 1,
+                eventDate: 1,
+                timestamp: 1,
+                recordedBy: 1,
+                note: 1,
+                transactionType: 1,
+                transactionState: 1,
+                unfReasonCode: 1,
+              }
+            }
+          ],
           as: "tickets"
         }
       },
@@ -866,7 +882,7 @@ export const getAllTasks = async (req, res) => {
           latestGaia: { $arrayElemAt: [{ $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } }, 0] }
         }
       },
-      { $project: { "subTasks.checkpoints": 0 } }
+      { $project: { subTasks: 0, checkpoints: 0 } }
     ];
 
     const tasks = await TaskSchema.aggregate(pipeline);

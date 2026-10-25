@@ -16,6 +16,7 @@ import { filesApi, tablesApi } from "./tablesApi";
 import { rawOf } from "./viewUtils";
 import { errText } from "./useTable";
 import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
+import SlaBadgeButton from "../../components/sla/SlaBadgeButton";
 import GroupsOutlined from "@mui/icons-material/GroupsOutlined";
 
 const AddTask = lazy(() => import("../../components/task/AddTask"));
@@ -131,7 +132,16 @@ const RowSheet = ({ open, onClose, table, fields, row, lookups, canEdit, onUpdat
 
   return (
     <Sheet open={open} onClose={onClose} width={560} title={title} description={`#${row.autoNumber} · ${table.name}`}
-      actions={canEdit && onDelete ? <Tooltip title="Delete row"><IconButton aria-label="Delete row" onClick={() => onDelete(row)}><DeleteOutline fontSize="small" /></IconButton></Tooltip> : undefined}>
+      actions={
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <SlaBadgeButton
+            target={{ kind: "row", id: row._id, tableId: table._id }}
+            title={`${table.name} #${row.autoNumber} · ${title}`}
+            slid={row.slid || (byConcept.slid ? rawOf(byConcept.slid, row) : undefined)}
+          />
+          {canEdit && onDelete ? <Tooltip title="Delete row"><IconButton aria-label="Delete row" onClick={() => onDelete(row)}><DeleteOutline fontSize="small" /></IconButton></Tooltip> : undefined}
+        </Box>
+      }>
       <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 2, mt: -1 }}>
         <Tab label="Details" />
         <Tab label="Activity" />

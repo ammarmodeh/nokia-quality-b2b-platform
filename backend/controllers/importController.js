@@ -87,26 +87,48 @@ const invoke = (fn, { body, params = {}, user }) =>
 
 const errorText = (data) => data?.message || data?.error || (typeof data === "string" ? data : "Request failed");
 
+const blank = (v) => v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length);
+const same = (a, b) => {
+  if (typeof a === "string" && typeof b === "string" && /^\d{4}-\d{2}-\d{2}/.test(a) && /^\d{4}-\d{2}-\d{2}/.test(b)) {
+    return a.slice(0, 10) === b.slice(0, 10);
+  }
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+};
+const diffOf = (existing, data, onlyBlanks = false, allowedCols = null) =>
+  Object.entries(data)
+    .filter(([k, v]) => {
+      if (k.startsWith("__") || ["_id", "createdBy", "createdAt", "updatedAt", "__v"].includes(k)) return false;
+      if (allowedCols && Array.isArray(allowedCols) && allowedCols.length && !allowedCols.includes(k)) return false;
+      if (blank(v)) return false;
+      if (onlyBlanks && !blank(existing[k])) return false;
+      return !same(existing[k], v);
+    })
+    .map(([k, v]) => ({ field: k, old: existing[k] ?? null, new: v }));
+
 export const importRows = async (req, res) => {
   const cfg = ENTITIES[req.params.entity];
   if (!cfg) return res.status(404).json({ message: `Unknown entity "${req.params.entity}"` });
 
-  const { rows = [], mode = "create", key, dryRun = true } = req.body || {};
+  const { rows = [], mode = "create", key, dryRun = true, columnsToUpdate } = req.body || {};
   if (!Array.isArray(rows) || !rows.length) return res.status(400).json({ message: "No rows to import" });
   if (rows.length > MAX_ROWS) return res.status(400).json({ message: `Send at most ${MAX_ROWS} rows per request` });
   if (!["create", "upsert", "skip"].includes(mode)) return res.status(400).json({ message: "mode must be create, upsert or skip" });
   if (mode !== "create" && !cfg.keys.includes(key)) return res.status(400).json({ message: `Choose a match key: ${cfg.keys.join(", ")}` });
 
   const results = [];
+  const seen = new Map();
+
   for (let i = 0; i < rows.length; i++) {
     let row = { ...rows[i] };
     const rowNo = row.__row ?? i + 1;
+    const rowAction = row.__action;
     delete row.__row;
+    delete row.__action;
     if (cfg.prepare) row = cfg.prepare(row);
     const r = { row: rowNo, action: null, status: "ok", message: "" };
     try {
       const missing = cfg.required.filter((f) => row[f] === undefined || row[f] === null || row[f] === "" || (Array.isArray(row[f]) && !row[f].length));
-      if (missing.length) throw new Error(`Missing ${missing.join(", ")}`);
+      if (missing.length && (!rowAction || rowAction === "create")) throw new Error(`Missing ${missing.join(", ")}`);
 
       if (cfg.taxonomy) {
         const tax = applyTaxonomy(row, cfg.taxonomy);
@@ -116,31 +138,98 @@ export const importRows = async (req, res) => {
 
       const matchKey = key || cfg.keys[0];
       let existing = null;
+      let repeatOf = null;
+
       if (row[matchKey] !== undefined && row[matchKey] !== "") {
+        const matchVal = String(row[matchKey]).trim();
+        if (seen.has(matchVal)) {
+          repeatOf = seen.get(matchVal);
+        } else {
+          seen.set(matchVal, rowNo);
+        }
+
         const filter = cfg.keyFilter ? cfg.keyFilter(row[matchKey], row) : { [matchKey]: row[matchKey] };
-        existing = await cfg.model.findOne(filter).select("_id").lean();
+        existing = await cfg.model.findOne(filter).lean();
       }
 
-      if (existing && mode === "skip") {
+      const dupInfo = existing
+        ? {
+            id: existing._id,
+            autoNumber: existing.requestNumber || existing.slid || existing.ticketId || existing.teamCode || String(existing._id).slice(-4),
+            changes: diffOf(existing, row, false, columnsToUpdate),
+            blanks: diffOf(existing, row, true, columnsToUpdate).length,
+          }
+        : null;
+
+      const decision = ["create", "update", "merge", "skip"].includes(rowAction) ? rowAction : null;
+
+      if (decision === "skip" || (!decision && existing && mode === "skip")) {
         r.action = "skip";
         r.message = `Exists (${matchKey} = ${row[matchKey]})`;
-        r.id = String(existing._id);
-      } else if (existing && mode === "create") {
+        r.id = String(existing?._id);
+        r.existing = dupInfo;
+        r.repeatOf = repeatOf;
+        results.push(r);
+        continue;
+      }
+
+      if (!decision && dryRun && repeatOf && mode !== "create") {
+        r.action = "skip";
+        r.message = "Repeated in the file";
+        r.repeatOf = repeatOf;
+        r.existing = dupInfo;
+        results.push(r);
+        continue;
+      }
+
+      if (!decision && existing && mode === "create") {
         throw new Error(`Already exists (${matchKey} = ${row[matchKey]})`);
+      }
+
+      const asNew = decision === "create" || !existing;
+      r.action = asNew ? "create" : "update";
+      r.existing = dupInfo;
+      r.repeatOf = repeatOf;
+
+      if (dryRun) {
+        if (asNew) {
+          const doc = new cfg.model({ ...row, createdBy: req.user?._id });
+          await doc.validate();
+        }
       } else {
-        r.action = existing ? "update" : "create";
-        if (dryRun) {
-          if (!existing) {
-            const doc = new cfg.model({ ...row, createdBy: req.user?._id });
-            await doc.validate();
+        if (!asNew) {
+          let patch = {};
+          if (decision === "merge") {
+            const mergeDiff = diffOf(existing, row, true, columnsToUpdate);
+            patch = Object.fromEntries(mergeDiff.map((c) => [c.field, c.new]));
+          } else if (columnsToUpdate && Array.isArray(columnsToUpdate) && columnsToUpdate.length) {
+            columnsToUpdate.forEach((col) => {
+              if (row[col] !== undefined && !blank(row[col])) {
+                patch[col] = row[col];
+              }
+            });
+          } else {
+            Object.entries(row).forEach(([k, v]) => {
+              if (!blank(v) && !k.startsWith("__")) patch[k] = v;
+            });
           }
+
+          if (Object.keys(patch).length === 0) {
+            r.action = "skip";
+            r.message = "No fields changed";
+            r.id = String(existing._id);
+            results.push(r);
+            continue;
+          }
+
+          const out = await invoke(cfg.update, { body: patch, params: { id: String(existing._id) }, user: req.user });
+          if (out.status >= 400) throw new Error(errorText(out.data));
+          r.id = String(existing._id);
         } else {
-          const out = existing
-            ? await invoke(cfg.update, { body: row, params: { id: String(existing._id) }, user: req.user })
-            : await invoke(cfg.create, { body: row, user: req.user });
+          const out = await invoke(cfg.create, { body: row, user: req.user });
           if (out.status >= 400) throw new Error(errorText(out.data));
           const saved = out.data?.task || out.data?.data || out.data;
-          r.id = saved?._id ? String(saved._id) : existing ? String(existing._id) : undefined;
+          r.id = saved?._id ? String(saved._id) : undefined;
         }
       }
     } catch (err) {

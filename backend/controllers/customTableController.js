@@ -708,7 +708,7 @@ export const deleteView = async (req, res) => {
 export const importRows = async (req, res) => {
   const t = await loadTable(req, res);
   if (!t) return;
-  const { rows = [], mode = "create", matchField, dryRun = true, fileId, sheet, mapping } = req.body;
+  const { rows = [], mode = "create", matchField, dryRun = true, fileId, sheet, mapping, columnsToUpdate } = req.body;
   if (!rows.length) return fail(res, 400, "No rows to import");
   if (rows.length > MAX_IMPORT_ROWS) return fail(res, 400, `Send at most ${MAX_IMPORT_ROWS} rows per request`);
   if (!["create", "upsert", "skip"].includes(mode)) return fail(res, 400, "Unknown mode");
@@ -729,7 +729,10 @@ export const importRows = async (req, res) => {
   // a date field is the same day even if the stored time differs (files carry no time)
   const same = (k, a, b) => (dayOnly.has(k) && typeof a === "string" && typeof b === "string" ? a.slice(0, 10) === b.slice(0, 10) : JSON.stringify(a ?? null) === JSON.stringify(b ?? null));
   const diffOf = (existing, data, onlyBlanks = false) => Object.entries(data)
-    .filter(([k, v]) => !blank(v) && (!onlyBlanks || blank(existing.data?.[k])) && !same(k, existing.data?.[k], v))
+    .filter(([k, v]) => {
+      if (columnsToUpdate && Array.isArray(columnsToUpdate) && columnsToUpdate.length && !columnsToUpdate.includes(k)) return false;
+      return !blank(v) && (!onlyBlanks || blank(existing.data?.[k])) && !same(k, existing.data?.[k], v);
+    })
     .map(([k, v]) => ({ field: k, old: existing.data?.[k] ?? null, new: v }));
 
   const results = [];

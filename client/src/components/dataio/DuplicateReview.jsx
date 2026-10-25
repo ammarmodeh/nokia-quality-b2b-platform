@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Checkbox, MenuItem, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, MenuItem, TextField, Typography } from "@mui/material";
 import ContentCopyOutlined from "@mui/icons-material/ContentCopyOutlined";
 import Badge from "../ui/Badge";
 
@@ -36,7 +36,22 @@ export const actionFor = (d, policy, decisions, repeatPolicy) => {
  * (with what an update would change), and rows that repeat a value earlier in the file.
  * Nothing is imported until a choice is made for the duplicates.
  */
-const DuplicateReview = ({ dups, fields, keyLabel, policy, onPolicy, decisions, onDecide, repeatPolicy, onRepeatPolicy, targetLabel }) => {
+const DuplicateReview = ({
+  dups,
+  fields,
+  keyLabel,
+  policy,
+  onPolicy,
+  decisions,
+  onDecide,
+  repeatPolicy,
+  onRepeatPolicy,
+  targetLabel,
+  selectedColumns,
+  onToggleColumn,
+  onSelectAllColumns,
+  onDeselectAllColumns,
+}) => {
   const [onlyChanged, setOnlyChanged] = useState(false);
   const byKey = useMemo(() => Object.fromEntries(fields.map((f) => [f.key, f])), [fields]);
   const existing = dups.filter((d) => d.existing);
@@ -72,6 +87,62 @@ const DuplicateReview = ({ dups, fields, keyLabel, policy, onPolicy, decisions, 
             })}
           </Box>
           {!policy && <Typography sx={{ fontSize: 12.5, color: "var(--warning)", fontWeight: 500, mb: 1 }}>Choose what to do with the duplicates to continue.</Typography>}
+
+          {/* Flexible Column Selection to Replace / Update */}
+          {["update", "merge", "custom"].includes(policy) && (
+            <Box sx={{ mb: 1.5, p: 1.25, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--surface)" }}>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.5, flexWrap: "wrap", gap: 1 }}>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 600 }}>
+                  Select columns to replace / update in existing rows:
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button size="small" onClick={onSelectAllColumns} sx={{ fontSize: 11.5, py: 0.25, minHeight: 0 }}>
+                    Select All
+                  </Button>
+                  <Button size="small" onClick={onDeselectAllColumns} sx={{ fontSize: 11.5, py: 0.25, minHeight: 0, color: "var(--text-secondary)" }}>
+                    Clear All
+                  </Button>
+                </Box>
+              </Box>
+              <Typography sx={{ fontSize: 11.5, color: "var(--text-secondary)", mb: 1 }}>
+                {selectedColumns?.length
+                  ? `Only ${selectedColumns.length} selected column(s) will be updated. Unchecked columns in the table will remain untouched.`
+                  : "All columns from the uploaded file will update matching records."}
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", maxHeight: 110, overflow: "auto", p: 0.5 }}>
+                {fields.map((f) => {
+                  const isSelected = !selectedColumns || selectedColumns.includes(f.key);
+                  return (
+                    <Box
+                      key={f.key}
+                      component="button"
+                      type="button"
+                      onClick={() => onToggleColumn?.(f.key)}
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        px: 1,
+                        py: 0.35,
+                        borderRadius: "6px",
+                        fontSize: 12,
+                        cursor: "pointer",
+                        border: "1px solid",
+                        borderColor: isSelected ? "var(--accent)" : "var(--border)",
+                        backgroundColor: isSelected ? "var(--accent-subtle)" : "var(--surface-subtle)",
+                        color: isSelected ? "var(--accent-text)" : "var(--text-muted)",
+                        fontWeight: isSelected ? 600 : 400,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <span>{isSelected ? "✓" : "+"}</span>
+                      <span>{f.label}</span>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
 
           <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
             <Box component="label" sx={{ display: "flex", alignItems: "center", fontSize: 12.5, color: "var(--text-secondary)", cursor: "pointer" }}>

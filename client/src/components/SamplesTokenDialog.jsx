@@ -17,7 +17,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, FileDownloadOutlined } from '@mui/icons-material';
 import {
   startOfYear,
   endOfYear,
@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 
 import api from '../api/api';
+import XLSX from 'xlsx-js-style';
 import { getCustomWeekNumber } from '../utils/helpers';
 import { AppDialog, Badge, ConfirmDialog } from './ui';
 
@@ -210,6 +211,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   const [teamMonthlyData, setTeamMonthlyData] = useState({}); // { [monthNum]: { [teamName]: sampleSize } }
   const [selectedTeamMonth, setSelectedTeamMonth] = useState(new Date().getMonth() + 1);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
+  const [showInactiveWithSamples, setShowInactiveWithSamples] = useState(false);
 
   // Daily Online Data State
   const [dailyOnlineData, setDailyOnlineData] = useState({}); // { [dateStr 'YYYY-MM-DD']: { onlineSamples: '', note: '' } }
@@ -505,25 +507,52 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   }, [teamMonthlyData]);
 
   // ── Team monthly totals and grand total ─────────────────────────────────
+  // Only count active teams so the badge always matches the visible rows.
   const teamMonthTotals = useMemo(() => {
+    const activeNames = new Set(
+      fieldTeams.filter(t => !t.isTerminated && t.isActive !== false).map(t => t.teamName)
+    );
     const totals = {};
     for (let m = 1; m <= 12; m++) {
       const monthObj = teamMonthlyData[m] || {};
-      totals[m] = Object.values(monthObj).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+      totals[m] = Object.entries(monthObj).reduce((sum, [name, val]) =>
+        activeNames.has(name) ? sum + (parseFloat(val) || 0) : sum, 0
+      );
     }
     return totals;
-  }, [teamMonthlyData]);
+  }, [teamMonthlyData, fieldTeams]);
 
   const grandTeamSamplesTotal = useMemo(() => {
     return Object.values(teamMonthTotals).reduce((sum, val) => sum + val, 0);
   }, [teamMonthTotals]);
 
-  // Filtered teams list based on search query
+  // Filtered teams list: exclude terminated / inactive, then apply search.
+  // When showInactiveWithSamples is on, also append inactive teams that have
+  // at least one month of saved sample data (across the full year) — BUT only
+  // if no active team already uses the same teamName (samples are keyed by
+  // name, so showing both would duplicate the same value on two rows).
   const filteredFieldTeams = useMemo(() => {
-    if (!teamSearchQuery.trim()) return fieldTeams;
+    const active = fieldTeams.filter(t => !t.isTerminated && t.isActive !== false);
+
+    let pool = active;
+    if (showInactiveWithSamples) {
+      const activeNames = new Set(active.map(t => t.teamName));
+      const inactiveWithData = fieldTeams
+        .filter(t => t.isTerminated || t.isActive === false)
+        .filter(t => !activeNames.has(t.teamName)) // skip if active twin exists
+        .filter(t =>
+          MONTHS.some(m => {
+            const v = teamMonthlyData[m.month]?.[t.teamName];
+            return v !== undefined && v !== '' && v !== null;
+          })
+        );
+      pool = [...active, ...inactiveWithData];
+    }
+
+    if (!teamSearchQuery.trim()) return pool;
     const q = teamSearchQuery.toLowerCase();
-    return fieldTeams.filter(t => `${t.teamName || ''} ${t.teamCode || ''}`.toLowerCase().includes(q));
-  }, [fieldTeams, teamSearchQuery]);
+    return pool.filter(t => `${t.teamName || ''} ${t.teamCode || ''}`.toLowerCase().includes(q));
+  }, [fieldTeams, teamSearchQuery, showInactiveWithSamples, teamMonthlyData]);
 
   // ── Daily Online & Samples Month Totals and Grand Total ─────────────────
   const dailyOnlineMonthTotals = useMemo(() => {
@@ -716,6 +745,99 @@ const SamplesTokenDialog = ({ open, onClose }) => {
     }
   };
 
+  // ── Export to xlsx ──────────────────────────────────────────────────────
+  const handleExport = () => {
+    const wb = XLSX.utils.book_new();
+    const hdrStyle = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1E293B' } } };
+    const applyHdr = (ws, cols) => {
+      cols.forEach((_, c) => {
+        const cell = XLSX.utils.encode_cell({ r: 0, c });
+        if (ws[cell]) ws[cell].s = hdrStyle;
+      });
+    };
+
+    // Sheet 1: Weekly Results
+    const weekHdr = ['Week', 'Promoters %', 'Detractors %', 'NPS', 'ITN Related', 'ITN %', 'Sample Size', 'Note'];
+    const weekRows = [
+      weekHdr,
+      ...weeksData
+        .filter(r => r.sampleSize !== '' || r.promoters !== '' || r.detractors !== '')
+        .map(r => [
+          `Week ${r.weekNum}`, r.promoters, r.detractors, r.nps,
+          r.itnRelated, r.itnRelatedPercent !== '' ? `${r.itnRelatedPercent}%` : '',
+          r.sampleSize, r.note,
+        ]),
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(weekRows);
+    applyHdr(ws1, weekHdr);
+    ws1['!cols'] = [70, 90, 95, 60, 80, 60, 90, 140].map(w => ({ wch: w / 7 }));
+    XLSX.utils.book_append_sheet(wb, ws1, 'Weekly Results');
+
+    // Sheet 2: Monthly Totals
+    const monthHdr = ['Month', 'Total Samples'];
+    const monthRows = [
+      monthHdr,
+      ...MONTHS.map(m => [m.name, monthlyTotals[m.month - 1]?.totalSamples ?? '']),
+      [],
+      ['TOTAL', grandMonthlyTotal],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(monthRows);
+    applyHdr(ws2, monthHdr);
+    ws2['!cols'] = [100, 100].map(w => ({ wch: w / 7 }));
+    XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Totals');
+
+    // Sheet 3: Team Samples — team × month matrix
+    const activeTeams = fieldTeams.filter(t => !t.isTerminated && t.isActive !== false);
+    const teamHdr = ['Team Name', 'Team Code', 'Company', ...MONTHS.map(m => m.short), 'Year Total'];
+    const teamDataRows = activeTeams.map(ft => {
+      const name = ft.teamName;
+      const monthVals = MONTHS.map(m => {
+        const v = teamMonthlyData[m.month]?.[name];
+        return v !== undefined && v !== '' ? (parseFloat(v) || 0) : '';
+      });
+      const yearTotal = monthVals.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+      return [name, ft.teamCode || '', ft.teamCompany || '', ...monthVals, yearTotal];
+    });
+    const monthColTotals = MONTHS.map(m =>
+      activeTeams.reduce((s, ft) => {
+        const v = teamMonthlyData[m.month]?.[ft.teamName];
+        return s + (v !== undefined && v !== '' ? (parseFloat(v) || 0) : 0);
+      }, 0)
+    );
+    const ws3 = XLSX.utils.aoa_to_sheet([teamHdr, ...teamDataRows, [], ['TOTAL', '', '', ...monthColTotals, grandTeamSamplesTotal]]);
+    applyHdr(ws3, teamHdr);
+    ws3['!cols'] = [160, 80, 120, ...MONTHS.map(() => 55), 80].map(w => ({ wch: w / 7 }));
+    XLSX.utils.book_append_sheet(wb, ws3, 'Team Samples');
+
+    // Sheet 4: Daily DVOC & Online
+    const dailyHdr = ['Date', 'Day', 'Online Samples', 'DVOC Token', 'Note'];
+    const dailyDataRows = [];
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    for (let m = 1; m <= 12; m++) {
+      const numDays = new Date(selectedYear, m, 0).getDate();
+      for (let d = 1; d <= numDays; d++) {
+        const dateStr = `${selectedYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const rec = dailyOnlineData[dateStr];
+        if (rec && (rec.onlineSamples !== '' || rec.samplesToken !== '' || rec.note !== '')) {
+          const day = new Date(selectedYear, m - 1, d);
+          dailyDataRows.push([
+            dateStr, dayNames[day.getDay()],
+            rec.onlineSamples !== '' ? parseFloat(rec.onlineSamples) : '',
+            rec.samplesToken  !== '' ? parseFloat(rec.samplesToken)  : '',
+            rec.note || '',
+          ]);
+        }
+      }
+    }
+    dailyDataRows.push([], ['TOTAL', '', grandDailyOnlineTotal, grandDailySamplesTokenTotal, '']);
+    const ws4 = XLSX.utils.aoa_to_sheet([dailyHdr, ...dailyDataRows]);
+    applyHdr(ws4, dailyHdr);
+    ws4['!cols'] = [90, 50, 100, 90, 160].map(w => ({ wch: w / 7 }));
+    XLSX.utils.book_append_sheet(wb, ws4, 'Daily DVOC & Online');
+
+    XLSX.writeFile(wb, `survey-samples-${selectedYear}.xlsx`);
+  };
+
   // ─── Render ─────────────────────────────────────────────────────────────
   const selectedOnlineMonthName = MONTHS[selectedOnlineMonth - 1]?.name;
   const selectedTeamMonthName = MONTHS[selectedTeamMonth - 1]?.name;
@@ -749,9 +871,21 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         secondary={{ label: 'Close' }}
         primary={{ label: saveSuccess ? 'Saved' : 'Save', loadingLabel: 'Saving…', onClick: handleManualSave, loading: saving }}
         extraActions={
-          <Typography sx={{ fontSize: 13, color: 'var(--text-secondary)', ...numCell, '& strong': { color: 'var(--text)', fontWeight: 600 } }}>
-            {footerSummary}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Typography sx={{ fontSize: 13, color: 'var(--text-secondary)', ...numCell, '& strong': { color: 'var(--text)', fontWeight: 600 } }}>
+              {footerSummary}
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<FileDownloadOutlined sx={{ fontSize: 15 }} />}
+              onClick={handleExport}
+              disabled={!mounted}
+              sx={{ flexShrink: 0 }}
+            >
+              Export xlsx
+            </Button>
+          </Box>
         }
       >
         {/* ── Tabs + year ── */}
@@ -896,6 +1030,15 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                 caption={`${filteredFieldTeams.length} teams · ${teamsWithSamples} with samples`}
               >
                 <SearchField value={teamSearchQuery} onChange={setTeamSearchQuery} placeholder="Search teams" />
+                <Button
+                  variant={showInactiveWithSamples ? 'contained' : 'outlined'}
+                  color={showInactiveWithSamples ? 'warning' : 'primary'}
+                  size="small"
+                  onClick={() => setShowInactiveWithSamples(v => !v)}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  {showInactiveWithSamples ? 'Hiding inactive' : 'Show inactive'}
+                </Button>
                 <Button variant="outlined" onClick={handleTransferJulToAug}>Move July to August</Button>
                 <Badge tone="success" sx={{ height: 32, px: 1.25, fontSize: 13, ...numCell }}>
                   {fmt(teamMonthTotals[selectedTeamMonth])} samples this month
@@ -926,9 +1069,16 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                         const curVal = (teamMonthlyData[selectedTeamMonth] || {})[team.teamName] ?? '';
                         const hasVal = curVal !== '' && curVal !== null && curVal !== undefined;
                         return (
-                          <TableRow key={team._id || team.teamName || idx} hover>
+                          <TableRow key={team._id || team.teamName || idx} hover
+                            sx={(team.isTerminated || team.isActive === false) ? { opacity: 0.75, backgroundColor: 'rgba(220,38,38,.04)' } : {}}
+                          >
                             <TableCell sx={{ color: 'var(--text-muted)', ...numCell }}>{idx + 1}</TableCell>
-                            <TableCell sx={{ fontWeight: 500 }}>{team.teamName}</TableCell>
+                            <TableCell sx={{ fontWeight: 500 }}>
+                              {team.teamName}
+                              {(team.isTerminated || team.isActive === false) && (
+                                <Box component="span" sx={{ ml: 1, fontSize: 10, px: 0.75, py: 0.125, borderRadius: '4px', backgroundColor: 'rgba(220,38,38,.12)', color: '#DC2626', fontWeight: 700, verticalAlign: 'middle' }}>left</Box>
+                              )}
+                            </TableCell>
                             <TableCell sx={{ color: 'var(--text-secondary)' }}>{team.teamCode || '—'}</TableCell>
                             <TableCell sx={{ color: 'var(--text-secondary)' }}>{team.teamCompany || '—'}</TableCell>
                             <TableCell>

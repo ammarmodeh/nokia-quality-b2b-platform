@@ -7,6 +7,7 @@ import CalendarMonthOutlined from "@mui/icons-material/CalendarMonthOutlined";
 import UserMenu from "./UserMenu";
 import Kbd from "../ui/Kbd";
 import { resolveCrumbs } from "./navConfig";
+import SlaNotificationMenu from "../sla/SlaNotificationMenu";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -77,6 +78,8 @@ const TopBar = ({ onOpenMobileNav, onOpenSearch, onOpenCalendar, showMenuButton 
           <CalendarMonthOutlined sx={{ fontSize: 17 }} />
         </IconButton>
       </Tooltip>
+
+      <SlaNotificationMenu />
 
       <UserMenu />
     </Box>
