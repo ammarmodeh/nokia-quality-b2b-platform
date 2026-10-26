@@ -8,7 +8,8 @@ export const getSamplesByYear = async (req, res) => {
     console.log(`🔍 [Backend] Fetching samples for year: ${year}`);
 
     const samples = await SamplesToken.find({ year: parseInt(year) })
-      .sort({ weekNumber: 1 });
+      .sort({ weekNumber: 1 })
+      .lean();
 
     console.log(`📊 [Backend] Found ${samples.length} samples for year ${year}`);
     if (samples.length > 0) {

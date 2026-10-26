@@ -2,7 +2,7 @@ import { Settings } from "../models/settingsModel.js";
 
 export const getSettings = async (req, res) => {
   try {
-    let settings = await Settings.findOne();
+    let settings = await Settings.findOne().lean();
     if (!settings) {
       // Create default settings if none exist
       settings = await Settings.create({});

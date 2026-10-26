@@ -72,4 +72,6 @@ taskTicketSchema.pre("save", async function (next) {
     next();
 });
 
+taskTicketSchema.index({ taskId: 1, timestamp: -1 });
+
 export const TaskTicket = mongoose.model("TaskTicket", taskTicketSchema);

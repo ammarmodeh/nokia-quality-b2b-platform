@@ -1,4 +1,5 @@
 import { TaskSchema } from "../models/taskModel.js";
+import { UserSchema } from "../models/userModel.js";
 import { applyTaxonomy } from "../utils/taxonomy.js";
 import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import { FavouriteSchema } from "../models/favouriteModel.js";
@@ -850,49 +851,57 @@ export const clearNotifications = async (req, res) => {
 
 export const getAllTasks = async (req, res) => {
   try {
-    const pipeline = [
-      { $match: {} },
-      { $sort: { createdAt: -1 } },
-      {
-        $lookup: {
-          from: "tasktickets",
-          localField: "_id",
-          foreignField: "taskId",
-          pipeline: [
-            {
-              $project: {
-                ticketId: 1,
-                status: 1,
-                mainCategory: 1,
-                eventDate: 1,
-                timestamp: 1,
-                recordedBy: 1,
-                note: 1,
-                transactionType: 1,
-                transactionState: 1,
-                unfReasonCode: 1,
-              }
-            }
-          ],
-          as: "tickets"
-        }
-      },
-      {
-        $addFields: {
-          latestGaia: { $arrayElemAt: [{ $sortArray: { input: "$tickets", sortBy: { timestamp: -1 } } }, 0] }
-        }
-      },
-      { $project: { subTasks: 0, checkpoints: 0 } }
-    ];
-
-    const tasks = await TaskSchema.aggregate(pipeline);
-    const populatedTasks = await TaskSchema.populate(tasks, [
-      { path: "assignedTo", select: "name email role" },
-      { path: "whomItMayConcern", select: "name email role" },
-      { path: "createdBy", select: "name email" }
+    const [tasks, tickets] = await Promise.all([
+      TaskSchema.find({})
+        .sort({ createdAt: -1 })
+        .select("-subTasks -checkpoints")
+        .lean(),
+      TaskTicket.find({})
+        .select("taskId ticketId status mainCategory eventDate timestamp recordedBy note transactionType transactionState unfReasonCode")
+        .lean()
     ]);
 
-    res.status(200).json(populatedTasks);
+    // Collect distinct user IDs for a single batch user lookup (avoids N+1 populate)
+    const userIdSet = new Set();
+    for (const t of tasks) {
+      if (t.createdBy) userIdSet.add(t.createdBy.toString());
+      if (Array.isArray(t.assignedTo)) t.assignedTo.forEach((id) => id && userIdSet.add(id.toString()));
+      if (Array.isArray(t.whomItMayConcern)) t.whomItMayConcern.forEach((id) => id && userIdSet.add(id.toString()));
+    }
+    const userDocs = await UserSchema.find({ _id: { $in: [...userIdSet] } })
+      .select("name email role")
+      .lean();
+    const userMap = new Map(userDocs.map((u) => [u._id.toString(), u]));
+
+    // Build ticket map
+    const ticketsByTask = new Map();
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      const tid = ticket.taskId ? ticket.taskId.toString() : null;
+      if (!tid) continue;
+      let list = ticketsByTask.get(tid);
+      if (!list) {
+        list = [];
+        ticketsByTask.set(tid, list);
+      }
+      list.push(ticket);
+    }
+
+    // Attach users and tickets in-memory
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      if (task.createdBy) task.createdBy = userMap.get(task.createdBy.toString()) || task.createdBy;
+      if (Array.isArray(task.assignedTo)) task.assignedTo = task.assignedTo.map((id) => (id ? (userMap.get(id.toString()) || id) : id));
+      if (Array.isArray(task.whomItMayConcern)) task.whomItMayConcern = task.whomItMayConcern.map((id) => (id ? (userMap.get(id.toString()) || id) : id));
+      const taskTickets = ticketsByTask.get(task._id.toString()) || [];
+      if (taskTickets.length > 1) {
+        taskTickets.sort((a, b) => new Date(b.timestamp || b.createdAt || 0) - new Date(a.timestamp || a.createdAt || 0));
+      }
+      task.tickets = taskTickets;
+      task.latestGaia = taskTickets[0] || null;
+    }
+
+    res.status(200).json(tasks);
   } catch (error) {
     console.error("Error fetching all tasks:", error);
     res.status(500).json({ error: error.message });

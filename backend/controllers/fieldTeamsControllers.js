@@ -75,7 +75,7 @@ export const validateTeam = async (req, res) => {
 
 export const getAllFieldTeams = async (req, res) => {
   try {
-    const users = await FieldTeamsSchema.find();
+    const users = await FieldTeamsSchema.find().lean();
     if (!users) return res.status(404).json({ message: "Field Teams not found" });
     res.status(200).json(users);
   } catch (error) {
