@@ -182,13 +182,13 @@ const GlobalCalendar = ({ onNavigate, height = "100%" }) => {
     if (ev.kind === "entry") {
       const tg = ev.raw.target || {};
       if (tg.kind === "row") return go(`/tables/${tg.tableId}?row=${tg.id}`);
-      if (tg.kind === "task") return go(`/tasks-list?task=${tg.id}`);
+      if (tg.kind === "task") return go(`/dvoc-installations?task=${tg.id}`);
       return go(`${trackerPath(ev.raw.issueCategory) || "/ojo-snags"}?q=${encodeURIComponent(ev.raw.slid || "")}`);
     }
-    if (ev.kind === "task") return go(`/tasks-list?task=${ev.raw._id}`);
+    if (ev.kind === "task") return go(`/dvoc-installations?task=${ev.raw._id}`);
     if (ev.kind === "visit") {
       const p = ev.raw.parent || {};
-      if (ev.raw.taskType === "Task") return go(`/tasks-list?task=${p._id}`);
+      if (ev.raw.taskType === "Task") return go(`/dvoc-installations?task=${p._id}`);
       return go(`${SNAG_PATH[ev.tax?.category] || "/ojo-snags"}?q=${encodeURIComponent(p.slid || p.ticketId || "")}`);
     }
     if (ev.kind === "row") return go(`/tables/${ev.raw.tableId}?row=${ev.raw.id}`);

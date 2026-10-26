@@ -259,7 +259,7 @@ const TeamViolationOverview = ({
   const [tableWeekFilter, setTableWeekFilter] = useState('all');
   const [tableMonthFilter, setTableMonthFilter] = useState('all');
 
-  // Task Details Dialog state (matching /tasks-list page)
+  // Task Details Dialog state (matching /dvoc-installations page)
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedViewTask, setSelectedViewTask] = useState(null);
 
@@ -2045,7 +2045,7 @@ const TeamViolationOverview = ({
         </DialogActions>
       </Dialog>
 
-      {/* Task Details Dialog - same as /tasks-list page */}
+      {/* Task Details Dialog - same as /dvoc-installations page */}
       {selectedViewTask && (
         <TaskDetailsDialog
           open={viewDialogOpen}

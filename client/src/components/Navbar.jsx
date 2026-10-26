@@ -313,7 +313,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
                 </MenuItem>
                 <MenuItem
                   component={Link}
-                  to="/tasks-list"
+                  to="/dvoc-installations"
                   onClick={handleMobileMenuClose}
                 >
                   <Typography variant="body1">All Tasks</Typography>
@@ -461,7 +461,7 @@ const Navbar = ({ toggleSidebar, isSidebarOpen }) => {
 
             <Button
               component={Link}
-              to="/tasks-list"
+              to="/dvoc-installations"
               disableRipple
               sx={{
                 height: '55px',

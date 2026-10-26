@@ -13,7 +13,7 @@ import { npsType, priorityMeta, taskDate, taskTitle, fmtDate } from "./taskUtils
 const BoardCard = memo(function BoardCard({ task, onOpen, dragging = false, overlay = false }) {
   const nps = npsType(task.evaluationScore);
   const pr = priorityMeta(task.priority);
-  const tickets = task.tickets?.length || 0;
+  const tickets = task.ticketCount ?? task.tickets?.length ?? 0;
   return (
     <Box
       role="button"

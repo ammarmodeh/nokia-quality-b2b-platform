@@ -73,5 +73,6 @@ taskTicketSchema.pre("save", async function (next) {
 });
 
 taskTicketSchema.index({ taskId: 1, timestamp: -1 });
+taskTicketSchema.index({ updatedAt: -1 });
 
 export const TaskTicket = mongoose.model("TaskTicket", taskTicketSchema);

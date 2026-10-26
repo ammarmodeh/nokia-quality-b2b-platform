@@ -202,7 +202,7 @@ const RowSheet = ({ open, onClose, table, fields, row, lookups, canEdit, onUpdat
             <Typography sx={{ fontSize: 13, flex: 1 }}>{row.linkedTaskId ? "Linked to a task" : "Not linked to a task"}</Typography>
             {row.linkedTaskId ? (
               <>
-                <Button size="small" component={RouterLink} to={`/tasks-list?task=${row.linkedTaskId}`}>Open task</Button>
+                <Button size="small" component={RouterLink} to={`/dvoc-installations?task=${row.linkedTaskId}`}>Open task</Button>
                 {canEdit && <Button size="small" startIcon={<LinkOff sx={{ fontSize: 16 }} />} onClick={() => linkTask(null)}>Unlink</Button>}
               </>
             ) : canEdit && <Button size="small" variant="outlined" onClick={() => setTaskOpen(true)}>Create task from row</Button>}

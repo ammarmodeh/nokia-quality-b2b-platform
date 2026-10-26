@@ -467,7 +467,7 @@ export const getSlaNotifications = async (req, res) => {
       const diffHours = +( (new Date(item.targetDate).getTime() - Date.now()) / 3600000 ).toFixed(1);
       const link =
         item.target.kind === "task"
-          ? `/tasks-list?task=${item.target.id}`
+          ? `/dvoc-installations?task=${item.target.id}`
           : item.target.kind === "issue"
           ? `/ojo-snags?q=${encodeURIComponent(item.slid || "")}`
           : `/tables/${item.target.tableId}?row=${item.target.id}`;

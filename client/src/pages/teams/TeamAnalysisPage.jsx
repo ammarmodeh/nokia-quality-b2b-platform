@@ -822,7 +822,7 @@ const TeamDetail = ({ teamId }) => {
                 if (row.source === 'task') {
                   // Fetch full task then open TaskSheet
                   try {
-                    // extract task id from the link: /tasks-list?task=<id>
+                    // extract task id from the link: /dvoc-installations?task=<id>
                     const taskId = row.link?.split('task=')[1];
                     if (taskId) {
                       const res = await api.get(`/tasks/get-task/${taskId}`);

@@ -80,6 +80,15 @@ export const filterTasks = (tasks, f, me) => {
   });
 };
 
+/**
+ * The date window to load from the server for these filters: { from, to } ISO strings,
+ * or {} for all time. Same window filterTasks applies, so loaded rows always cover the view.
+ */
+export const serverRangeFor = (f) => {
+  const range = f.from && f.to ? { start: startOfDay(new Date(f.from)), end: endOfDay(new Date(f.to)) } : rangeFor(f.range);
+  return range ? { from: range.start.toISOString(), to: range.end.toISOString() } : {};
+};
+
 // Board order: explicit boardOrder first, then newest first.
 export const boardSort = (a, b) => {
   const ao = a.boardOrder ?? null;

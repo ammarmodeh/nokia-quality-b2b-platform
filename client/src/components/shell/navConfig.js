@@ -29,7 +29,7 @@ export const NAV_SECTIONS = [
   {
     title: "Work",
     items: [
-      { label: "Tasks", to: "/tasks-list", icon: ViewKanbanOutlined, keywords: "board list dvoc" },
+      { label: "DVOC Installations", to: "/dvoc-installations", icon: ViewKanbanOutlined, keywords: "tasks board list dvoc installation" },
       { label: "Calendar", to: "/calendar", icon: CalendarMonthOutlined },
     ],
   },
@@ -44,7 +44,7 @@ export const NAV_SECTIONS = [
         icon: FactCheckOutlined,
         category: "DVOC",
         children: [
-          { label: "Installation tasks", to: "/tasks-list", keywords: "dvoc tasks nps" },
+          { label: "Installation tasks", to: "/dvoc-installations", keywords: "dvoc tasks nps" },
           { label: "Workspace", to: "/dvoc", keywords: "dvoc maintenance tables" },
         ],
       },
@@ -102,7 +102,7 @@ const EXTRA_TITLES = {
   "/profile": ["Account", "Profile"],
   "/change-password": ["Account", "Change password"],
   "/team": ["Settings", "Users & roles"],
-  "/tasks-list/reports": ["Tasks", "Audit reports"],
+  "/dvoc-installations/reports": ["DVOC Installations", "Audit reports"],
 };
 
 export const resolveCrumbs = (pathname, user) => {

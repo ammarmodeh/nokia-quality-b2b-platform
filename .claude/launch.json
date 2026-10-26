@@ -4,26 +4,60 @@
     {
       "name": "backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "backend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "backend",
+        "run",
+        "dev"
+      ],
       "port": 5000
     },
     {
       "name": "client",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "client", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "client",
+        "run",
+        "dev"
+      ],
       "port": 3000
     },
     {
       "name": "backend-localtest",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["-e", "Object.assign(process.env,{PORT:'5055',MONGO_URI:'mongodb://127.0.0.1:27017/qops_redesign_test',AWS_S3_BUCKET:''});process.chdir('backend');import(require('url').pathToFileURL(require('path').resolve('server.js')).href)"],
+      "runtimeArgs": [
+        "-e",
+        "Object.assign(process.env,{PORT:'5055',MONGO_URI:'mongodb://127.0.0.1:27017/qops_redesign_test',AWS_S3_BUCKET:''});process.chdir('backend');import(require('url').pathToFileURL(require('path').resolve('server.js')).href)"
+      ],
       "port": 5055
     },
     {
       "name": "client-localtest",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["-e", "process.env.API_PROXY_TARGET='http://localhost:5055';process.env.VITE_CACHE_DIR='node_modules/.vite-localtest';process.chdir('client');require('child_process').spawn(process.execPath,[require('path').resolve('node_modules/vite/bin/vite.js'),'--port','3055','--strictPort'],{stdio:'inherit'})"],
+      "runtimeArgs": [
+        "-e",
+        "process.env.API_PROXY_TARGET='http://localhost:5055';process.env.VITE_CACHE_DIR='node_modules/.vite-localtest';process.chdir('client');require('child_process').spawn(process.execPath,[require('path').resolve('node_modules/vite/bin/vite.js'),'--port','3055','--strictPort'],{stdio:'inherit'})"
+      ],
       "port": 3055
+    },
+    {
+      "name": "perf-backend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "Object.assign(process.env,{PORT:'5066',MONGO_URI:'mongodb://127.0.0.1:27017/qops_perf',JWT_SECRET:'perf-local-secret',AWS_S3_BUCKET:''});process.chdir('backend');import(require('url').pathToFileURL(require('path').resolve('server.js')).href)"
+      ],
+      "port": 5066
+    },
+    {
+      "name": "perf-client",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.API_PROXY_TARGET='http://127.0.0.1:5066';process.env.VITE_CACHE_DIR='node_modules/.vite-perf';process.chdir('client');require('child_process').spawn(process.execPath,[require('path').resolve('node_modules/vite/bin/vite.js'),'--port','3066','--strictPort'],{stdio:'inherit'})"
+      ],
+      "port": 3066
     }
   ]
 }

@@ -383,7 +383,7 @@ const collect = async (from, to, onlyTeam) => {
       date: d,
       slid: k.slid || "",
       title: k.customerName || k.slid || "Task",
-      link: `/tasks-list?task=${k._id}`,
+      link: `/dvoc-installations?task=${k._id}`,
       rootCause: toList(k.rootCause),
       reason: toList(k.reason),
       subReason: toList(k.subReason),

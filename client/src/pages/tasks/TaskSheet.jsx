@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Autocomplete, Box, Button, Divider, IconButton, ListItemIcon, Menu, MenuItem, Select, TextField, Tooltip, Typography } from "@mui/material";
 import MoreHoriz from "@mui/icons-material/MoreHoriz";
 import EditOutlined from "@mui/icons-material/EditOutlined";
@@ -6,6 +6,7 @@ import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOu
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import ContentCopy from "@mui/icons-material/ContentCopy";
 import { toast } from "sonner";
+import api from "../../api/api";
 import Sheet from "../../components/ui/Sheet";
 import CalendarEntriesPanel from "../../components/calendar/CalendarEntriesPanel";
 import SlaBadgeButton from "../../components/sla/SlaBadgeButton";
@@ -52,9 +53,23 @@ const selectSx = { minWidth: 150, "& .MuiSelect-select": { py: "5px", fontSize: 
 
 const TaskSheet = ({ task, open, onClose, users, onPatch, onEdit, onRecordTicket, onDelete, canDelete = false }) => {
   const [menu, setMenu] = useState(null);
+  // Summary rows carry only ticketCount; the history loads when the sheet opens.
+  const [loaded, setLoaded] = useState({ id: null, tickets: [] });
+  const needsTickets = open && task && !task.tickets;
+  useEffect(() => {
+    if (!needsTickets) return undefined;
+    let cancelled = false;
+    api
+      .get(`/tasks/tickets/${task._id}`)
+      .then(({ data }) => !cancelled && setLoaded({ id: task._id, tickets: data || [] }))
+      .catch(() => !cancelled && setLoaded({ id: task._id, tickets: [] }));
+    return () => {
+      cancelled = true;
+    };
+  }, [needsTickets, task?._id, task?.ticketCount]);
   if (!task) return null;
   const nps = npsType(task.evaluationScore);
-  const tickets = [...(task.tickets || [])].sort((a, b) => new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt));
+  const tickets = [...(task.tickets || (loaded.id === task._id ? loaded.tickets : []))].sort((a, b) => new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt));
   const assigned = (task.assignedTo || []).map((u) => users.find((x) => x._id === (u?._id || u)) || u).filter((u) => u && typeof u === "object");
 
   return (

@@ -7,6 +7,8 @@ import PollOutlined from "@mui/icons-material/PollOutlined";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import { endOfDay, format } from "date-fns";
 import api from "../../api/api";
+import { useTaskSummaries } from "../../api/taskStore";
+import { cachedGet, clearCachedGet } from "../../api/requestCache";
 import PageHeader from "../../components/ui/PageHeader";
 import FilterChip from "../../components/ui/FilterChip";
 import ErrorState from "../../components/ui/ErrorState";
@@ -93,49 +95,61 @@ const DashboardPage = () => {
     [setParams]
   );
 
-  const [tasks, setTasks] = useState([]);
   const [teams, setTeams] = useState([]);
   const [samples, setSamples] = useState([]);
   const [settings, setSettings] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [refLoading, setRefLoading] = useState(true);
+  const [refError, setRefError] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
   const [refresh, setRefresh] = useState(0);
   const [samplesOpen, setSamplesOpen] = useState(false);
+  // Explicit refresh: drop cached reference data so the dashboard and tracker share one fresh request each.
+  const reload = useCallback(() => {
+    clearCachedGet("/samples-token/");
+    setRefresh((r) => r + 1);
+  }, []);
 
   useEffect(() => {
-    const onRefresh = () => setRefresh((r) => r + 1);
+    const onRefresh = () => reload();
     window.addEventListener("dashboard-refresh", onRefresh);
     return () => window.removeEventListener("dashboard-refresh", onRefresh);
-  }, []);
+  }, [reload]);
+
+  // Slim task rows from the shared cache: a revisit renders instantly and revalidates (304 when unchanged).
+  const { data: taskRows, error: tasksError } = useTaskSummaries({}, refresh);
+  const tasks = useMemo(() => taskRows || [], [taskRows]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setError(null);
+      setRefError(null);
       try {
-        const [t, ft, st, ...yrs] = await Promise.all([
-          api.get("/tasks/get-all-tasks"),
+        const [ft, st, ...yrs] = await Promise.all([
           api.get("/field-teams/get-field-teams"),
           api.get("/settings"),
-          ...yearsNeeded().map((y) => api.get(`/samples-token/${y}`).catch(() => ({ data: [] }))),
+          ...yearsNeeded().map((y) => cachedGet(`/samples-token/${y}`).catch(() => ({ data: [] }))),
         ]);
         if (cancelled) return;
-        setTasks(Array.isArray(t.data) ? t.data : t.data?.tasks || []);
         setTeams((ft.data || []).map((team) => ({ ...team, evaluationScore: team.evaluationScore || 0, isEvaluated: team.isEvaluated || false })));
         setSettings(st.data || {});
         setSamples(yrs.flatMap((r) => r.data || []));
-        setUpdatedAt(new Date());
       } catch (e) {
-        if (!cancelled) setError(e?.response?.data?.message || "Check your connection and try again.");
+        if (!cancelled) setRefError(e?.response?.data?.message || "Check your connection and try again.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setRefLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (taskRows) setUpdatedAt(new Date());
+  }, [taskRows]);
+
+  const loading = refLoading || (!taskRows && !tasksError);
+  const error = refError || (tasksError ? tasksError?.response?.data?.message || "Check your connection and try again." : null);
 
   const resolved = useMemo(() => resolvePeriod(period, settings || {}, { from, to }), [period, settings, from, to]);
   const [customSummary, setCustomSummary] = useState(null);
@@ -186,7 +200,7 @@ const DashboardPage = () => {
               </Typography>
             )}
             <Tooltip title="Refresh">
-              <IconButton aria-label="Refresh dashboard" onClick={() => setRefresh((r) => r + 1)} sx={{ width: 32, height: 32, border: "1px solid var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-xs)" }}>
+              <IconButton aria-label="Refresh dashboard" onClick={() => reload()} sx={{ width: 32, height: 32, border: "1px solid var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-xs)" }}>
                 <RefreshIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
@@ -208,7 +222,7 @@ const DashboardPage = () => {
         </Box>
       </PageHeader>
 
-      {error && <ErrorState title="The dashboard didn't load" message={error} onRetry={() => { setLoading(true); setRefresh((r) => r + 1); }} sx={{ mb: 3 }} />}
+      {error && <ErrorState title="The dashboard didn't load" message={error} onRetry={() => { setRefLoading(true); reload(); }} sx={{ mb: 3 }} />}
 
       {loading ? (
         <PageLoader minHeight={420} variant="cards" />
@@ -218,7 +232,7 @@ const DashboardPage = () => {
             <NpsPerformance tasks={scopedTasks} samples={samples} settings={settings} period={resolved} teamFilter={teamFilter} />
             <NpsTrends tasks={scopedTasks} samples={samples} settings={settings} grain={grain} onGrainChange={(g) => setQuery({ grain: g })} />
             <Suspense fallback={<PageLoader minHeight={240} variant="table" rows={5} />}>
-              <TeamViolationTracker tasks={accTasks} initialFieldTeams={teams} teamFilter={teamFilter} customSummary={customSummary} period={resolved.current} onTaskUpdated={() => setRefresh((r) => r + 1)} />
+              <TeamViolationTracker tasks={accTasks} initialFieldTeams={teams} teamFilter={teamFilter} customSummary={customSummary} period={resolved.current} reloadKey={refresh} onTaskUpdated={() => reload()} />
             </Suspense>
           </>
         )
@@ -230,7 +244,7 @@ const DashboardPage = () => {
             open={samplesOpen}
             onClose={() => {
               setSamplesOpen(false);
-              setRefresh((r) => r + 1);
+              reload();
             }}
           />
         )}

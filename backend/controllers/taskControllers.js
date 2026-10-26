@@ -1,6 +1,7 @@
 import { TaskSchema } from "../models/taskModel.js";
 import { UserSchema } from "../models/userModel.js";
 import { applyTaxonomy } from "../utils/taxonomy.js";
+import { collectionVersion, notModified } from "../utils/httpCache.js";
 import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import { FavouriteSchema } from "../models/favouriteModel.js";
 import { TrashSchema } from "../models/trashModel.js";
@@ -849,29 +850,117 @@ export const clearNotifications = async (req, res) => {
   res.status(501).json({ message: "Notifications removed in flat model" });
 };
 
+// Fields the list/board/dashboard (and their detail dialogs and exports) never read. Dropped in
+// ?view=summary to cut the payload; rows carry isSummary so the edit form reloads the full record.
+const SUMMARY_EXCLUDE = [
+  "subTasks", "checkpoints", "readBy", "whomItMayConcern", "closureComment", "customFields",
+  "subtaskType", "secondCallInitiated", "secondCallStatus",
+  "secondCallCategory", "secondCallAction", "secondCallTeam", "secondCallDispatchDate", "secondCallSecondaryStatus",
+  "secondCallResolutionMethod", "secondCallResolvedBy", "secondCallRootCause", "secondCallResolutionDate",
+  "secondCallResolvedBeforeSurvey",
+].map((f) => `-${f}`).join(" ");
+const TICKET_FIELDS = "taskId ticketId status mainCategory eventDate timestamp recordedBy note transactionType transactionState unfReasonCode";
+
+const parseDate = (v) => {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+};
+
+/**
+ * Mongo filter for "task date in [from, to]", where the task date is the client's
+ * taskDate(): interviewDate, else pisDate, else createdAt. Each branch can use its own index.
+ */
+export const taskDateMatch = (from, to) => {
+  if (!from && !to) return {};
+  const range = {};
+  if (from) range.$gte = from;
+  if (to) range.$lte = to;
+  const missing = { $in: [null] }; // matches null and absent
+  return {
+    $or: [
+      { interviewDate: range },
+      { interviewDate: missing, pisDate: range },
+      { interviewDate: missing, pisDate: missing, createdAt: range },
+    ],
+  };
+};
+
+// Replaces user ids with { name, email, role } in one batch query (avoids N+1 populate).
+const attachUsers = async (tasks) => {
+  const userIdSet = new Set();
+  for (const t of tasks) {
+    if (t.createdBy) userIdSet.add(t.createdBy.toString());
+    if (Array.isArray(t.assignedTo)) t.assignedTo.forEach((id) => id && userIdSet.add(id.toString()));
+    if (Array.isArray(t.whomItMayConcern)) t.whomItMayConcern.forEach((id) => id && userIdSet.add(id.toString()));
+  }
+  const userDocs = await UserSchema.find({ _id: { $in: [...userIdSet] } })
+    .select("name email role")
+    .lean();
+  const userMap = new Map(userDocs.map((u) => [u._id.toString(), u]));
+  const resolve = (id) => (id ? userMap.get(id.toString()) || id : id);
+  for (const task of tasks) {
+    if (task.createdBy) task.createdBy = resolve(task.createdBy);
+    if (Array.isArray(task.assignedTo)) task.assignedTo = task.assignedTo.map(resolve);
+    if (Array.isArray(task.whomItMayConcern)) task.whomItMayConcern = task.whomItMayConcern.map(resolve);
+  }
+};
+
+/**
+ * Slim task rows for the list, board and dashboard: heavy fields dropped and the ticket
+ * history reduced server-side to { ticketCount, latestGaia }.
+ */
+const getTaskSummaries = async (match) => {
+  const tasks = await TaskSchema.find(match).sort({ createdAt: -1 }).select(SUMMARY_EXCLUDE).lean();
+  const ticketMatch = Object.keys(match).length ? { taskId: { $in: tasks.map((t) => t._id) } } : {};
+  const latestFields = Object.fromEntries(TICKET_FIELDS.split(" ").map((f) => [`latestGaia.${f}`, 1]));
+  const [ticketStats] = await Promise.all([
+    TaskTicket.aggregate([
+      { $match: ticketMatch },
+      { $sort: { taskId: 1, timestamp: -1 } },
+      { $group: { _id: "$taskId", ticketCount: { $sum: 1 }, latestGaia: { $first: "$$ROOT" } } },
+      { $project: { ticketCount: 1, ...latestFields } },
+    ]),
+    attachUsers(tasks),
+  ]);
+  const byTask = new Map(ticketStats.map((s) => [s._id.toString(), s]));
+  for (const task of tasks) {
+    const s = byTask.get(task._id.toString());
+    task.ticketCount = s?.ticketCount || 0;
+    task.latestGaia = s?.latestGaia || null;
+    task.isSummary = true;
+  }
+  return tasks;
+};
+
 export const getAllTasks = async (req, res) => {
   try {
+    const summary = req.query.view === "summary";
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
+    if (from === undefined || to === undefined) return res.status(400).json({ message: "Invalid from/to date" });
+
+    const [taskVersion, ticketVersion, userVersion] = await Promise.all([
+      collectionVersion(TaskSchema),
+      collectionVersion(TaskTicket),
+      collectionVersion(UserSchema),
+    ]);
+    if (notModified(req, res, ["all-tasks", summary ? "summary" : "full", from?.toISOString(), to?.toISOString(), taskVersion, ticketVersion, userVersion])) return;
+
+    const match = taskDateMatch(from, to);
+    if (summary) return res.status(200).json(await getTaskSummaries(match));
+
     const [tasks, tickets] = await Promise.all([
-      TaskSchema.find({})
+      TaskSchema.find(match)
         .sort({ createdAt: -1 })
         .select("-subTasks -checkpoints")
         .lean(),
       TaskTicket.find({})
-        .select("taskId ticketId status mainCategory eventDate timestamp recordedBy note transactionType transactionState unfReasonCode")
+        .select(TICKET_FIELDS)
         .lean()
     ]);
 
-    // Collect distinct user IDs for a single batch user lookup (avoids N+1 populate)
-    const userIdSet = new Set();
-    for (const t of tasks) {
-      if (t.createdBy) userIdSet.add(t.createdBy.toString());
-      if (Array.isArray(t.assignedTo)) t.assignedTo.forEach((id) => id && userIdSet.add(id.toString()));
-      if (Array.isArray(t.whomItMayConcern)) t.whomItMayConcern.forEach((id) => id && userIdSet.add(id.toString()));
-    }
-    const userDocs = await UserSchema.find({ _id: { $in: [...userIdSet] } })
-      .select("name email role")
-      .lean();
-    const userMap = new Map(userDocs.map((u) => [u._id.toString(), u]));
+    await attachUsers(tasks);
 
     // Build ticket map
     const ticketsByTask = new Map();
@@ -887,12 +976,9 @@ export const getAllTasks = async (req, res) => {
       list.push(ticket);
     }
 
-    // Attach users and tickets in-memory
+    // Attach tickets in-memory
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
-      if (task.createdBy) task.createdBy = userMap.get(task.createdBy.toString()) || task.createdBy;
-      if (Array.isArray(task.assignedTo)) task.assignedTo = task.assignedTo.map((id) => (id ? (userMap.get(id.toString()) || id) : id));
-      if (Array.isArray(task.whomItMayConcern)) task.whomItMayConcern = task.whomItMayConcern.map((id) => (id ? (userMap.get(id.toString()) || id) : id));
       const taskTickets = ticketsByTask.get(task._id.toString()) || [];
       if (taskTickets.length > 1) {
         taskTickets.sort((a, b) => new Date(b.timestamp || b.createdAt || 0) - new Date(a.timestamp || a.createdAt || 0));

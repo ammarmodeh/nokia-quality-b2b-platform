@@ -227,7 +227,7 @@ const ViolationTable = ({
           <RowMenu
             row={row}
             onDetails={() => onTeamDetails(row.teamName)}
-            onViewTasks={() => navigate(`/tasks-list?view=table&team=${encodeURIComponent(row.teamName)}`)}
+            onViewTasks={() => navigate(`/dvoc-installations?view=table&team=${encodeURIComponent(row.teamName)}`)}
             onAddSession={() => onAddSession(row.teamName, row.id)}
             onViewSessions={() => onViewSessions(row.id)}
             onReportAbsence={() => onReportAbsence(row.teamName, row.id)}

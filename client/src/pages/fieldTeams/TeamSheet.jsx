@@ -96,7 +96,7 @@ const TeamSheet = ({ team, open, onClose, metrics, periodLabel, tasks, isAdmin, 
           </Button>
         </Field>
         <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" onClick={() => navigate(`/tasks-list?view=table&team=${encodeURIComponent(team.teamName)}`)}>Open team tasks</Button>
+          <Button variant="outlined" onClick={() => navigate(`/dvoc-installations?view=table&team=${encodeURIComponent(team.teamName)}`)}>Open team tasks</Button>
         </Box>
       </Section>
 

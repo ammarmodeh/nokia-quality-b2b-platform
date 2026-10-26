@@ -65,7 +65,7 @@ const SidebarLinks = () => {
         },
         {
           label: "All Tasks List",
-          link: "tasks-list",
+          link: "dvoc-installations",
           icon: <img width={20} height={20} src="/tasks-list.png" />,
           isNew: false,
         },

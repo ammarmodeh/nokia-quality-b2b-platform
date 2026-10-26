@@ -47,7 +47,7 @@ const CategoryWorkspace = ({ category, actions }) => {
             <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)" }}>NPS detractor and neutral cases on the Tasks board, table and calendar.</Typography>
           </Box>
           {taskCount !== null && <Badge>{taskCount.toLocaleString()} tasks</Badge>}
-          <Button component={RouterLink} to="/tasks-list" variant="outlined" endIcon={<ArrowForward sx={{ fontSize: 16 }} />}>Open tasks</Button>
+          <Button component={RouterLink} to="/dvoc-installations" variant="outlined" endIcon={<ArrowForward sx={{ fontSize: 16 }} />}>Open tasks</Button>
         </Box>
       )}
       <CategoryTables category={category} sub={tab && tab !== "all" ? tab : undefined} title={tab && tab !== "all" && subs.length > 1 ? `${tab} tables` : "Tables"} />

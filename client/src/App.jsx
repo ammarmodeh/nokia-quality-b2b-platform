@@ -112,6 +112,12 @@ const Loading = () => <RouteActivity><PageLoader fullScreen /></RouteActivity>;
 // Wraps an out-of-scope page: rendered only when SHOW_OUT_OF_SCOPE_PAGES is on.
 const Hidden = ({ children }) => (SHOW_OUT_OF_SCOPE_PAGES ? children : <Navigate to="/dashboard" replace />);
 
+// Old URL → new URL, keeping the sub-path, query (?task=…, filters) and hash so saved links still work.
+const RenamedRoute = ({ from, to }) => {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`${to}${pathname.slice(from.length)}${search}${hash}`} replace />;
+};
+
 const App = () => {
   const router = React.useMemo(() => createBrowserRouter(
     createRoutesFromElements(
@@ -187,8 +193,9 @@ const App = () => {
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
           <Route path="/change-password" element={<Navigate to="/settings?tab=security" replace />} />
           <Route path="/assigned-to-me" element={<Hidden><AssignedToMe /></Hidden>} />
-          <Route path="/tasks-list" element={<TasksPage />} />
-          <Route path="/tasks-list/reports" element={<AllTasksList />} />
+          <Route path="/dvoc-installations" element={<TasksPage />} />
+          <Route path="/dvoc-installations/reports" element={<AllTasksList />} />
+          <Route path="/tasks-list/*" element={<RenamedRoute from="/tasks-list" to="/dvoc-installations" />} />
           <Route path="/assigned-to-me/detractor" element={<Hidden><AssignedDetractor /></Hidden>} />
           <Route path="/assigned-to-me/neutrals" element={<Hidden><AssignedNeutral /></Hidden>} />
           <Route path="/benchmark-tables" element={<Hidden><BenchmarkTables /></Hidden>} />

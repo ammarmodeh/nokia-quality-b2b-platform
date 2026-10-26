@@ -50,7 +50,7 @@ export const isValidTaxonomy = (category, subCategory) => {
   return c.subs.includes(subCategory);
 };
 
-// NPS survey tasks (the Tasks / tasks-list records) are the DVOC · Installation tracker.
+// NPS survey tasks (the DVOC Installations / dvoc-installations records) are the DVOC · Installation tracker.
 export const TASK_TAXONOMY = { category: "DVOC", subCategory: "Installation" };
 
 // ---- Record classification ------------------------------------------------

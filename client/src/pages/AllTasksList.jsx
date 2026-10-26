@@ -10460,7 +10460,7 @@ const AllTasksList = () => {
       <PageHeader
         title="Tasks audit reports"
         description="DVOC · Installation NPS audit: KPIs, breakdowns, escalation and cumulative benchmarks, and the full task register."
-        actions={<Button variant="outlined" component={RouterLink} to="/tasks-list" startIcon={<MdArrowBack />}>Back to tasks</Button>}
+        actions={<Button variant="outlined" component={RouterLink} to="/dvoc-installations" startIcon={<MdArrowBack />}>Back to DVOC Installations</Button>}
       />
 
       {/* KPI Cards */}

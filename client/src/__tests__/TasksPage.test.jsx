@@ -42,7 +42,7 @@ const renderAt = (url) =>
       <ThemeProvider theme={appTheme}>
         <MemoryRouter initialEntries={[url]}>
           <Routes>
-            <Route path="/tasks-list" element={<TasksPage />} />
+            <Route path="/dvoc-installations" element={<TasksPage />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -52,18 +52,18 @@ const renderAt = (url) =>
 describe("TasksPage", () => {
   for (const view of ["board", "table", "calendar"]) {
     it(`renders the ${view} view without looping`, async () => {
-      renderAt(`/tasks-list?view=${view}`);
+      renderAt(`/dvoc-installations?view=${view}`);
       await waitFor(() => expect(screen.getByText(/of 30 tasks/)).toBeInTheDocument(), { timeout: 5000 });
     }, 15000);
   }
 
   it("defaults date range selection to 'This week'", async () => {
-    renderAt("/tasks-list");
+    renderAt("/dvoc-installations");
     await waitFor(() => expect(screen.getByText("This week")).toBeInTheDocument(), { timeout: 5000 });
   });
 
   it("shows all tasks when range=all is specified", async () => {
-    renderAt("/tasks-list?range=all");
+    renderAt("/dvoc-installations?range=all");
     await waitFor(() => expect(screen.getByText("30 of 30 tasks")).toBeInTheDocument(), { timeout: 5000 });
   });
 });

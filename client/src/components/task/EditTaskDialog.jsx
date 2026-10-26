@@ -191,22 +191,24 @@ const EditTaskDialog = ({
   onUpdate,
 }) => {
   const phone = useMediaQuery('(max-width:768px)');
-  const [task, setTask] = useState(taskProp);
-  const [loadingTask, setLoadingTask] = useState(false);
+  const [task, setTask] = useState(taskProp?.isSummary ? null : taskProp);
+  const [loadingTask, setLoadingTask] = useState(Boolean(taskProp?.isSummary));
 
-  // Sync internal task state with prop
+  // Sync internal task state with prop. Summary rows (list/dashboard) lack some fields,
+  // so they are reloaded in full below instead of seeding the form with blanks.
   useEffect(() => {
-    if (taskProp) setTask(taskProp);
+    if (taskProp && !taskProp.isSummary) setTask(taskProp);
   }, [taskProp]);
 
-  // Fetch task by ID if not provided as object
+  // Fetch task by ID if not provided as a full object
   useEffect(() => {
     let cancel = false;
+    const fetchId = taskProp?.isSummary ? taskProp._id : !taskProp ? id : null;
     const fetchTask = async () => {
-      if (open && !taskProp && id) {
+      if (open && fetchId) {
         try {
           setLoadingTask(true);
-          const { data } = await api.get(`/tasks/get-task/${id}`);
+          const { data } = await api.get(`/tasks/get-task/${fetchId}`);
           if (!cancel) setTask(data);
         } catch (err) {
           console.error("Failed to fetch task for editing:", err);

@@ -5,11 +5,12 @@ import { getCustomWeekNumber } from "../utils/helpers";
 import { toast } from "sonner";
 import SessionDialogs from "./ViolationSessionDialogs";
 import api from "../api/api";
+import { cachedGet } from "../api/requestCache";
 import * as XLSX from 'xlsx';
 import ViolationTable from "./violations/ViolationTable";
 import { isTeamAccountable } from "../utils/accountability";
 
-const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, teamFilter = [], customSummary = null, period = null }) => {
+const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, teamFilter = [], customSummary = null, period = null, reloadKey = 0 }) => {
   // The app shows toasts with sonner (no notistack provider is mounted).
   const enqueueSnackbar = (message, { variant } = {}) =>
     (variant === "error" ? toast.error : variant === "warning" ? toast.warning : variant === "info" ? toast.info : toast.success)(message);
@@ -53,24 +54,19 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
 
   const weekStartDay = settings?.weekStartDay || 0;
 
-  // Fetch samples token data (replacing localStorage)
+  // Years the tasks span; the samples fetch re-runs only when this set changes, not on every task edit.
+  const sampleYearsKey = useMemo(() => {
+    const years = new Set([new Date().getFullYear()]);
+    tasks.forEach((task) => task.interviewDate && years.add(new Date(task.interviewDate).getFullYear()));
+    return [...years].sort().join(",");
+  }, [tasks]);
+
+  // Fetch samples token data (replacing localStorage); shares the dashboard's per-year requests.
   useEffect(() => {
     const fetchSamplesData = async () => {
       try {
-        const yearsToFetch = new Set();
-        const currentYear = new Date().getFullYear();
-        yearsToFetch.add(currentYear);
-
-        tasks.forEach(task => {
-          if (task.interviewDate) {
-            yearsToFetch.add(new Date(task.interviewDate).getFullYear());
-          }
-        });
-
-        const promises = Array.from(yearsToFetch).map(year =>
-          api.get(`/samples-token/${year}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
-          }).then(res => ({ year, data: res.data || [] }))
+        const promises = sampleYearsKey.split(",").map(Number).map(year =>
+          cachedGet(`/samples-token/${year}`).then(res => ({ year, data: res.data || [] }))
             .catch(err => {
               console.error(`Error fetching samples for ${year}:`, err);
               return { year, data: [] };
@@ -93,7 +89,7 @@ const TeamViolationTracker = ({ tasks, initialFieldTeams = [], onTaskUpdated, te
     };
 
     fetchSamplesData();
-  }, [tasks]);
+  }, [sampleYearsKey, reloadKey]);
 
   // Calculate total samples from fetched state based on task weeks
   const totalGlobalSamples = useMemo(() => {

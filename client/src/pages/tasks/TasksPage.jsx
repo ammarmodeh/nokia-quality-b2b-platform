@@ -15,6 +15,7 @@ import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
 import PersonAddAltOutlined from "@mui/icons-material/PersonAddAltOutlined";
 import FilterAltOffOutlined from "@mui/icons-material/FilterAltOffOutlined";
 import api from "../../api/api";
+import { useTaskSummaries } from "../../api/taskStore";
 import PageHeader from "../../components/ui/PageHeader";
 import SegmentedControl from "../../components/ui/SegmentedControl";
 import FilterChip from "../../components/ui/FilterChip";
@@ -31,7 +32,7 @@ import EventCalendar from "../../components/calendar/EventCalendar";
 import TaskSheet from "./TaskSheet";
 import useTaskActions from "./useTaskActions";
 import { exportTasks, TASK_COLUMNS } from "./exportTasks";
-import { DATE_RANGES, GROUP_BY, PRIORITIES, STATUSES, filterTasks, statusMeta, taskDate, taskTitle } from "./taskUtils";
+import { DATE_RANGES, GROUP_BY, PRIORITIES, STATUSES, filterTasks, serverRangeFor, statusMeta, taskDate, taskTitle } from "./taskUtils";
 
 const AddTask = lazy(() => import("../../components/task/AddTask"));
 const EditTaskDialog = lazy(() => import("../../components/task/EditTaskDialog"));
@@ -154,22 +155,29 @@ const TasksPage = () => {
 
   const { patchOne, patchMany, dropMany } = useTaskActions(setTasks, users);
 
+  // Only the active date window is loaded from the server ("This week" by default); rows come
+  // from the shared cache, so revisits render instantly and revalidate in the background.
+  const serverRange = useMemo(() => serverRangeFor(f), [f.range, f.from, f.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data: rows, error: loadError } = useTaskSummaries(serverRange, refresh);
+  useEffect(() => {
+    if (rows) setTasks(rows);
+  }, [rows]);
+  useEffect(() => {
+    if (rows || loadError) setLoading(false);
+    setError(loadError ? "We couldn't load tasks. Check your connection and try again." : null);
+  }, [rows, loadError]);
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setError(null);
-      const [t, u, ft] = await Promise.allSettled([api.get("/tasks/get-all-tasks"), api.get("/users/get-all-users"), api.get("/field-teams/get-field-teams")]);
+    Promise.allSettled([api.get("/users/get-all-users"), api.get("/field-teams/get-field-teams")]).then(([u, ft]) => {
       if (cancelled) return;
-      if (t.status === "fulfilled") setTasks(Array.isArray(t.value.data) ? t.value.data : t.value.data?.tasks || []);
-      else setError("We couldn't load tasks. Check your connection and try again.");
       if (u.status === "fulfilled") setUsers((u.value.data || []).filter((x) => x.isActive !== false).map(({ _id, name, email, color, role }) => ({ _id, name, email, color, role })));
       if (ft.status === "fulfilled") setTeams(ft.value.data || []);
-      setLoading(false);
-    })();
+    });
     return () => {
       cancelled = true;
     };
-  }, [refresh]);
+  }, []);
 
   // Debounced search → URL
   useEffect(() => {
@@ -220,7 +228,7 @@ const TasksPage = () => {
   return (
     <Box>
       <PageHeader
-        title="Tasks"
+        title="DVOC Installations"
         description="DVOC · Installation — NPS detractor and neutral follow-ups."
         actions={
           <>
@@ -236,7 +244,7 @@ const TasksPage = () => {
                 <ListItemIcon><FileDownloadOutlined fontSize="small" /></ListItemIcon>Export view as CSV
               </MenuItem>
               <Divider />
-              <MenuItem component={RouterLink} to="/tasks-list/reports" onClick={() => setMoreMenu(null)}>
+              <MenuItem component={RouterLink} to="/dvoc-installations/reports" onClick={() => setMoreMenu(null)}>
                 <ListItemIcon><InsightsOutlined fontSize="small" /></ListItemIcon>Audit reports
               </MenuItem>
             </Menu>

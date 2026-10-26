@@ -44,7 +44,7 @@ const NpsPerformance = ({ tasks, samples, settings, period, teamFilter }) => {
   const delta = (a, b) => (prev.hasSamples && cur.hasSamples ? a - b : undefined);
 
   const openTasks = (type) =>
-    navigate(`/tasks-list?view=table&type=${type}&from=${iso(period.current.start)}&to=${iso(period.current.end)}${teamFilter.length ? `&team=${encodeURIComponent(teamFilter.join(","))}` : ""}`);
+    navigate(`/dvoc-installations?view=table&type=${type}&from=${iso(period.current.start)}&to=${iso(period.current.end)}${teamFilter.length ? `&team=${encodeURIComponent(teamFilter.join(","))}` : ""}`);
 
   const reasons = useMemo(() => topCounts(cur.detractorTasks, "reason"), [cur]);
   const owners = useMemo(() => topCounts([...cur.detractorTasks, ...cur.neutralTasks], "responsible"), [cur]);

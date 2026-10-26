@@ -354,6 +354,7 @@ taskSchema.index({ interviewDate: -1 });
 taskSchema.index({ pisDate: -1 });
 taskSchema.index({ contractDate: -1 });
 taskSchema.index({ createdAt: -1 });
+taskSchema.index({ updatedAt: -1 }); // collection version for conditional GETs
 taskSchema.index({ teamId: 1, interviewDate: -1 });
 taskSchema.index({ teamName: 1, interviewDate: -1 });
 taskSchema.index({ issueCategory: 1, issueSubCategory: 1 });

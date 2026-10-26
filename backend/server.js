@@ -94,7 +94,9 @@ const corsOptions = {
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  // If-None-Match / ETag: conditional GETs on large lists (see utils/httpCache.js)
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "If-None-Match"],
+  exposedHeaders: ["ETag"],
   optionsSuccessStatus: 204
 };
 

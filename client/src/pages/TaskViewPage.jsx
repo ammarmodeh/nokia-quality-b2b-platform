@@ -103,7 +103,7 @@ const TaskViewPage = () => {
   const location = useLocation();
   const { id } = useParams();
   const loggedInUser = useSelector((state) => state?.auth?.user);
-  const from = location.state?.from || "/tasks-list";
+  const from = location.state?.from || "/dvoc-installations";
 
   const [task, setTask] = useState(null);
   const [tickets, setTickets] = useState([]);
