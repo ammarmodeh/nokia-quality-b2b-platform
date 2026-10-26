@@ -35,6 +35,8 @@ import { customTableRouter, tableTemplateRouter, storedFileRouter } from "./rout
 import { mountBulkDelete } from "./routes/bulkDeleteRoutes.js";
 import { trackerRouter, teamCodeRouter, calendarEntryRouter, teamAnalyticsRouter } from "./routes/qopsRoutes.js";
 import teamOnlineRoutes from "./routes/teamOnlineRoutes.js";
+import teamTrendsRoutes from "./routes/teamTrendsRoutes.js";
+import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 import { ensureTrackers } from "./utils/trackers.js";
 import path from "path";
 import { errorHandler, routeNotFound } from "./middlewares/errorMiddleware.js";
@@ -154,6 +156,8 @@ app.use("/api/table-templates", tableTemplateRouter);
 app.use("/api/stored-files", storedFileRouter);
 app.use("/api/training-sessions", trainingSessionRoutes);
 app.use("/api/team-online", teamOnlineRoutes);
+app.use("/api/team-trends", teamTrendsRoutes);
+app.use("/api/maintenance", maintenanceRoutes); // DVOC · Maintenance (own maintenance_* collections)
 
 // Static Uploads Folder
 const __dirname = path.resolve();

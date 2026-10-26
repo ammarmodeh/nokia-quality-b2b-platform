@@ -16,6 +16,7 @@ import GavelOutlined from "@mui/icons-material/GavelOutlined";
 import VerifiedOutlined from "@mui/icons-material/VerifiedOutlined";
 import TrackChangesOutlined from "@mui/icons-material/TrackChangesOutlined";
 import QueryStatsOutlined from "@mui/icons-material/QueryStatsOutlined";
+import TrendingDownOutlined from "@mui/icons-material/TrendingDownOutlined";
 import { customTrackers } from "../../constants/taxonomy";
 
 // Single source of truth for the sidebar and the command palette.
@@ -45,6 +46,7 @@ export const NAV_SECTIONS = [
         category: "DVOC",
         children: [
           { label: "Installation tasks", to: "/dvoc-installations", keywords: "dvoc tasks nps" },
+          { label: "Maintenance", to: "/dvoc-maintenance", keywords: "dvoc maintenance teams survey samples tasks processing tickets" },
           { label: "Workspace", to: "/dvoc", keywords: "dvoc maintenance tables" },
         ],
       },
@@ -58,6 +60,7 @@ export const NAV_SECTIONS = [
     items: [
       { label: "Field Teams", to: "/fieldTeams", icon: GroupsOutlined, keywords: "technicians members" },
       { label: "Team analysis", to: "/team-analysis", icon: QueryStatsOutlined, keywords: "team code slid performance 360" },
+      { label: "Trends", to: "/team-trends", icon: TrendingDownOutlined, keywords: "worst teams ranking dvoc accountable reach online samples" },
     ],
   },
   {

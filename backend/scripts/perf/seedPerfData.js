@@ -22,7 +22,7 @@ const daysAgo = (d) => new Date(Date.now() - d * 864e5);
 await mongoose.connect(uri);
 const passwordHash = await bcrypt.hash(PERF_ADMIN.password, 10);
 const db = mongoose.connection.db;
-for (const c of ["tasks", "tasktickets", "users", "fieldteams"]) await db.collection(c).deleteMany({});
+for (const c of ["tasks", "tasktickets", "users", "fieldteams", "teamsamplestokens", "teamonlinedatas"]) await db.collection(c).deleteMany({});
 
 const users = Array.from({ length: 25 }, (_, i) => ({ _id: new mongoose.Types.ObjectId(), name: `User ${i}`, email: `perf${i}@example.test`, role: i === 0 ? "Admin" : "Member", password: passwordHash, isActive: true, createdAt: new Date(), updatedAt: new Date() }));
 await db.collection("users").insertMany(users);
@@ -38,7 +38,7 @@ for (let i = 0; i < TASKS; i++) {
     slid: `SL${100000 + i}`, requestNumber: 500000 + i, customerName: `Customer ${i}`, contactNumber: `07${Math.floor(Math.random() * 1e8)}`,
     governorate: pick(["Amman", "Irbid", "Zarqa"]), district: "D1", customerType: "Residential",
     evaluationScore: Math.ceil(Math.random() * 8), customerFeedback: text(40), closureComment: text(25), gaiaContent: text(110),
-    reason: [pick(words)], subReason: [pick(words)], rootCause: [pick(words)], teamAccountability: [pick(["Yes", "No"])], responsible: [pick(words)],
+    reason: [pick(words)], subReason: [pick(words)], rootCause: [pick(words)], teamAccountability: [pick(["Yes", "No"])], responsible: [pick(["Reach", "Reach", "Customer", "OJO", "GAM"])],
     itnRelated: ["No"], relatedToSubscription: ["No"], scoringKeys: ["a", "b"], customFields: [{ key: "k", value: text(10) }],
     secondCallStatus: "Done", secondCallCategory: pick(words), secondCallAction: text(8), secondCallRootCause: text(6),
     teamName: team.teamName, teamId: team._id, teamCompany: team.teamCompany,
@@ -61,6 +61,18 @@ for (const t of tasks) {
   }
 }
 await db.collection("tasktickets").insertMany(tickets);
+// Per-team monthly survey samples and online transactions for the last 4 months (Teams → Trends rates).
+const monthly = [];
+const online = [];
+for (let i = 0; i < 4; i++) {
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+  for (const t of teams.slice(0, 34)) { // a few teams without denominators, to exercise the "—" path
+    monthly.push({ year: d.getFullYear(), month: d.getMonth() + 1, teamName: t.teamName, teamId: t._id, sampleSize: 20 + Math.floor(Math.random() * 60), createdAt: new Date(), updatedAt: new Date() });
+    online.push({ year: d.getFullYear(), month: d.getMonth() + 1, teamName: t.teamName, teamCode: `C${t.teamName.slice(-2)}`, onlineTransactions: 200 + Math.floor(Math.random() * 900), createdAt: new Date(), updatedAt: new Date() });
+  }
+}
+await db.collection("teamsamplestokens").insertMany(monthly);
+await db.collection("teamonlinedatas").insertMany(online);
 console.log(`Seeded ${tasks.length} tasks, ${tickets.length} tickets, ${users.length} users, ${teams.length} teams into ${uri}`);
 console.log("Admin user id for benchmark tokens:", users[0]._id.toString());
 await mongoose.disconnect();

@@ -54,6 +54,12 @@ const TablePage = lazy(() => import("./pages/tables/TablePage"));
 const CategoryWorkspace = lazy(() => import("./pages/tables/CategoryWorkspace"));
 const TrackerWorkspace = lazy(() => import("./pages/tables/TrackerWorkspace"));
 const TeamAnalysisPage = lazy(() => import("./pages/teams/TeamAnalysisPage"));
+const TeamTrendsPage = lazy(() => import("./pages/teams/TeamTrendsPage"));
+const MaintenanceLayout = lazy(() => import("./pages/maintenance/MaintenanceLayout"));
+const MaintenanceTeamsPage = lazy(() => import("./pages/maintenance/MaintenanceTeamsPage"));
+const MaintenanceSamplesPage = lazy(() => import("./pages/maintenance/MaintenanceSamplesPage"));
+const MaintenanceTasksPage = lazy(() => import("./pages/maintenance/MaintenanceTasksPage"));
+const MaintenanceProcessingPage = lazy(() => import("./pages/maintenance/MaintenanceProcessingPage"));
 const QuizManagement = lazy(() => import("./pages/QuizManagement"));
 const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnalytics"));
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
@@ -189,6 +195,14 @@ const App = () => {
           <Route path="/trackers/:key" element={<TrackerWorkspace />} />
           <Route path="/team-analysis" element={<TeamAnalysisPage />} />
           <Route path="/team-analysis/:teamId" element={<TeamAnalysisPage />} />
+          <Route path="/team-trends" element={<TeamTrendsPage />} />
+          <Route path="/dvoc-maintenance" element={<MaintenanceLayout />}>
+            <Route index element={<Navigate to="teams" replace />} />
+            <Route path="teams" element={<MaintenanceTeamsPage />} />
+            <Route path="samples" element={<MaintenanceSamplesPage />} />
+            <Route path="tasks" element={<MaintenanceTasksPage />} />
+            <Route path="processing" element={<MaintenanceProcessingPage />} />
+          </Route>
           <Route path="/tables/:id" element={<TablePage />} />
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />
           <Route path="/change-password" element={<Navigate to="/settings?tab=security" replace />} />
