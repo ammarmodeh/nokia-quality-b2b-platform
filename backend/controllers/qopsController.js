@@ -11,6 +11,7 @@ import { OnTheJobAssessment } from "../models/onTheJobAssessmentModel.js";
 import QuizResult from "../models/quizResultModel.js";
 import TeamSamplesToken from "../models/teamSamplesTokenModel.js";
 import TeamOnlineData from "../models/teamOnlineDataModel.js";
+import { matchedRates, monthKey, monthKeyOf } from "../utils/teamMonthlyRates.js";
 import { BUILT_IN_CATEGORIES, taxonomyForIssue, TAXONOMY } from "../utils/taxonomy.js";
 import { reloadTrackers } from "../utils/trackers.js";
 import { EPOCH, findOverlap, makeResolver, normCode } from "../utils/teamCodes.js";
@@ -423,66 +424,46 @@ const assessOut = (m, id) => {
 export const teamMatrix = async (req, res) => {
   const { from, to } = rangeOf(req);
   const { teams, records, assess } = await collect(from, to, null);
+
+  // Per team: tracker counts, plus DVOC / samples / online per month (see utils/teamMonthlyRates.js).
   const by = new Map();
+  const monthsOf = new Map(); // teamId → Map(monthKey → { accountable, notAccountable, samples, online })
+  const monthEntry = (tid, key) => {
+    if (!monthsOf.has(tid)) monthsOf.set(tid, new Map());
+    const m = monthsOf.get(tid);
+    if (!m.has(key)) m.set(key, { accountable: 0, notAccountable: 0, samples: 0, online: 0 });
+    return m.get(key);
+  };
   for (const r of records) {
-    const x = by.get(r.teamId) || {
-      total: 0,
-      dvocCount: 0,
-      accountableCount: 0,
-      notAccountableCount: 0,
-      byCategory: {},
-    };
+    const x = by.get(r.teamId) || { total: 0, byCategory: {} };
     x.total++;
     x.byCategory[r.category] = (x.byCategory[r.category] || 0) + 1;
-    if (r.source === "task" || r.category === "DVOC") {
-      x.dvocCount++;
-      if (r.accountability === "accountable") {
-        x.accountableCount++;
-      } else {
-        x.notAccountableCount++;
-      }
-    }
     by.set(r.teamId, x);
+    if (r.source === "task" || r.category === "DVOC") {
+      const e = monthEntry(r.teamId, monthKeyOf(r.date));
+      if (r.accountability === "accountable") e.accountable++;
+      else e.notAccountable++;
+    }
   }
 
-  // Calculate team samples token from TeamSamplesToken
+  const teamByName = new Map(teams.filter((t) => t.teamName).map((t) => [t.teamName.trim().toLowerCase(), String(t._id)]));
+  const teamByCode = new Map(teams.filter((t) => t.teamCode).map((t) => [normCode(t.teamCode), String(t._id)]));
+  const teamIds = new Set(teams.map((t) => String(t._id)));
+  const inPeriod = (y, m) => new Date(Date.UTC(y, m, 0, 23, 59, 59, 999)) >= from && new Date(Date.UTC(y, m - 1, 1)) <= to;
+
+  // Team survey samples: by team id, else team name.
   const allTeamSamples = await TeamSamplesToken.find({}).lean().catch(() => []);
-  const sampleByTeamId = new Map();
-  const sampleByTeamName = new Map();
   for (const s of allTeamSamples) {
-    const mStart = new Date(Date.UTC(s.year, s.month - 1, 1));
-    const mEnd = new Date(Date.UTC(s.year, s.month, 0, 23, 59, 59, 999));
-    if (mEnd >= from && mStart <= to) {
-      const val = Number(s.sampleSize) || 0;
-      if (s.teamId) {
-        const idStr = String(s.teamId);
-        sampleByTeamId.set(idStr, (sampleByTeamId.get(idStr) || 0) + val);
-      }
-      if (s.teamName) {
-        const tn = s.teamName.trim().toLowerCase();
-        sampleByTeamName.set(tn, (sampleByTeamName.get(tn) || 0) + val);
-      }
-    }
+    if (!inPeriod(s.year, s.month)) continue;
+    const tid = s.teamId && teamIds.has(String(s.teamId)) ? String(s.teamId) : s.teamName ? teamByName.get(s.teamName.trim().toLowerCase()) : null;
+    if (tid) monthEntry(tid, monthKey(s.year, s.month)).samples += Number(s.sampleSize) || 0;
   }
-
-  // Calculate team online transactions from TeamOnlineData
+  // Online transactions: by team name, else team code.
   const allTeamOnline = await TeamOnlineData.find({}).lean().catch(() => []);
-  const onlineByTeamName = new Map();
-  const onlineByTeamCode = new Map();
   for (const o of allTeamOnline) {
-    const mStart = new Date(Date.UTC(o.year, o.month - 1, 1));
-    const mEnd = new Date(Date.UTC(o.year, o.month, 0, 23, 59, 59, 999));
-    if (mEnd >= from && mStart <= to) {
-      const val = Number(o.onlineTransactions) || 0;
-      if (o.teamName) {
-        const tn = o.teamName.trim().toLowerCase();
-        onlineByTeamName.set(tn, (onlineByTeamName.get(tn) || 0) + val);
-      }
-      if (o.teamCode) {
-        const tc = normCode(o.teamCode);
-        if (tc) onlineByTeamCode.set(tc, (onlineByTeamCode.get(tc) || 0) + val);
-      }
-    }
+    if (!inPeriod(o.year, o.month)) continue;
+    const tid = (o.teamName && teamByName.get(o.teamName.trim().toLowerCase())) || (o.teamCode && teamByCode.get(normCode(o.teamCode))) || null;
+    if (tid) monthEntry(tid, monthKey(o.year, o.month)).online += Number(o.onlineTransactions) || 0;
   }
 
   res.json({
@@ -491,34 +472,17 @@ export const teamMatrix = async (req, res) => {
     categories: TAXONOMY.map((t) => t.category),
     teams: teams.map((t) => {
       const tid = String(t._id);
-      const tname = t.teamName ? t.teamName.trim().toLowerCase() : "";
-      const tcode = t.teamCode ? normCode(t.teamCode) : "";
-      const samplesTotal = sampleByTeamId.get(tid) ?? (tname ? sampleByTeamName.get(tname) : 0) ?? 0;
-      const onlineTotal = (tname ? onlineByTeamName.get(tname) : 0) ?? (tcode ? onlineByTeamCode.get(tcode) : 0) ?? 0;
-
-      const teamStats = by.get(tid) || { total: 0, dvocCount: 0, accountableCount: 0, notAccountableCount: 0, byCategory: {} };
-      const dvocCount = teamStats.dvocCount || teamStats.byCategory["DVOC"] || 0;
-      const accountableCount = teamStats.accountableCount || 0;
-      const nonAccountableCount = Math.max(0, dvocCount - accountableCount);
-      const adjustedSamples = Math.max(0, samplesTotal - nonAccountableCount);
-      const dvocSamplePct = adjustedSamples > 0 ? +((accountableCount / adjustedSamples) * 100).toFixed(1) : null;
-      const dvocOnlinePct = onlineTotal > 0 ? +((accountableCount / onlineTotal) * 100).toFixed(2) : null;
-
+      const stats = by.get(tid) || { total: 0, byCategory: {} };
+      const rates = matchedRates(monthsOf.get(tid) || new Map());
       return {
         fieldTeamId: t._id,
         teamName: t.teamName,
         teamCode: t.teamCode,
         teamCompany: t.teamCompany,
         isTerminated: t.isTerminated,
-        total: teamStats.total,
-        samplesToken: samplesTotal,
-        dvoc: dvocCount,
-        accountable: accountableCount,
-        adjustedSamples,
-        dvocSamplePct,
-        onlineTotal,
-        dvocOnlinePct,
-        byCategory: teamStats.byCategory,
+        total: stats.total,
+        ...rates, // dvoc, accountable, samplesToken, adjustedSamples, dvocSamplePct, onlineTotal, dvocOnlinePct, coverage
+        byCategory: stats.byCategory,
         lab: assessOut(assess.lab, t._id),
         ojt: assessOut(assess.ojt, t._id),
         technical: assessOut(assess.quiz, t._id),

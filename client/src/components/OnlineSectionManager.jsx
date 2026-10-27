@@ -22,6 +22,30 @@ import { useSelector } from 'react-redux';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// "Rank by" for the per-month table (highest first). Values derive like the table's own columns.
+const ONLINE_RANK_BY = [
+  { value: 'accountable',   label: 'Accountable DVOC' },
+  { value: 'dvocSamplePct', label: 'DVOC / Sample %' },
+  { value: 'dvocOnlinePct', label: 'DVOC / Online %' },
+  { value: 'dvoc',          label: 'DVOC' },
+  { value: 'samplesToken',  label: 'Samples token' },
+  { value: 'online',        label: 'Online Tx' },
+];
+const rankValue = (r, key) => {
+  const dvoc = r.dvoc ?? r.issuesFound ?? 0;
+  const acc = r.accountable ?? 0;
+  const adj = r.adjustedSamples ?? Math.max(0, (r.samplesToken || 0) - Math.max(0, dvoc - acc));
+  switch (key) {
+    case 'accountable':   return acc;
+    case 'dvoc':          return dvoc;
+    case 'samplesToken':  return r.samplesToken || 0;
+    case 'online':        return r.onlineTransactions || 0;
+    case 'dvocSamplePct': return r.dvocSamplePct ?? (adj > 0 ? +((acc / adj) * 100).toFixed(1) : null);
+    case 'dvocOnlinePct': return r.dvocOnlinePct ?? (r.onlineTransactions > 0 ? +((acc / r.onlineTransactions) * 100).toFixed(2) : null);
+    default:              return null;
+  }
+};
 const monthLabel = (m) => MONTHS[(m || 1) - 1] ?? m;
 const pct  = (v) => (v == null ? '—' : `${v}%`);
 const num  = (v) => (v == null || v === '' ? '—' : Number(v).toLocaleString());
@@ -410,6 +434,8 @@ const OnlineSectionManager = ({ sx, defaultFilterTeam }) => {
   const [filterYear,  setFilterYear]  = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterTeam,  setFilterTeam]  = useState(defaultFilterTeam || '');
+  const [rankBy, setRankBy] = useState('');   // '' = period order
+  const [topN, setTopN]     = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -434,8 +460,14 @@ const OnlineSectionManager = ({ sx, defaultFilterTeam }) => {
     if (filterYear)  r = r.filter((x) => x.year  === Number(filterYear));
     if (filterMonth) r = r.filter((x) => x.month === Number(filterMonth));
     if (filterTeam)  r = r.filter((x) => x.teamName.toLowerCase().includes(filterTeam.toLowerCase()));
+    if (rankBy) {
+      // Highest first by the chosen measure (rows without a value go last / drop out of a Top N).
+      const v = (x) => rankValue(x, rankBy);
+      r = [...r].sort((a, b) => (v(b) ?? -Infinity) - (v(a) ?? -Infinity));
+      if (topN) r = r.filter((x) => v(x) != null && v(x) > 0).slice(0, topN);
+    }
     return r;
-  }, [rows, filterYear, filterMonth, filterTeam]);
+  }, [rows, filterYear, filterMonth, filterTeam, rankBy, topN]);
 
   const totals = useMemo(() => {
     const online  = displayed.reduce((s, r) => s + (r.onlineTransactions || 0), 0);
@@ -512,9 +544,9 @@ const OnlineSectionManager = ({ sx, defaultFilterTeam }) => {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
         <Box sx={{ flex: 1 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 700 }}>Online Section</Typography>
+          <Typography sx={{ fontSize: 14, fontWeight: 700 }}>Online Section · per team per month</Typography>
           <Typography sx={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            Upload monthly online transactions — auto-joined with samples &amp; DVOC issues per team.
+            One row per team per month — that month’s online transactions joined with the same month’s samples &amp; DVOC (unlike the cumulative table above).
           </Typography>
         </Box>
         <Button variant="outlined" size="small" startIcon={<RefreshOutlined sx={{ fontSize: 15 }} />} onClick={load} disabled={loading}>Refresh</Button>
@@ -556,7 +588,14 @@ const OnlineSectionManager = ({ sx, defaultFilterTeam }) => {
           {MONTHS.map((m, i) => <MenuItem key={i+1} value={i+1}>{m}</MenuItem>)}
         </TextField>
         <TextField label="Team" size="small" value={filterTeam} onChange={(e) => setFilterTeam(e.target.value)} placeholder="Filter team…" sx={{ width: 200 }} />
-        <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)', ml: 'auto' }}>{displayed.length} rows</Typography>
+        <TextField select label="Rank by" size="small" value={rankBy} onChange={(e) => setRankBy(e.target.value)} sx={{ width: 190 }}>
+          <MenuItem value="">Period (newest first)</MenuItem>
+          {ONLINE_RANK_BY.map((r) => <MenuItem key={r.value} value={r.value}>{r.label}</MenuItem>)}
+        </TextField>
+        <TextField select label="Show" size="small" value={topN} onChange={(e) => setTopN(Number(e.target.value))} sx={{ width: 120 }} disabled={!rankBy}>
+          {[0, 5, 10, 20, 50].map((n) => <MenuItem key={n} value={n}>{n ? `Top ${n}` : 'All rows'}</MenuItem>)}
+        </TextField>
+        <Typography sx={{ fontSize: 12.5, color: 'var(--text-muted)', ml: 'auto' }}>{displayed.length} rows{rankBy && topN ? ` · top ${topN} by ${ONLINE_RANK_BY.find((r) => r.value === rankBy)?.label}` : ''}</Typography>
       </Box>
 
       {loading && <LinearProgress sx={{ mb: 1, borderRadius: 1 }} />}
