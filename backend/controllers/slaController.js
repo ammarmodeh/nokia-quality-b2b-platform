@@ -6,9 +6,18 @@ import { CustomerIssueSchema } from "../models/customerIssueModel.js";
 import { CustomTable, CustomRow } from "../models/customTableModels.js";
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import { makeResolver, normCode } from "../utils/teamCodes.js";
+import { buildSlaAnalytics, classifySla } from "../utils/slaAnalytics.js";
 
 const oid = (v) => mongoose.Types.ObjectId.isValid(String(v));
 const fail = (res, code, message) => res.status(code).json({ message });
+
+/** In-app link to the ticket an SLA belongs to. */
+const slaLink = (item) =>
+  item.target.kind === "task"
+    ? `/dvoc-installations?task=${item.target.id}`
+    : item.target.kind === "issue"
+    ? `/ojo-snags?q=${encodeURIComponent(item.slid || "")}`
+    : `/tables/${item.target.tableId}?row=${item.target.id}`;
 
 /** Take a live snapshot of the target entity (Task, Issue, or CustomRow) */
 const resolveTargetSnapshot = async (kind, id, tableId) => {
@@ -465,12 +474,7 @@ export const getSlaNotifications = async (req, res) => {
 
     const formatItem = (item, type) => {
       const diffHours = +( (new Date(item.targetDate).getTime() - Date.now()) / 3600000 ).toFixed(1);
-      const link =
-        item.target.kind === "task"
-          ? `/dvoc-installations?task=${item.target.id}`
-          : item.target.kind === "issue"
-          ? `/ojo-snags?q=${encodeURIComponent(item.slid || "")}`
-          : `/tables/${item.target.tableId}?row=${item.target.id}`;
+      const link = slaLink(item);
 
       return {
         id: item._id,
@@ -525,13 +529,10 @@ export const getTeamSlaPerformance = async (req, res) => {
       if (s.renewals?.some((r) => r.isCustomerRequested) || s.teamExempt) {
         customerRescheduled++;
       }
-      if (s.status === "met" || s.teamExempt) {
-        met++;
-      } else if (s.noResponse || s.status === "breached" || (s.status === "active" && new Date(s.targetDate).getTime() < now && !s.teamExempt)) {
-        breached++;
-      } else if (s.status === "active") {
-        active++;
-      }
+      const outcome = classifySla(s, now); // same rule as the SLA analysis page
+      if (outcome === "met") met++;
+      else if (outcome === "breached") breached++;
+      else if (outcome === "open") active++;
     }
 
     const closed = met + breached;
@@ -548,6 +549,39 @@ export const getTeamSlaPerformance = async (req, res) => {
       noResponseCount,
       complianceRate,
     });
+  } catch (err) {
+    fail(res, 500, err.message);
+  }
+};
+
+/**
+ * GET /api/sla/analytics?from&to&category&priority&kind
+ * Team responsiveness for the SLA analysis page. Period = ticket creation date.
+ */
+export const getSlaAnalytics = async (req, res) => {
+  try {
+    const { from, to, category, priority, kind } = req.query;
+    const filter = {};
+    const range = {};
+    if (from) range.$gte = new Date(from);
+    if (to) range.$lte = new Date(to);
+    if (Object.values(range).some((d) => Number.isNaN(d.getTime()))) return fail(res, 400, "Invalid from/to date");
+    if (Object.keys(range).length) {
+      filter.$or = [{ ticketCreationDate: range }, { ticketCreationDate: null, startDate: range }];
+    }
+    if (category) filter.issueCategory = { $in: String(category).split(",") };
+    if (priority) filter.priority = { $in: String(priority).split(",") };
+    if (kind) filter["target.kind"] = { $in: String(kind).split(",") };
+
+    const records = await SlaRecord.find(filter)
+      .select("-calendarEntryId -resolutionNote -createdBy -updatedBy")
+      .populate("fieldTeamId", "teamName teamCode teamCompany")
+      .lean();
+    const result = buildSlaAnalytics(records, { now: Date.now() });
+    result.overdueNow = result.overdueNow.map((o) => ({ ...o, link: slaLink(o) }));
+    // Distinct categories in the whole collection, for the filter chips.
+    result.categories = (await SlaRecord.distinct("issueCategory")).filter(Boolean).sort();
+    res.json(result);
   } catch (err) {
     fail(res, 500, err.message);
   }

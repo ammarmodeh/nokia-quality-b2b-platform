@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Badge as MuiBadge,
   Box,
@@ -72,6 +72,17 @@ const SlaNotificationMenu = () => {
             {data.breachedCount > 0 && <Badge tone="danger">{data.breachedCount} breached</Badge>}
             {data.aboutToBreachCount > 0 && <Badge tone="warning">{data.aboutToBreachCount} near breach</Badge>}
           </Box>
+        </Box>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => {
+            setAnchor(null);
+            navigate("/sla-performance");
+          }}
+          sx={{ display: "block", width: "100%", textAlign: "left", font: "inherit", fontSize: 12.5, fontWeight: 500, color: "var(--accent-text)", border: 0, borderTop: "1px solid var(--border)", backgroundColor: "var(--surface)", px: 1.5, py: 1, cursor: "pointer", "&:hover": { backgroundColor: "var(--surface-hover)" } }}
+        >
+          See SLA performance by team →
         </Box>
         <Divider />
 

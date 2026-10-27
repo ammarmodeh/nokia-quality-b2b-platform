@@ -55,6 +55,7 @@ const CategoryWorkspace = lazy(() => import("./pages/tables/CategoryWorkspace"))
 const TrackerWorkspace = lazy(() => import("./pages/tables/TrackerWorkspace"));
 const TeamAnalysisPage = lazy(() => import("./pages/teams/TeamAnalysisPage"));
 const TeamTrendsPage = lazy(() => import("./pages/teams/TeamTrendsPage"));
+const SlaPerformancePage = lazy(() => import("./pages/teams/SlaPerformancePage"));
 const MaintenanceLayout = lazy(() => import("./pages/maintenance/MaintenanceLayout"));
 const MaintenanceTeamsPage = lazy(() => import("./pages/maintenance/MaintenanceTeamsPage"));
 const MaintenanceSamplesPage = lazy(() => import("./pages/maintenance/MaintenanceSamplesPage"));
@@ -196,6 +197,7 @@ const App = () => {
           <Route path="/team-analysis" element={<TeamAnalysisPage />} />
           <Route path="/team-analysis/:teamId" element={<TeamAnalysisPage />} />
           <Route path="/team-trends" element={<TeamTrendsPage />} />
+          <Route path="/sla-performance" element={<SlaPerformancePage />} />
           <Route path="/dvoc-maintenance" element={<MaintenanceLayout />}>
             <Route index element={<Navigate to="teams" replace />} />
             <Route path="teams" element={<MaintenanceTeamsPage />} />

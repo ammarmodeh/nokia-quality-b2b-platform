@@ -8,6 +8,7 @@ import {
   listSlas,
   getSlaNotifications,
   getTeamSlaPerformance,
+  getSlaAnalytics,
 } from "../controllers/slaController.js";
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.post("/:id/resolve", resolveSla);
 router.get("/list", listSlas);
 router.get("/notifications", getSlaNotifications);
 router.get("/team-performance/:teamId", getTeamSlaPerformance);
+router.get("/analytics", getSlaAnalytics);
 
 export default router;

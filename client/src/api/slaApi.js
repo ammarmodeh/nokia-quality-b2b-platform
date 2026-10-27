@@ -12,4 +12,5 @@ export const slaApi = {
   getNotifications: () => data(api.get("/sla/notifications")),
   teamPerformance: (teamId) => data(api.get(`/sla/team-performance/${teamId}`)),
   getTeamPerformance: (teamId) => data(api.get(`/sla/team-performance/${teamId}`)),
+  analytics: (params) => data(api.get("/sla/analytics", { params })),
 };
