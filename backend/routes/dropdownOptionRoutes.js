@@ -9,6 +9,7 @@ import {
   seedOptions,
   getRcaUsage,
   bulkAddOptions,
+  orderByUsage,
 } from "../controllers/dropdownOptionControllers.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
@@ -28,5 +29,6 @@ router.post("/seed", protect, adminOnly, seedOptions);
 // Fill RCA lists from what tasks actually use (reviewed and confirmed in Dropdown Management)
 router.get("/usage/:category", protect, adminOnly, getRcaUsage);
 router.post("/bulk-add", protect, adminOnly, bulkAddOptions);
+router.post("/order-by-usage/:category", protect, adminOnly, orderByUsage);
 
 export default router;

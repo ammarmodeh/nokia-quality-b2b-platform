@@ -29,6 +29,16 @@ const WORST_COUNT = 5; // teams flagged as "worst" in the table and chart
 
 const fmtPct = (v) => (v == null ? "—" : `${v}%`);
 const fmtNum = (v) => (v == null ? "—" : v.toLocaleString());
+/**
+ * The card's samples are the sum of per-team samples (Survey samples → Team samples), which is what the
+ * rate uses. The official monthly total (→ Monthly totals) is entered separately; show it when they differ.
+ */
+const samplesHint = (teamSum, official) => {
+  if (teamSum == null) return official != null ? `No team samples · official total ${fmtNum(official)}` : "No samples entered";
+  if (official == null) return `${fmtNum(teamSum)} team samples`;
+  const gap = teamSum - official;
+  return gap ? `${fmtNum(teamSum)} team samples · official total ${fmtNum(official)} (${gap > 0 ? "+" : ""}${gap})` : `${fmtNum(teamSum)} samples · matches official total`;
+};
 
 const COLUMNS = [
   { key: "rank", label: "Rank", align: "right", get: (r) => r.rank ?? Infinity, render: (r) => r.rank ?? "—" },
@@ -285,7 +295,14 @@ const TeamTrendsPage = () => {
                   ) : "—"
                 } hint={worst ? `${metric.format(worst[metric.field])} · ${metric.label.toLowerCase()}` : "No accountable DVOC"} sx={{ gridColumn: { xs: "1 / -1", md: "auto" } }} icon={<TrendingUpOutlined sx={{ fontSize: 15 }} />} />
               <StatCard label="Accountable DVOC" value={fmtNum(summary.accountable)} hint={`of ${fmtNum(summary.dvoc)} DVOC`} delta={delta("accountable")} goodWhen="down" />
-              <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtNum(summary.samples)} samples` : "No samples entered"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
+              <StatCard
+                label="DVOC / survey sample"
+                value={fmtPct(summary.perSamplePct)}
+                hint={samplesHint(summary.samples, current.officialSamples)}
+                delta={delta("perSamplePct")}
+                deltaSuffix=" pts"
+                goodWhen="down"
+              />
               <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtNum(summary.online)} online` : "No online data"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
               <StatCard label="REACH ownership" value={fmtNum(summary.reachOwned)} hint={summary.accountableNoReach ? `RCA rows owned by REACH · ${summary.accountableNoReach} accountable task${summary.accountableNoReach === 1 ? " has" : "s have"} no REACH owner` : "RCA rows owned by REACH"} delta={delta("reachOwned")} goodWhen="down" />
             </Box>

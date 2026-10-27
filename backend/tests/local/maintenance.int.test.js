@@ -13,6 +13,7 @@ const { default: maintenanceRoutes } = await import("../../routes/maintenanceRou
 const { default: teamTrendsRoutes } = await import("../../routes/teamTrendsRoutes.js");
 const { default: dropdownRoutes } = await import("../../routes/dropdownOptionRoutes.js");
 const { DropdownOption } = await import("../../models/dropdownOptionModel.js");
+const { default: SamplesToken } = await import("../../models/samplesTokenModel.js");
 const { UserSchema } = await import("../../models/userModel.js");
 const { TaskSchema } = await import("../../models/taskModel.js");
 const { TaskTicket } = await import("../../models/taskTicketModel.js");
@@ -234,5 +235,25 @@ describe("Dropdown Management: add RCA values from usage", () => {
     expect(added).toMatchObject({ order: 5, parentCategory: "RESPONSIBILITY", parentValue: "Reach", label: "Slow speed", isActive: true });
     const again = (await request(app).post("/api/dropdown-options/bulk-add").set(auth(admin)).send({ category: "REASON", items: [{ value: "Slow speed" }] }).expect(201)).body;
     expect(again.added).toBe(0);
+  });
+});
+
+describe("Dropdown order and official sample totals", () => {
+  it("puts the most-used values first, unused ones after in their old order", async () => {
+    await DropdownOption.create({ category: "REASON", value: "Never used", label: "Never used", order: 0 });
+    await request(app).post("/api/dropdown-options/order-by-usage/REASON").set(auth(member)).expect(403);
+    const r = (await request(app).post("/api/dropdown-options/order-by-usage/REASON").set(auth(admin)).expect(200)).body;
+    expect(r.top.slice(0, 2)).toEqual([{ value: "Slow speed", uses: 2 }, { value: "Billing", uses: 1 }]);
+    const list = await DropdownOption.find({ category: "REASON" }).sort({ order: 1 }).lean();
+    expect(list.map((o) => o.value)).toEqual(["Slow speed", "Billing", "Never used"]);
+  });
+
+  it("returns the official monthly total next to the team samples sum", async () => {
+    await SamplesToken.create({ year: 2026, weekNumber: 109, weekRange: "September", sampleSize: 30 });
+    const res = (await request(app).get("/api/team-trends").query({ from: "2026-09-01T00:00:00.000Z", to: "2026-09-30T23:59:59.999Z", months: "2026-9" }).set(auth(member)).expect(200)).body;
+    expect(res.summary.samples).toBe(31); // team samples: Alpha 21 + Bravo 10
+    expect(res.officialSamples).toBe(30); // Monthly totals tab
+    const none = (await request(app).get("/api/team-trends").query({ from: "2026-08-01T00:00:00.000Z", to: "2026-08-31T23:59:59.999Z", months: "2026-8" }).set(auth(member)).expect(200)).body;
+    expect(none.officialSamples).toBeNull();
   });
 });

@@ -21,6 +21,7 @@ const RcaUsageDialog = ({ open, category, listLabel, onClose, onAdded }) => {
   const [q, setQ] = useState("");
   const [showExisting, setShowExisting] = useState(false);
   const [linkParent, setLinkParent] = useState(true);
+  const [mostUsedFirst, setMostUsedFirst] = useState(true); // forms list options in this order
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -52,11 +53,20 @@ const RcaUsageDialog = ({ open, category, listLabel, onClose, onAdded }) => {
 
   const add = async () => {
     const items = missing.filter((i) => selected.has(i.value)).map((i) => ({ value: i.value, label: i.value, parentValue: linkParent ? i.parentValue : null }));
-    if (!items.length) return;
+    if (!items.length && !mostUsedFirst) return;
     setSaving(true);
     try {
-      const { data: r } = await api.post("/dropdown-options/bulk-add", { category, items });
-      toast.success(`Added ${r.added} value${r.added === 1 ? "" : "s"} to ${listLabel}`);
+      const done = [];
+      if (items.length) {
+        const { data: r } = await api.post("/dropdown-options/bulk-add", { category, items });
+        done.push(`added ${r.added} value${r.added === 1 ? "" : "s"}`);
+      }
+      // New values are appended after the existing ones; put the most-used at the top so they're first in the forms.
+      if (mostUsedFirst) {
+        await api.post(`/dropdown-options/order-by-usage/${category}`);
+        done.push("put the most-used first");
+      }
+      toast.success(`${listLabel}: ${done.join(" and ")}`);
       onAdded?.();
       onClose();
     } catch (e) {
@@ -75,7 +85,7 @@ const RcaUsageDialog = ({ open, category, listLabel, onClose, onAdded }) => {
       title={`Add ${listLabel} from task usage`}
       description={data ? `${data.items.length} distinct values found on ${data.tasksScanned.toLocaleString()} tasks · ${missing.length} not in the list yet · most used first` : "Reading the values used on DVOC tasks…"}
       error={error}
-      primary={{ label: count ? `Add ${count} to the list` : "Add to the list", onClick: add, loading: saving, disabled: !count }}
+      primary={{ label: count ? `Add ${count} to the list` : mostUsedFirst ? "Put most-used first" : "Add to the list", onClick: add, loading: saving, disabled: !count && !mostUsedFirst }}
       extraActions={
         data && (
           <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -97,6 +107,10 @@ const RcaUsageDialog = ({ open, category, listLabel, onClose, onAdded }) => {
             <Box component="label" sx={{ display: "flex", alignItems: "center", fontSize: 12.5, color: "var(--text-secondary)", cursor: "pointer" }}>
               <Switch size="small" checked={showExisting} onChange={(e) => setShowExisting(e.target.checked)} />
               Show values already in the list
+            </Box>
+            <Box component="label" sx={{ display: "flex", alignItems: "center", fontSize: 12.5, color: "var(--text-secondary)", cursor: "pointer" }}>
+              <Switch size="small" checked={mostUsedFirst} onChange={(e) => setMostUsedFirst(e.target.checked)} />
+              Put the most-used values first in the forms
             </Box>
             {parentWord && (
               <Box component="label" sx={{ display: "flex", alignItems: "center", fontSize: 12.5, color: "var(--text-secondary)", cursor: "pointer" }}>

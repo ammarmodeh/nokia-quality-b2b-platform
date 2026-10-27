@@ -372,3 +372,28 @@ export const bulkAddOptions = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+// ---------------------------------------------------------------------------
+// POST /api/dropdown-options/order-by-usage/:category  (admin)
+// Re-orders an RCA list so the values tasks use most come first (by use count); values never used
+// keep their current relative order after them. Values themselves are not changed.
+// ---------------------------------------------------------------------------
+export const orderByUsage = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const spec = RCA_LISTS[category];
+    if (!spec) return res.status(400).json({ message: `Ordering by usage is only available for ${Object.keys(RCA_LISTS).join(", ")}` });
+    const parentField = spec.parent ? RCA_LISTS[spec.parent].field : null;
+    const [tasks, options] = await Promise.all([
+      TaskSchema.find({ [spec.field]: { $exists: true, $ne: [] } }, { [spec.field]: 1, ...(parentField ? { [parentField]: 1 } : {}) }).lean(),
+      DropdownOption.find({ category }).sort({ order: 1, createdAt: 1 }).lean(),
+    ]);
+    const uses = new Map(rcaUsage(tasks, category).map((u) => [u.value.trim().toLowerCase(), u.count]));
+    const count = (o) => uses.get(o.value.trim().toLowerCase()) || 0;
+    const ordered = options.map((o, i) => ({ o, i, n: count(o) })).sort((a, b) => b.n - a.n || a.i - b.i);
+    if (ordered.length) await DropdownOption.bulkWrite(ordered.map(({ o }, idx) => ({ updateOne: { filter: { _id: o._id }, update: { $set: { order: idx + 1 } } } })));
+    res.json({ ordered: ordered.length, used: ordered.filter((x) => x.n > 0).length, top: ordered.slice(0, 5).map(({ o, n }) => ({ value: o.value, uses: n })) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
