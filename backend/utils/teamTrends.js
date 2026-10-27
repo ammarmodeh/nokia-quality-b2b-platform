@@ -7,9 +7,10 @@
 // - DVOC / Online %  = accountable / online transactions × 100                      (onlineSummary)
 // - REACH ownership: the task's `responsible` contains "reach" (FieldTeamPortal "Owner Reach").
 // Each task counts once per team, whatever the number of RCA rows.
-// Samples and online volumes are stored per team per month. For a period that covers part of a month
-// (a week), each month's figure is pro-rated by the share of its days inside the period (approved
-// 2026-10-27): samples × overlapDays ÷ daysInMonth. Whole months have weight 1, so they stay exact.
+// Samples and online volumes are stored per team per month and are used as whole monthly figures
+// (user rule 2026-10-27: a week uses its month's full samples, never a pro-rated fraction). The client
+// picks the months (see client trendPeriods.sampleMonths). An optional per-month `weight` is still
+// accepted by the API but the app always sends whole months (weight 1).
 
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 

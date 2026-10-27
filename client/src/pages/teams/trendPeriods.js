@@ -24,9 +24,8 @@ export const monthsCovered = (start, end) => {
 };
 
 /**
- * Every calendar month [start, end] touches, with the share of its days inside the period:
- * [{ key: "2026-10", year, month, days, daysInMonth, weight }]. Monthly team samples and online
- * volumes are pro-rated by `weight` (approved 2026-10-27); whole months have weight 1.
+ * Every calendar month [start, end] touches, with how many of its days are inside the period:
+ * [{ key: "2026-10", year, month, days, daysInMonth, weight }].
  */
 export const monthShares = (start, end) => {
   if (!start || !end || start > end) return [];
@@ -39,12 +38,26 @@ export const monthShares = (start, end) => {
   return out;
 };
 
+/**
+ * The months whose full team samples / online volumes a period uses (user rule, 2026-10-27: whole
+ * numbers, never pro-rated). Team samples are entered per month, so:
+ * - a month counts when the period covers at least half of it (whole months always do);
+ * - if none does (a week, or a short range across two months), the month holding most of the
+ *   period's days is used, so a week crossing a month boundary isn't counted twice.
+ */
+export const sampleMonths = (start, end) => {
+  const shares = monthShares(start, end);
+  const covered = shares.filter((m) => m.weight >= 0.5);
+  if (covered.length || !shares.length) return covered;
+  return [shares.reduce((best, m) => (m.days >= best.days ? m : best))];
+};
+
 /** Query params for /team-trends from a resolved period descriptor. */
 export const trendQuery = (p, metric) => ({
   from: p.start.toISOString(),
   to: endOfDay(p.end).toISOString(),
-  months: monthShares(p.start, p.end)
-    .map((m) => (m.weight === 1 ? m.key : `${m.key}:${m.weight.toFixed(4)}`))
+  months: sampleMonths(p.start, p.end)
+    .map((m) => m.key)
     .join(","),
   metric,
 });

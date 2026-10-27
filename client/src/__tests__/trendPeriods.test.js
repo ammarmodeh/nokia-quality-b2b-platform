@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveMetric, monthShares, monthsCovered, trendQuery } from "../pages/teams/trendPeriods";
+import { effectiveMetric, monthShares, monthsCovered, sampleMonths, trendQuery } from "../pages/teams/trendPeriods";
 import { resolvePeriod } from "../pages/dashboard/npsPeriods";
 
 const d = (y, m, day, end = false) => (end ? new Date(y, m - 1, day, 23, 59, 59, 999) : new Date(y, m - 1, day));
@@ -24,17 +24,22 @@ describe("Trends periods use the dashboard's period rules", () => {
     const cur = resolvePeriod("month", {}, {}, now).current;
     expect(trendQuery(cur, "perSample").months).toBe("2026-10");
   });
-  it("weeks send their share of the month so samples can be pro-rated", () => {
+  it("weeks use their month's full team samples (whole numbers, never pro-rated)", () => {
     const week = resolvePeriod("lastWeek", {}, {}, now).current;
     const q = trendQuery(week, "perSample");
-    expect(q.months).toMatch(/^2026-10:0.2258$/); // 7 of October's 31 days
+    expect(q.months).toBe("2026-10");
     expect(effectiveMetric("perSample", ["2026-10"]).value).toBe("perSample");
     expect(effectiveMetric("perSample", []).value).toBe("accountable");
   });
-  it("a week across two months takes a share of each", () => {
+  it("a week across two months uses the month holding most of its days (not both)", () => {
     const shares = monthShares(d(2026, 9, 28), d(2026, 10, 4, true));
     expect(shares.map((m) => [m.key, m.days, m.daysInMonth])).toEqual([["2026-9", 3, 30], ["2026-10", 4, 31]]);
-    expect(trendQuery({ start: d(2026, 9, 28), end: d(2026, 10, 4) }, "perSample").months).toBe("2026-9:0.1000,2026-10:0.1290");
+    expect(sampleMonths(d(2026, 9, 28), d(2026, 10, 4, true)).map((m) => m.key)).toEqual(["2026-10"]);
+    expect(sampleMonths(d(2026, 9, 26), d(2026, 10, 2, true)).map((m) => m.key)).toEqual(["2026-9"]);
+  });
+  it("longer custom ranges use every month they cover at least half of", () => {
+    expect(sampleMonths(d(2026, 9, 15), d(2026, 11, 15, true)).map((m) => m.key)).toEqual(["2026-9", "2026-10", "2026-11"]);
+    expect(sampleMonths(d(2026, 9, 20), d(2026, 11, 10, true)).map((m) => m.key)).toEqual(["2026-10"]);
   });
   it("sends the end of the last day as `to`", () => {
     const cur = resolvePeriod("month", {}, {}, now).current;

@@ -6,8 +6,8 @@ import { buildTeamTrends, parseMonths, rankTeams, summarize, METRICS } from "../
 
 // GET /api/team-trends?from=ISO&to=ISO&months=2026-9,2026-10:0.2258&metric=perSample
 // from/to: the period (client resolves it with the app's week/month rules).
-// months: every calendar month the period touches, with the share of its days inside the period
-// (":w", default 1). Monthly samples/online are pro-rated by that share; whole months stay exact.
+// months: the months whose full team samples / online volumes the period uses (the app sends whole
+// months, e.g. a week uses its month). ":w" (0–1) would scale a month; the app doesn't use it.
 export const getTeamTrends = async (req, res) => {
   try {
     const from = new Date(req.query.from);

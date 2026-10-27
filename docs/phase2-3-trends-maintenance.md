@@ -18,12 +18,13 @@ Ranks DVOC Installation teams worst-first for a period. API: `GET /api/team-tren
 - DVOC scope = tasks with an `interviewDate` in the period and a team name (same as `onlineSummary`).
 - A task counts once per team, however many RCA rows it has. Team names match case/space-insensitively.
 - The metrics are **never combined** into one score; the ranking uses the selected metric only.
-- Team samples (`TeamSamplesToken`) and online volumes (`TeamOnlineData`) are stored **per team per month**.
-  For periods that cover part of a month (Last week, Current week, mid-month custom ranges) each month's
-  figure is **pro-rated** by the share of its days inside the period (approved 2026-10-27):
-  samples × days-in-period-within-month ÷ days-in-month, summed over the months a week crosses.
-  Net samples = estimated samples − the period's non-accountable DVOC. Estimated values are marked "≈"
-  and the page states the share used (e.g. "7/31 days of Oct 2026"). Whole months stay exact.
+- Team samples (`TeamSamplesToken`) and online volumes (`TeamOnlineData`) are stored **per team per month**
+  and are always used as **whole monthly figures** — never pro-rated (user rule, 2026-10-27; pro-rating
+  produced fractions and rates over 100%). A week uses its month's full samples; a week crossing two
+  months uses the month holding most of its days; a longer custom range uses every month it covers at
+  least half of. Net samples = those samples − the period's non-accountable DVOC (e.g. 10 − 1 = 9), and
+  the period's accountable DVOC is divided by it. For weeks this makes the % lower than a true weekly
+  rate; the page says which month's samples it used.
 - Chart: each bar is a team's net samples; the red part is its accountable DVOC, labelled
   "accountable / net samples · %".
 - Missing or zero denominators give no rate (“—”); those teams are listed last, unranked. Summary rates

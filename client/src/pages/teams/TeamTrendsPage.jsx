@@ -9,6 +9,7 @@ import TrendingUpOutlined from "@mui/icons-material/TrendingUpOutlined";
 import ArrowUpward from "@mui/icons-material/ArrowUpward";
 import ArrowDownward from "@mui/icons-material/ArrowDownward";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import api from "../../api/api";
 import PageHeader from "../../components/ui/PageHeader";
 import PeriodPicker from "../../components/ui/PeriodPicker";
@@ -22,14 +23,12 @@ import PageLoader from "../../components/ui/PageLoader";
 import Badge from "../../components/ui/Badge";
 import { exportRows } from "../../utils/exportRows";
 import { resolvePeriod } from "../dashboard/npsPeriods";
-import { TREND_METRICS, TREND_PERIODS, effectiveMetric, monthShares, trendQuery } from "./trendPeriods";
+import { TREND_METRICS, TREND_PERIODS, effectiveMetric, monthsCovered, sampleMonths, trendQuery } from "./trendPeriods";
 
 const WORST_COUNT = 5; // teams flagged as "worst" in the table and chart
 
 const fmtPct = (v) => (v == null ? "—" : `${v}%`);
-const fmtNum = (v) => (v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: 1 }));
-// Pro-rated (week / partial-month) samples and online volumes are estimates: shown with "≈".
-const fmtEst = (v, est) => (v == null ? "—" : `${est ? "≈ " : ""}${fmtNum(v)}`);
+const fmtNum = (v) => (v == null ? "—" : v.toLocaleString());
 
 const COLUMNS = [
   { key: "rank", label: "Rank", align: "right", get: (r) => r.rank ?? Infinity, render: (r) => r.rank ?? "—" },
@@ -39,9 +38,9 @@ const COLUMNS = [
   { key: "reachAccountable", label: "REACH owned", align: "right", get: (r) => r.reachAccountable, render: (r) => fmtNum(r.reachAccountable), title: "Accountable DVOC where REACH is the responsible owner" },
   { key: "accountable", label: "Accountable", align: "right", get: (r) => r.accountable, render: (r) => fmtNum(r.accountable) },
   { key: "dvoc", label: "All DVOC", align: "right", get: (r) => r.dvoc, render: (r) => fmtNum(r.dvoc) },
-  { key: "samples", label: "Samples", align: "right", get: (r) => r.samples, render: (r, est) => fmtEst(r.samples, est) },
-  { key: "adjustedSamples", label: "Net samples", align: "right", get: (r) => r.adjustedSamples, render: (r, est) => fmtEst(r.adjustedSamples, est), title: "Survey samples − non-accountable DVOC (the DVOC / sample denominator)" },
-  { key: "online", label: "Online", align: "right", get: (r) => r.online, render: (r, est) => fmtEst(r.online, est) },
+  { key: "samples", label: "Samples", align: "right", get: (r) => r.samples, render: (r) => fmtNum(r.samples) },
+  { key: "adjustedSamples", label: "Net samples", align: "right", get: (r) => r.adjustedSamples, render: (r) => fmtNum(r.adjustedSamples), title: "Survey samples − non-accountable DVOC (the DVOC / sample denominator)" },
+  { key: "online", label: "Online", align: "right", get: (r) => r.online, render: (r) => fmtNum(r.online) },
   { key: "change", label: "vs previous", align: "right", get: (r) => r.change, render: null },
 ];
 
@@ -144,11 +143,10 @@ const TeamTrendsPage = () => {
   }, []);
 
   const period = useMemo(() => (settings ? resolvePeriod(periodKey, settings, { from, to }) : null), [periodKey, settings, from, to]);
-  const months = useMemo(() => (period ? monthShares(period.current.start, period.current.end) : []), [period]);
-  const partial = months.filter((m) => m.weight < 1);
-  const est = partial.length > 0;
-  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const shareText = partial.map((m) => `${m.days}/${m.daysInMonth} days of ${MONTH_NAMES[m.month - 1]} ${m.year}`).join(" + ");
+  // Months whose full team samples / online the period uses (whole numbers, never pro-rated).
+  const months = useMemo(() => (period ? sampleMonths(period.current.start, period.current.end) : []), [period]);
+  const partialPeriod = useMemo(() => Boolean(period) && !monthsCovered(period.current.start, period.current.end).length, [period]);
+  const monthsText = months.map((m) => format(new Date(m.year, m.month - 1, 1), "MMMM yyyy")).join(", ");
   const metric = effectiveMetric(metricKey, months);
   const requested = TREND_METRICS.find((m) => m.value === metricKey) || TREND_METRICS[0];
   const fellBack = metric.value !== requested.value;
@@ -197,7 +195,7 @@ const TeamTrendsPage = () => {
   const chartRows = ranked.slice(0, 10).map((r) => ({
     ...r,
     restOfSamples: r.adjustedSamples != null ? Math.max(0, r.adjustedSamples - r.accountable) : null,
-    chartLabel: r.adjustedSamples != null ? `${r.accountable} / ${est ? "≈" : ""}${fmtNum(r.adjustedSamples)}${r.perSamplePct != null ? ` · ${r.perSamplePct}%` : ""}` : "",
+    chartLabel: r.adjustedSamples != null ? `${r.accountable} / ${fmtNum(r.adjustedSamples)}${r.perSamplePct != null ? ` · ${r.perSamplePct}%` : ""}` : "",
   }));
   const chartHasSamples = chartRows.some((r) => r.adjustedSamples != null);
   const worst = ranked[0];
@@ -255,13 +253,13 @@ const TeamTrendsPage = () => {
         </Box>
       </PageHeader>
 
-      {(est || fellBack) && (
+      {((partialPeriod && months.length > 0) || fellBack) && (
         <Box role="note" sx={{ display: "flex", gap: 1, alignItems: "flex-start", p: 1.5, mb: 2, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--surface-subtle)" }}>
           <InfoOutlined sx={{ fontSize: 17, color: "var(--text-secondary)", mt: "1px" }} />
           <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)" }}>
-            {est
-              ? `Team survey samples and online transactions are entered per month, so for this period they are estimated (≈) as ${shareText} of each team's monthly figures. Net samples = estimated samples − this period's non-accountable DVOC.`
-              : `“${requested.label}” needs survey samples; ranking by total accountable DVOC instead.`}
+            {fellBack
+              ? `“${requested.label}” needs survey samples; ranking by total accountable DVOC instead.`
+              : `Team survey samples and online transactions are entered per month, so this period uses each team's full ${monthsText} figures. Net samples = those samples − this period's non-accountable DVOC; the period's accountable DVOC is divided by them.`}
           </Typography>
         </Box>
       )}
@@ -285,8 +283,8 @@ const TeamTrendsPage = () => {
                   ) : "—"
                 } hint={worst ? `${metric.format(worst[metric.field])} · ${metric.label.toLowerCase()}` : "No accountable DVOC"} sx={{ gridColumn: { xs: "1 / -1", md: "auto" } }} icon={<TrendingUpOutlined sx={{ fontSize: 15 }} />} />
               <StatCard label="Accountable DVOC" value={fmtNum(summary.accountable)} hint={`of ${fmtNum(summary.dvoc)} DVOC`} delta={delta("accountable")} goodWhen="down" />
-              <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtEst(summary.samples, est)} samples` : "No samples entered"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
-              <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtEst(summary.online, est)} online` : "No online data"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
+              <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtNum(summary.samples)} samples` : "No samples entered"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
+              <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtNum(summary.online)} online` : "No online data"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
               <StatCard label="REACH ownership" value={fmtNum(summary.reachAccountable)} hint="accountable, REACH owner" delta={delta("reachAccountable")} goodWhen="down" />
             </Box>
 
@@ -374,7 +372,7 @@ const TeamTrendsPage = () => {
                               ) : c.key === "change" ? (
                                 <Change value={r.change} metric={metric} />
                               ) : (
-                                c.render(r, est)
+                                c.render(r)
                               )}
                             </Box>
                           ))}
