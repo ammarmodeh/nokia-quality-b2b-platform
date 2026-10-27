@@ -126,3 +126,31 @@ describe("pro-rated samples for partial months (weeks)", () => {
     expect(rows[0].perOnlinePct).toBe(3.33); // 1 / 30
   });
 });
+
+describe("matching records to field teams", () => {
+  const teams = [
+    { _id: "t1", teamName: "أحمد محمود", teamCode: "5077" },
+    { _id: "t2", teamName: "Team Bravo", teamCode: "B2" },
+  ];
+  const rows = buildTeamTrends({
+    teams,
+    tasks: [
+      { teamId: "t2", teamName: "Old Bravo Name", teamAccountability: ["Yes"] }, // renamed team → by id
+      { teamName: "احمد  محمود", teamAccountability: ["No"] }, // spelling/space variant → by name
+      { teamName: "Ghost Team", teamAccountability: ["Yes"] }, // not a field team
+    ],
+    online: [{ teamCode: " b2 ", teamName: "bravo upload name", onlineTransactions: 100 }], // by code
+    samples: [{ teamName: "Ghost Team", sampleSize: 5 }],
+  });
+  const by = (n) => rows.find((r) => r.teamName === n);
+  it("matches by team id, then code, then normalised Arabic/space-insensitive name", () => {
+    expect(by("Team Bravo")).toMatchObject({ dvoc: 1, accountable: 1, online: 100, unlinked: false });
+    expect(by("أحمد محمود")).toMatchObject({ dvoc: 1, notAccountable: 1, unlinked: false });
+  });
+  it("keeps names that match no field team, flagged with where they came from", () => {
+    expect(by("Ghost Team")).toMatchObject({ unlinked: true, dvoc: 1, samples: 5 });
+    expect(by("Ghost Team").sources).toEqual(["DVOC tasks", "team samples"]);
+    expect(rows).toHaveLength(3);
+    expect(summarize(rows)).toMatchObject({ teams: 3, fieldTeams: 2, unlinked: 1 });
+  });
+});

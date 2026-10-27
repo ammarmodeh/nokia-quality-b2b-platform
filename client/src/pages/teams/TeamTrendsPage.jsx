@@ -214,6 +214,7 @@ const TeamTrendsPage = () => {
           ["Team", (r) => r.teamName],
           ["Team code", (r) => r.teamCode],
           ["Company", (r) => r.teamCompany],
+          ["In Field Teams", (r) => (r.unlinked ? `No — name only in ${r.sources.join(", ")}` : "Yes")],
           ["Accountable DVOC / survey sample %", (r) => r.perSamplePct],
           ["Accountable DVOC / online %", (r) => r.perOnlinePct],
           ["REACH-owned RCA rows", (r) => r.reachOwned],
@@ -327,7 +328,7 @@ const TeamTrendsPage = () => {
 
             <SectionCard
               title="All teams"
-              description={`${visible.length.toLocaleString()} of ${rows.length.toLocaleString()} teams · ranked by ${metric.label.toLowerCase()}`}
+              description={`${visible.length.toLocaleString()} of ${rows.length.toLocaleString()} rows · ${summary.fieldTeams} field teams${summary.unlinked ? ` + ${summary.unlinked} name${summary.unlinked === 1 ? "" : "s"} not in Field Teams` : ""} · ranked by ${metric.label.toLowerCase()}`}
               padding={0}
               actions={
                 <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
@@ -368,6 +369,9 @@ const TeamTrendsPage = () => {
                                   <span style={{ color: "var(--text)", fontWeight: 500 }}>{r.teamName}</span>
                                   {r.rank != null && r.rank <= WORST_COUNT && r[metric.field] > 0 && <Badge tone="danger">Worst {WORST_COUNT}</Badge>}
                                   {r.isTerminated && <Badge>Terminated</Badge>}
+                                  {r.unlinked && (
+                                    <Badge tone="warning" title={`This name matches no field team (by id, code or name). Found in: ${r.sources.join(", ")}. Rename it to the field team’s name, or add the team, to merge it.`}>Not in Field Teams</Badge>
+                                  )}
                                   {r.teamCompany && <Typography component="span" sx={{ fontSize: 11.5, color: "var(--text-muted)" }}>{r.teamCompany}</Typography>}
                                 </Box>
                               ) : c.key === "change" ? (

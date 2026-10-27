@@ -25,10 +25,10 @@ export const getTeamTrends = async (req, res) => {
       // Same DVOC scope as the existing DVOC/Sample and DVOC/Online figures (onlineSummary).
       Task.find(
         { interviewDate: { $gte: from, $lte: to }, teamName: { $exists: true, $nin: [null, ""] } },
-        { teamName: 1, teamAccountability: 1, responsible: 1 }
+        { teamId: 1, teamName: 1, teamAccountability: 1, responsible: 1 }
       ).lean(),
-      monthMatch ? TeamSamplesToken.find(monthMatch, { teamName: 1, sampleSize: 1, year: 1, month: 1 }).lean() : [],
-      monthMatch ? TeamOnlineData.find(monthMatch, { teamName: 1, onlineTransactions: 1, year: 1, month: 1 }).lean() : [],
+      monthMatch ? TeamSamplesToken.find(monthMatch, { teamId: 1, teamName: 1, sampleSize: 1, year: 1, month: 1 }).lean() : [],
+      monthMatch ? TeamOnlineData.find(monthMatch, { teamCode: 1, teamName: 1, onlineTransactions: 1, year: 1, month: 1 }).lean() : [],
       FieldTeamsSchema.find({}, { teamName: 1, teamCompany: 1, teamCode: 1, isTerminated: 1 }).lean(),
     ]);
 

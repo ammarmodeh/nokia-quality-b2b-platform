@@ -21,36 +21,67 @@ const owners = (task) => list(task?.responsible).flatMap((x) => String(x ?? "").
 /** Number of RCA rows owned by REACH. */
 export const reachRows = (task) => owners(task).filter((x) => x.toLowerCase().includes("reach")).length;
 export const isReachOwned = (task) => reachRows(task) > 0;
-export const teamKey = (name) => String(name || "").trim().toLowerCase();
+/**
+ * Name key that ignores case, extra spaces and common Arabic spelling variants
+ * (أ/إ/آ→ا, ة→ه, ى→ي, diacritics and tatweel removed), so "أحمد  محمود" and "احمد محمود" match.
+ */
+export const teamKey = (name) =>
+  String(name || "")
+    .normalize("NFKC")
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "") // harakat, superscript alef, tatweel
+    .replace(/[\u0623\u0625\u0622\u0671]/g, "\u0627") // أ إ آ ٱ → ا
+    .replace(/\u0629/g, "\u0647") // ة → ه
+    .replace(/\u0649/g, "\u064A") // ى → ي
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+const codeKey = (c) => String(c ?? "").trim().toUpperCase();
 
 const pct = (num, den, digits) => (den > 0 ? +((num / den) * 100).toFixed(digits) : null);
 
 /**
- * @param tasks    DVOC tasks in the period: { teamName, teamAccountability, responsible }
- * @param samples  team monthly samples for the period's months: { teamName, sampleSize, weight? }
- * @param online   team monthly online rows for the period's months: { teamName, onlineTransactions, weight? }
+ * @param tasks    DVOC tasks in the period: { teamId?, teamName, teamAccountability, responsible }
+ * @param samples  team monthly samples for the period's months: { teamId?, teamName, sampleSize, weight? }
+ * @param online   team monthly online rows for the period's months: { teamCode?, teamName, onlineTransactions, weight? }
  *                 weight = share of that month inside the period (default 1)
- * @param teams    field teams to include even without activity: { _id, teamName, teamCompany, teamCode, isTerminated }
- * @param ratesAvailable false when the period isn't whole months (denominators are stored per month)
+ * @param teams    field teams: { _id, teamName, teamCompany, teamCode, isTerminated }
+ * @param ratesAvailable false when no sample months are given
+ *
+ * Each record is matched to a field team by id, then team code, then normalised name. Records that
+ * match none keep a row of their own, marked `unlinked` with the sources they came from, so names
+ * missing from Field Teams are visible instead of silently inflating the team count.
  */
 export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams = [], ratesAvailable = true }) => {
   const rows = new Map();
-  const row = (name) => {
-    const key = teamKey(name);
-    if (!key) return null;
-    if (!rows.has(key)) {
-      rows.set(key, { key, teamName: String(name).trim(), teamId: null, teamCompany: null, teamCode: null, isTerminated: false, dvoc: 0, accountable: 0, notAccountable: 0, reachOwned: 0, accountableNoReach: 0, samples: null, online: null });
-    }
-    return rows.get(key);
-  };
+  const byId = new Map();
+  const byCode = new Map();
+  const byName = new Map();
+  const blank = (key, teamName) => ({ key, teamName, teamId: null, teamCompany: null, teamCode: null, isTerminated: false, unlinked: false, sources: [], dvoc: 0, accountable: 0, notAccountable: 0, reachOwned: 0, accountableNoReach: 0, samples: null, online: null });
 
   for (const t of teams) {
-    const r = row(t.teamName);
-    if (!r) continue;
-    Object.assign(r, { teamName: t.teamName.trim(), teamId: t._id ? String(t._id) : null, teamCompany: t.teamCompany || null, teamCode: t.teamCode || null, isTerminated: Boolean(t.isTerminated) });
+    if (!t.teamName && !t._id) continue;
+    const key = t._id ? `id:${t._id}` : `name:${teamKey(t.teamName)}`;
+    const r = { ...blank(key, String(t.teamName || "").trim()), teamId: t._id ? String(t._id) : null, teamCompany: t.teamCompany || null, teamCode: t.teamCode || null, isTerminated: Boolean(t.isTerminated) };
+    rows.set(key, r);
+    if (t._id) byId.set(String(t._id), r);
+    if (codeKey(t.teamCode)) byCode.set(codeKey(t.teamCode), r);
+    if (teamKey(t.teamName) && !byName.has(teamKey(t.teamName))) byName.set(teamKey(t.teamName), r);
   }
+
+  const resolve = (rec, source) => {
+    const hit = (rec.teamId && byId.get(String(rec.teamId))) || (codeKey(rec.teamCode) && byCode.get(codeKey(rec.teamCode))) || byName.get(teamKey(rec.teamName));
+    if (hit) return hit;
+    const nk = teamKey(rec.teamName);
+    if (!nk) return null;
+    const key = `unlinked:${nk}`;
+    if (!rows.has(key)) rows.set(key, { ...blank(key, String(rec.teamName).trim()), unlinked: true });
+    const r = rows.get(key);
+    if (!r.sources.includes(source)) r.sources.push(source);
+    return r;
+  };
+
   for (const t of tasks) {
-    const r = row(t.teamName);
+    const r = resolve(t, "DVOC tasks");
     if (!r) continue;
     r.dvoc++;
     r.reachOwned += reachRows(t);
@@ -61,11 +92,11 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
   }
   // Denominators are summed only when present, so "no data entered" (null) stays distinct from 0.
   for (const s of samples) {
-    const r = row(s.teamName);
+    const r = resolve(s, "team samples");
     if (r) r.samples = (r.samples || 0) + (Number(s.sampleSize) || 0) * (s.weight ?? 1);
   }
   for (const o of online) {
-    const r = row(o.teamName);
+    const r = resolve(o, "online data");
     if (r) r.online = (r.online || 0) + (Number(o.onlineTransactions) || 0) * (o.weight ?? 1);
   }
 
@@ -74,7 +105,7 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
     // Terminated teams with nothing in the period are noise.
     if (r.isTerminated && !r.dvoc && !r.samples && !r.online) continue;
     const adjustedSamples = r.samples == null ? null : Math.max(0, r.samples - r.notAccountable);
-    const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10); // pro-rated values are fractional
+    const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
     out.push({
       ...r,
       samples: round1(r.samples),
@@ -119,6 +150,8 @@ export const summarize = (rows) => {
   const online = sum("online");
   return {
     teams: rows.length,
+    fieldTeams: rows.filter((r) => !r.unlinked).length,
+    unlinked: rows.filter((r) => r.unlinked).length,
     activeTeams: rows.filter((r) => r.dvoc > 0).length,
     dvoc: sum("dvoc"),
     accountable,
