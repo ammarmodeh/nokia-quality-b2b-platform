@@ -7,6 +7,8 @@ import {
   deleteOption,
   reorderOptions,
   seedOptions,
+  getRcaUsage,
+  bulkAddOptions,
 } from "../controllers/dropdownOptionControllers.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
@@ -23,5 +25,8 @@ router.patch("/update/:id", protect, adminOnly, updateOption);
 router.delete("/delete/:id", protect, adminOnly, deleteOption);
 router.put("/reorder", protect, adminOnly, reorderOptions);
 router.post("/seed", protect, adminOnly, seedOptions);
+// Fill RCA lists from what tasks actually use (reviewed and confirmed in Dropdown Management)
+router.get("/usage/:category", protect, adminOnly, getRcaUsage);
+router.post("/bulk-add", protect, adminOnly, bulkAddOptions);
 
 export default router;

@@ -1,6 +1,8 @@
 import { DropdownOption } from "../models/dropdownOptionModel.js";
 import { FieldTeamsSchema } from "../models/fieldTeamsModel.js";
 import { UserSchema } from "../models/userModel.js";
+import { TaskSchema } from "../models/taskModel.js";
+import { RCA_LISTS, rcaUsage } from "../utils/rcaUsage.js";
 
 // Get all options grouped by category
 export const getAllOptions = async (req, res) => {
@@ -301,5 +303,72 @@ export const seedOptions = async (req, res) => {
     res.status(201).json({ message: "Database seeded/updated successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// GET /api/dropdown-options/usage/:category  (admin)
+// Most-used values of an RCA list (REASON, REASON_SUB, ROOT_CAUSE, RESPONSIBILITY) on DVOC tasks,
+// with the parent value each is most often paired with and whether it is already in the list.
+// ---------------------------------------------------------------------------
+export const getRcaUsage = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const spec = RCA_LISTS[category];
+    if (!spec) return res.status(400).json({ message: `Usage is only available for ${Object.keys(RCA_LISTS).join(", ")}` });
+    const parentField = spec.parent ? RCA_LISTS[spec.parent].field : null;
+    const [tasks, existing] = await Promise.all([
+      TaskSchema.find({ [spec.field]: { $exists: true, $ne: [] } }, { [spec.field]: 1, ...(parentField ? { [parentField]: 1 } : {}) }).lean(),
+      DropdownOption.find({ category }, { value: 1 }).lean(),
+    ]);
+    res.json({ category, parentCategory: spec.parent, tasksScanned: tasks.length, items: rcaUsage(tasks, category, existing.map((o) => o.value)) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// POST /api/dropdown-options/bulk-add  (admin)
+// Body: { category, items: [{ value, label?, parentValue? }] }
+// Adds the values that aren't in the list yet (existing ones are left as they are), appended after
+// the current last option. Safe to repeat.
+// ---------------------------------------------------------------------------
+export const bulkAddOptions = async (req, res) => {
+  try {
+    const { category, items } = req.body;
+    if (!category || !Array.isArray(items) || !items.length) return res.status(400).json({ message: "category and a non-empty items array are required" });
+    if (items.length > 500) return res.status(400).json({ message: "At most 500 values at a time" });
+    const spec = RCA_LISTS[category];
+    const existing = await DropdownOption.find({ category }, { value: 1, order: 1 }).lean();
+    const have = new Set(existing.map((o) => o.value.trim().toLowerCase()));
+    let order = existing.reduce((m, o) => Math.max(m, o.order || 0), 0);
+    const seen = new Set();
+    const docs = [];
+    for (const it of items) {
+      const value = String(it?.value ?? "").replace(/\s+/g, " ").trim();
+      const k = value.toLowerCase();
+      if (!value || have.has(k) || seen.has(k)) continue;
+      seen.add(k);
+      docs.push({
+        category,
+        value,
+        label: String(it.label || value).trim(),
+        order: ++order,
+        parentCategory: spec?.parent || it.parentCategory || null,
+        parentValue: it.parentValue ? String(it.parentValue).trim() : null,
+      });
+    }
+    let added = 0;
+    if (docs.length) {
+      try {
+        added = (await DropdownOption.insertMany(docs, { ordered: false })).length;
+      } catch (err) {
+        if (err?.code !== 11000 && !err?.writeErrors) throw err;
+        added = err.insertedDocs?.length ?? err.result?.insertedCount ?? 0; // duplicates added meanwhile are skipped
+      }
+    }
+    res.status(201).json({ added, skipped: items.length - added });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };

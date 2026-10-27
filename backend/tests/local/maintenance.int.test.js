@@ -11,6 +11,8 @@ process.env.JWT_SECRET = "local-test-secret";
 
 const { default: maintenanceRoutes } = await import("../../routes/maintenanceRoutes.js");
 const { default: teamTrendsRoutes } = await import("../../routes/teamTrendsRoutes.js");
+const { default: dropdownRoutes } = await import("../../routes/dropdownOptionRoutes.js");
+const { DropdownOption } = await import("../../models/dropdownOptionModel.js");
 const { UserSchema } = await import("../../models/userModel.js");
 const { TaskSchema } = await import("../../models/taskModel.js");
 const { TaskTicket } = await import("../../models/taskTicketModel.js");
@@ -23,6 +25,7 @@ const app = express();
 app.use(express.json());
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/team-trends", teamTrendsRoutes);
+app.use("/api/dropdown-options", dropdownRoutes);
 
 let admin;
 let member;
@@ -203,5 +206,33 @@ describe("Teams Trends API", () => {
     const none = (await request(app).get("/api/team-trends").query({ from: "2026-09-10T00:00:00.000Z", to: "2026-09-16T23:59:59.999Z" }).set(auth(member)).expect(200)).body;
     expect(none.rows.every((r) => r.perSamplePct === null)).toBe(true);
     await request(app).get("/api/team-trends").query({ from: "nope", to: "2026-09-13" }).set(auth(member)).expect(400);
+  });
+});
+
+describe("Dropdown Management: add RCA values from usage", () => {
+  it("lists the most-used reasons with their usual owner, admin only", async () => {
+    await request(app).get("/api/dropdown-options/usage/REASON").set(auth(member)).expect(403);
+    await TaskSchema.collection.insertMany([
+      { slid: "R1", requestNumber: 9101, reason: ["Slow speed", "Billing"], responsible: ["Reach", "Customer"], subReason: ["Wi-Fi", "Price"] },
+      { slid: "R2", requestNumber: 9102, reason: ["slow speed"], responsible: ["Reach"], subReason: ["Wi-Fi"] },
+    ]);
+    await DropdownOption.create({ category: "REASON", value: "Billing", label: "Billing", order: 4 });
+    const r = (await request(app).get("/api/dropdown-options/usage/REASON").set(auth(admin)).expect(200)).body;
+    expect(r.parentCategory).toBe("RESPONSIBILITY");
+    expect(r.items.slice(0, 2)).toMatchObject([
+      { value: "Slow speed", count: 2, parentValue: "Reach", exists: false },
+      { value: "Billing", count: 1, parentValue: "Customer", exists: true },
+    ]);
+    await request(app).get("/api/dropdown-options/usage/PRIORITY").set(auth(admin)).expect(400);
+  });
+
+  it("bulk-adds only missing values, after the current last option, linked to their parent", async () => {
+    await request(app).post("/api/dropdown-options/bulk-add").set(auth(member)).send({ category: "REASON", items: [{ value: "x" }] }).expect(403);
+    const res = (await request(app).post("/api/dropdown-options/bulk-add").set(auth(admin)).send({ category: "REASON", items: [{ value: "Slow speed", parentValue: "Reach" }, { value: "billing" }, { value: " Slow  speed " }] }).expect(201)).body;
+    expect(res).toEqual({ added: 1, skipped: 2 });
+    const added = await DropdownOption.findOne({ category: "REASON", value: "Slow speed" }).lean();
+    expect(added).toMatchObject({ order: 5, parentCategory: "RESPONSIBILITY", parentValue: "Reach", label: "Slow speed", isActive: true });
+    const again = (await request(app).post("/api/dropdown-options/bulk-add").set(auth(admin)).send({ category: "REASON", items: [{ value: "Slow speed" }] }).expect(201)).body;
+    expect(again.added).toBe(0);
   });
 });

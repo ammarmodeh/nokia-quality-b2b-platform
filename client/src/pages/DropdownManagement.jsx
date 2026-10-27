@@ -11,6 +11,8 @@ import SectionCard from '../components/ui/SectionCard';
 import Sheet from '../components/ui/Sheet';
 import SafeDeleteDialog from '../components/ui/SafeDeleteDialog';
 import { bulkDelete, DELETE_PATHS } from '../api/bulkDelete';
+import RcaUsageDialog from '../components/dropdown/RcaUsageDialog';
+import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
 
 // Every field of a dropdown option, for the backup taken before a permanent delete.
 const OPTION_COLUMNS = [
@@ -34,6 +36,8 @@ const ItemTypes = {
 };
 
 const READ_ONLY_CATEGORIES = ['FIELD_TEAMS', 'SUPERVISORS'];
+// Root-cause lists that can be filled from the values tasks actually use.
+const RCA_USAGE_LISTS = ['RESPONSIBILITY', 'REASON', 'REASON_SUB', 'ROOT_CAUSE'];
 // Values here are stored on tasks and snags, so they can be renamed but not deleted.
 const PROTECTED_CATEGORIES = ['ISSUE_TAXONOMY', 'ISSUE_TAXONOMY_SUB'];
 
@@ -219,6 +223,7 @@ const DropdownManagement = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingOption, setEditingOption] = useState(null);
   const [formData, setFormData] = useState({ value: '', label: '', order: 0, parentCategory: null, parentValue: null });
+  const [usageOpen, setUsageOpen] = useState(false);
 
   const colors = {
     background: 'transparent',
@@ -393,6 +398,9 @@ const DropdownManagement = () => {
             description={`${currentOptions.length} option${currentOptions.length === 1 ? '' : 's'}${parent ? ` · each linked to a ${parent.label.replace('Parent ', '')}` : ''}${readOnly ? ' · managed automatically' : ' · drag rows to reorder'}${PROTECTED_CATEGORIES.includes(activeTab) ? ' · used on records, so values can be renamed but not deleted' : ''}`}
             actions={!readOnly && (
               <>
+                {RCA_USAGE_LISTS.includes(activeTab) && (
+                  <Button variant="outlined" startIcon={<InsightsOutlined sx={{ fontSize: 16 }} />} onClick={() => setUsageOpen(true)}>Add from usage</Button>
+                )}
                 <Button variant="outlined" startIcon={<UpdateIcon sx={{ fontSize: 16 }} />} onClick={saveOrder}>Save order</Button>
                 <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 17 }} />} onClick={() => handleOpenDialog()}>Add option</Button>
               </>
@@ -498,6 +506,7 @@ const DropdownManagement = () => {
           onDelete={(list) => bulkDelete(DELETE_PATHS.dropdowns, list.map((o) => o._id))}
           onDeleted={({ deleted }) => { if (deleted.length) fetchOptions(); }}
         />
+        <RcaUsageDialog open={usageOpen} category={activeTab} listLabel={CATEGORY_MAP[activeTab] || activeTab} onClose={() => setUsageOpen(false)} onAdded={fetchOptions} />
       </Box>
     </DndProvider>
   );
