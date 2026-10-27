@@ -12,8 +12,11 @@ Ranks DVOC Installation teams worst-first for a period. API: `GET /api/team-tren
 | Accountable DVOC | task's `teamAccountability` has any “Yes” | `client/src/utils/accountability.js`, `onlineSummary` |
 | Per survey sample % | accountable ÷ (team samples − non-accountable DVOC) × 100 | `onlineDataController.onlineSummary` (“DVOC / Sample %”) |
 | Per online % | accountable ÷ team online transactions × 100 | `onlineDataController.onlineSummary` (“DVOC / Online %”) |
-| REACH ownership | accountable tasks whose `responsible` contains “reach” | Field Team Portal “Owner Reach” |
+| REACH ownership | every RCA row whose owner (`responsible`) is REACH, accountable or not (a task with two REACH rows counts twice) | dashboard “Top owners”; user rule 2026-10-28 |
 | Total accountable | count of accountable tasks | — |
+
+The REACH card also reports accountable tasks that have **no** REACH owner — a data check, since every
+accountable case is expected to be REACH’s responsibility.
 
 - DVOC scope = tasks with an `interviewDate` in the period and a team name (same as `onlineSummary`).
 - A task counts once per team, however many RCA rows it has. Team names match case/space-insensitively.

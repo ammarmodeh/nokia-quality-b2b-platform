@@ -5,7 +5,8 @@
 //   onlineDataController.onlineSummary).
 // - DVOC / Sample %  = accountable / (team samples − non-accountable DVOC) × 100   (onlineSummary)
 // - DVOC / Online %  = accountable / online transactions × 100                      (onlineSummary)
-// - REACH ownership: the task's `responsible` contains "reach" (FieldTeamPortal "Owner Reach").
+// - REACH ownership: every RCA row whose owner (`responsible`) is REACH, accountable or not — the same
+//   count as the dashboard's "Top owners" (a task with two REACH rows counts twice). User rule 2026-10-28.
 // Each task counts once per team, whatever the number of RCA rows.
 // Samples and online volumes are stored per team per month and are used as whole monthly figures
 // (user rule 2026-10-27: a week uses its month's full samples, never a pro-rated fraction). The client
@@ -15,7 +16,11 @@
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
 export const isAccountable = (task) => list(task?.teamAccountability).some((x) => String(x).trim().toLowerCase() === "yes");
-export const isReachOwned = (task) => list(task?.responsible).some((x) => String(x ?? "").toLowerCase().includes("reach"));
+// Owner values per RCA row; legacy single strings may hold several owners ("Reach, OJO").
+const owners = (task) => list(task?.responsible).flatMap((x) => String(x ?? "").split(/[,;|]/)).map((x) => x.trim()).filter(Boolean);
+/** Number of RCA rows owned by REACH. */
+export const reachRows = (task) => owners(task).filter((x) => x.toLowerCase().includes("reach")).length;
+export const isReachOwned = (task) => reachRows(task) > 0;
 export const teamKey = (name) => String(name || "").trim().toLowerCase();
 
 const pct = (num, den, digits) => (den > 0 ? +((num / den) * 100).toFixed(digits) : null);
@@ -34,7 +39,7 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
     const key = teamKey(name);
     if (!key) return null;
     if (!rows.has(key)) {
-      rows.set(key, { key, teamName: String(name).trim(), teamId: null, teamCompany: null, teamCode: null, isTerminated: false, dvoc: 0, accountable: 0, notAccountable: 0, reachAccountable: 0, samples: null, online: null });
+      rows.set(key, { key, teamName: String(name).trim(), teamId: null, teamCompany: null, teamCode: null, isTerminated: false, dvoc: 0, accountable: 0, notAccountable: 0, reachOwned: 0, accountableNoReach: 0, samples: null, online: null });
     }
     return rows.get(key);
   };
@@ -48,9 +53,10 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
     const r = row(t.teamName);
     if (!r) continue;
     r.dvoc++;
+    r.reachOwned += reachRows(t);
     if (isAccountable(t)) {
       r.accountable++;
-      if (isReachOwned(t)) r.reachAccountable++;
+      if (!isReachOwned(t)) r.accountableNoReach++; // data check: accountable but no REACH owner
     } else r.notAccountable++;
   }
   // Denominators are summed only when present, so "no data entered" (null) stays distinct from 0.
@@ -84,7 +90,7 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
 export const METRICS = {
   perSample: { field: "perSamplePct", label: "Accountable DVOC / survey sample %" },
   perOnline: { field: "perOnlinePct", label: "Accountable DVOC / online %" },
-  reach: { field: "reachAccountable", label: "Accountable DVOC · REACH ownership" },
+  reach: { field: "reachOwned", label: "REACH-owned RCA rows" },
   accountable: { field: "accountable", label: "Accountable DVOC" },
 };
 
@@ -117,7 +123,8 @@ export const summarize = (rows) => {
     dvoc: sum("dvoc"),
     accountable,
     notAccountable: sum("notAccountable"),
-    reachAccountable: sum("reachAccountable"),
+    reachOwned: sum("reachOwned"),
+    accountableNoReach: sum("accountableNoReach"),
     samples: hasSamples ? sum("samples") : null,
     online: hasOnline ? online : null,
     perSamplePct: hasSamples && rows.some((r) => r.perSamplePct != null) ? pct(accountable, adjusted, 1) : null,

@@ -185,7 +185,7 @@ describe("Teams Trends API", () => {
     const alpha = res.rows.find((r) => r.teamName === "Install Alpha");
     const bravo = res.rows.find((r) => r.teamName === "Install Bravo");
     // Alpha: 1 accountable, 1 not → 1 / (21 − 1) = 5%; Bravo: 1 / 10 = 10% → Bravo is worse.
-    expect(alpha).toMatchObject({ dvoc: 2, accountable: 1, reachAccountable: 1, perSamplePct: 5, perOnlinePct: 0.25 });
+    expect(alpha).toMatchObject({ dvoc: 2, accountable: 1, reachOwned: 1, perSamplePct: 5, perOnlinePct: 0.25 });
     expect(bravo).toMatchObject({ accountable: 1, perSamplePct: 10, perOnlinePct: null, rank: 1 });
     expect(res.rows.some((r) => /maint/i.test(r.teamName))).toBe(false);
     const reach = (await request(app).get("/api/team-trends").query({ ...q, metric: "reach" }).set(auth(member)).expect(200)).body;

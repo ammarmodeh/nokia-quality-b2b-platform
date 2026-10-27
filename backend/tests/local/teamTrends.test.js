@@ -1,5 +1,5 @@
 // Pure calculation tests — no database. Run with: npm run test:local
-import { buildTeamTrends, isAccountable, isReachOwned, parseMonths, rankTeams, summarize } from "../../utils/teamTrends.js";
+import { buildTeamTrends, isAccountable, isReachOwned, parseMonths, rankTeams, reachRows, summarize } from "../../utils/teamTrends.js";
 
 const task = (teamName, acc, responsible = []) => ({ teamName, teamAccountability: acc, responsible });
 
@@ -15,6 +15,11 @@ describe("accountability rules", () => {
     expect(isReachOwned(task("A", [], "Reach"))).toBe(true);
     expect(isReachOwned(task("A", [], ["OJO"]))).toBe(false);
   });
+  it("counts every REACH-owned RCA row, like the dashboard's Top owners", () => {
+    expect(reachRows(task("A", ["Yes", "No"], ["Reach", "REACH"]))).toBe(2);
+    expect(reachRows(task("A", [], "Reach, OJO"))).toBe(1); // legacy multi-owner string
+    expect(reachRows(task("A", [], []))).toBe(0);
+  });
 });
 
 describe("buildTeamTrends", () => {
@@ -27,7 +32,7 @@ describe("buildTeamTrends", () => {
     task("Alpha", ["Yes", "Yes"], ["Reach", "Reach"]), // two RCA rows → still one task
     task("alpha ", ["Yes"], ["OJO"]), // name differs only in case/space → same team
     task("Alpha", ["No"]),
-    task("Bravo", ["No"]),
+    task("Bravo", ["No"], ["Reach"]), // not accountable, still a REACH-owned row
   ];
   const samples = [{ teamName: "Alpha", sampleSize: 30 }, { teamName: "ALPHA", sampleSize: 11 }];
   const online = [{ teamName: "Alpha", onlineTransactions: 400 }, { teamName: "Bravo", onlineTransactions: 0 }];
@@ -36,7 +41,12 @@ describe("buildTeamTrends", () => {
   const by = (n) => rows.find((r) => r.teamName === n);
 
   it("counts each task once per team", () => {
-    expect(by("Alpha")).toMatchObject({ dvoc: 3, accountable: 2, notAccountable: 1, reachAccountable: 1 });
+    expect(by("Alpha")).toMatchObject({ dvoc: 3, accountable: 2, notAccountable: 1 });
+  });
+  it("REACH ownership counts REACH-owned rows whether accountable or not", () => {
+    expect(by("Alpha").reachOwned).toBe(2); // two REACH rows on one task
+    expect(by("Bravo").reachOwned).toBe(1); // not accountable
+    expect(by("Alpha").accountableNoReach).toBe(1); // the OJO-owned accountable task (data check)
   });
   it("uses the existing DVOC/Sample formula: accountable / (samples − non-accountable)", () => {
     expect(by("Alpha").samples).toBe(41);
@@ -64,10 +74,10 @@ describe("buildTeamTrends", () => {
 
 describe("rankTeams", () => {
   const rows = [
-    { teamName: "A", accountable: 1, perSamplePct: 2, reachAccountable: 0 },
-    { teamName: "B", accountable: 4, perSamplePct: 9, reachAccountable: 3 },
-    { teamName: "C", accountable: 2, perSamplePct: 2, reachAccountable: 1 },
-    { teamName: "D", accountable: 5, perSamplePct: null, reachAccountable: 2 },
+    { teamName: "A", accountable: 1, perSamplePct: 2, reachOwned: 0 },
+    { teamName: "B", accountable: 4, perSamplePct: 9, reachOwned: 3 },
+    { teamName: "C", accountable: 2, perSamplePct: 2, reachOwned: 1 },
+    { teamName: "D", accountable: 5, perSamplePct: null, reachOwned: 2 },
   ];
   it("ranks worst first, ties share a rank, rows without a value go last unranked", () => {
     const r = rankTeams(rows.map((x) => ({ ...x })), "perSample");
@@ -82,8 +92,8 @@ describe("rankTeams", () => {
 describe("summarize", () => {
   it("pools rates from totals instead of averaging team percentages", () => {
     const s = summarize([
-      { dvoc: 3, accountable: 2, notAccountable: 1, reachAccountable: 1, samples: 41, adjustedSamples: 40, online: 400, perSamplePct: 5, perOnlinePct: 0.5 },
-      { dvoc: 1, accountable: 0, notAccountable: 1, reachAccountable: 0, samples: 9, adjustedSamples: 8, online: 100, perSamplePct: 0, perOnlinePct: 0 },
+      { dvoc: 3, accountable: 2, notAccountable: 1, reachOwned: 1, samples: 41, adjustedSamples: 40, online: 400, perSamplePct: 5, perOnlinePct: 0.5 },
+      { dvoc: 1, accountable: 0, notAccountable: 1, reachOwned: 0, samples: 9, adjustedSamples: 8, online: 100, perSamplePct: 0, perOnlinePct: 0 },
     ]);
     expect(s).toMatchObject({ dvoc: 4, accountable: 2, samples: 50, online: 500, perSamplePct: 4.2, perOnlinePct: 0.4 });
   });

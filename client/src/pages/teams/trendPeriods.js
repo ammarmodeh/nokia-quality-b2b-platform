@@ -65,7 +65,7 @@ export const trendQuery = (p, metric) => ({
 export const TREND_METRICS = [
   { value: "perSample", label: "Per survey sample", field: "perSamplePct", rate: true, format: (v) => `${v}%`, description: "Accountable DVOC ÷ (team survey samples − non-accountable DVOC)" },
   { value: "perOnline", label: "Per online", field: "perOnlinePct", rate: true, format: (v) => `${v}%`, description: "Accountable DVOC ÷ team online transactions" },
-  { value: "reach", label: "REACH ownership", field: "reachAccountable", rate: false, format: (v) => v.toLocaleString(), description: "Accountable DVOC where the responsible owner is REACH" },
+  { value: "reach", label: "REACH ownership", field: "reachOwned", rate: false, format: (v) => v.toLocaleString(), description: "RCA rows whose owner is REACH, accountable or not — same count as the dashboard's Top owners" },
   { value: "accountable", label: "Total accountable", field: "accountable", rate: false, format: (v) => v.toLocaleString(), description: "All accountable DVOC in the period" },
 ];
 

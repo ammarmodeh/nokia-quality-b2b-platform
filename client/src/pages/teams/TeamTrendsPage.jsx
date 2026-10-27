@@ -35,7 +35,7 @@ const COLUMNS = [
   { key: "teamName", label: "Team", get: (r) => r.teamName.toLowerCase() },
   { key: "perSamplePct", label: "DVOC / sample", align: "right", get: (r) => r.perSamplePct, render: (r) => fmtPct(r.perSamplePct), title: "Accountable DVOC ÷ (survey samples − non-accountable)" },
   { key: "perOnlinePct", label: "DVOC / online", align: "right", get: (r) => r.perOnlinePct, render: (r) => fmtPct(r.perOnlinePct), title: "Accountable DVOC ÷ online transactions" },
-  { key: "reachAccountable", label: "REACH owned", align: "right", get: (r) => r.reachAccountable, render: (r) => fmtNum(r.reachAccountable), title: "Accountable DVOC where REACH is the responsible owner" },
+  { key: "reachOwned", label: "REACH owned", align: "right", get: (r) => r.reachOwned, render: (r) => fmtNum(r.reachOwned), title: "RCA rows whose owner is REACH, accountable or not (a task with two REACH rows counts twice)" },
   { key: "accountable", label: "Accountable", align: "right", get: (r) => r.accountable, render: (r) => fmtNum(r.accountable) },
   { key: "dvoc", label: "All DVOC", align: "right", get: (r) => r.dvoc, render: (r) => fmtNum(r.dvoc) },
   { key: "samples", label: "Samples", align: "right", get: (r) => r.samples, render: (r) => fmtNum(r.samples) },
@@ -216,7 +216,8 @@ const TeamTrendsPage = () => {
           ["Company", (r) => r.teamCompany],
           ["Accountable DVOC / survey sample %", (r) => r.perSamplePct],
           ["Accountable DVOC / online %", (r) => r.perOnlinePct],
-          ["Accountable DVOC · REACH ownership", (r) => r.reachAccountable],
+          ["REACH-owned RCA rows", (r) => r.reachOwned],
+          ["Accountable tasks without a REACH owner", (r) => r.accountableNoReach],
           ["Accountable DVOC", (r) => r.accountable],
           ["Non-accountable DVOC", (r) => r.notAccountable],
           ["All DVOC", (r) => r.dvoc],
@@ -285,7 +286,7 @@ const TeamTrendsPage = () => {
               <StatCard label="Accountable DVOC" value={fmtNum(summary.accountable)} hint={`of ${fmtNum(summary.dvoc)} DVOC`} delta={delta("accountable")} goodWhen="down" />
               <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtNum(summary.samples)} samples` : "No samples entered"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
               <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtNum(summary.online)} online` : "No online data"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
-              <StatCard label="REACH ownership" value={fmtNum(summary.reachAccountable)} hint="accountable, REACH owner" delta={delta("reachAccountable")} goodWhen="down" />
+              <StatCard label="REACH ownership" value={fmtNum(summary.reachOwned)} hint={summary.accountableNoReach ? `RCA rows owned by REACH · ${summary.accountableNoReach} accountable task${summary.accountableNoReach === 1 ? " has" : "s have"} no REACH owner` : "RCA rows owned by REACH"} delta={delta("reachOwned")} goodWhen="down" />
             </Box>
 
             <SectionCard title={`Worst ${Math.min(10, chartRows.length) || ""} teams · ${metric.label}`} description={metric.description} sx={{ mb: 2 }}>
