@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Box, Button, InputBase, Switch, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
@@ -38,6 +38,7 @@ const COLUMNS = [
   { key: "accountable", label: "Accountable", align: "right", get: (r) => r.accountable, render: (r) => fmtNum(r.accountable) },
   { key: "dvoc", label: "All DVOC", align: "right", get: (r) => r.dvoc, render: (r) => fmtNum(r.dvoc) },
   { key: "samples", label: "Samples", align: "right", get: (r) => r.samples, render: (r) => fmtNum(r.samples) },
+  { key: "adjustedSamples", label: "Net samples", align: "right", get: (r) => r.adjustedSamples, render: (r) => fmtNum(r.adjustedSamples), title: "Survey samples − non-accountable DVOC (the DVOC / sample denominator)" },
   { key: "online", label: "Online", align: "right", get: (r) => r.online, render: (r) => fmtNum(r.online) },
   { key: "change", label: "vs previous", align: "right", get: (r) => r.change, render: null },
 ];
@@ -62,16 +63,32 @@ const useTrends = (period, metric, settings, refresh) => {
   return state;
 };
 
+const TipRow = ({ label, value, strong, color }) => (
+  <Box sx={{ display: "flex", gap: 2, fontSize: 12, py: 0.2 }}>
+    <span style={{ flex: 1, color: "var(--text-secondary)" }}>{label}</span>
+    <span style={{ fontWeight: strong ? 600 : 400, color: color || "var(--text)", fontVariantNumeric: "tabular-nums" }}>{value}</span>
+  </Box>
+);
+
 const ChartTooltip = ({ active, payload, metric }) => {
   if (!active || !payload?.length) return null;
   const r = payload[0].payload;
   return (
-    <Box sx={{ p: 1.25, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-md)", minWidth: 200 }}>
-      <Typography sx={{ fontSize: 12.5, fontWeight: 600 }}>#{r.rank} · {r.teamName}</Typography>
-      <Typography sx={{ fontSize: 12, color: "var(--text-secondary)", mt: 0.5 }}>{metric.label}: <strong>{metric.format(r[metric.field])}</strong></Typography>
-      <Typography sx={{ fontSize: 11.5, color: "var(--text-muted)", mt: 0.25 }}>
-        {r.accountable} accountable of {r.dvoc} DVOC{r.samples != null ? ` · ${r.samples} samples` : ""}{r.online != null ? ` · ${r.online.toLocaleString()} online` : ""}
-      </Typography>
+    <Box sx={{ p: 1.25, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--surface)", boxShadow: "var(--shadow-md)", minWidth: 230 }}>
+      <Typography sx={{ fontSize: 12.5, fontWeight: 600, mb: 0.5 }}>#{r.rank} · {r.teamName}</Typography>
+      {r.samples != null ? (
+        <>
+          <TipRow label="Survey samples" value={r.samples.toLocaleString()} />
+          <TipRow label="− Non-accountable DVOC" value={r.notAccountable.toLocaleString()} />
+          <TipRow label="= Net samples" value={r.adjustedSamples.toLocaleString()} strong />
+          <TipRow label="Accountable DVOC" value={r.accountable.toLocaleString()} strong color="var(--danger)" />
+          <TipRow label="DVOC / survey sample" value={r.perSamplePct == null ? "—" : `${r.perSamplePct}%`} strong />
+        </>
+      ) : (
+        <TipRow label="Accountable DVOC" value={`${r.accountable} of ${r.dvoc} DVOC`} strong />
+      )}
+      {metric.value !== "perSample" && metric.value !== "accountable" && <TipRow label={metric.label} value={r[metric.field] == null ? "—" : metric.format(r[metric.field])} strong />}
+      {r.online != null && <TipRow label="Online transactions" value={r.online.toLocaleString()} />}
     </Box>
   );
 };
@@ -170,7 +187,13 @@ const TeamTrendsPage = () => {
   }, [rows, q, showIdle, companyFilter, sort]);
 
   const ranked = useMemo(() => rows.filter((r) => r.rank != null && r[metric.field] > 0), [rows, metric.field]);
-  const chartRows = ranked.slice(0, 10);
+  // Each bar = net samples (samples − non-accountable), red part = accountable, so the bar shows the rate.
+  const chartRows = ranked.slice(0, 10).map((r) => ({
+    ...r,
+    restOfSamples: r.adjustedSamples != null ? Math.max(0, r.adjustedSamples - r.accountable) : null,
+    chartLabel: r.adjustedSamples != null ? `${r.accountable} / ${r.adjustedSamples}${r.perSamplePct != null ? ` · ${r.perSamplePct}%` : ""}` : "",
+  }));
+  const chartHasSamples = chartRows.some((r) => r.adjustedSamples != null);
   const worst = ranked[0];
   const summary = current?.summary;
   const prevSummary = previous?.summary;
@@ -243,7 +266,16 @@ const TeamTrendsPage = () => {
         current && (
           <Box sx={{ opacity: loading ? 0.6 : 1, transition: "opacity .15s" }}>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 1.5, mb: 2 }}>
-              <StatCard label="Worst team" value={worst ? worst.teamName : "—"} hint={worst ? `${metric.format(worst[metric.field])} · ${metric.label.toLowerCase()}` : "No accountable DVOC"} sx={{ gridColumn: { xs: "1 / -1", md: "auto" } }} icon={<TrendingUpOutlined sx={{ fontSize: 15 }} />} />
+              <StatCard
+                label="Worst team"
+                value={
+                  worst ? (
+                    // Long (often Arabic) names: smaller type, two lines max, full name on hover.
+                    <Box component="span" dir="auto" title={worst.teamName} sx={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: worst.teamName.length > 18 ? 17 : 22, lineHeight: 1.3 }}>
+                      {worst.teamName}
+                    </Box>
+                  ) : "—"
+                } hint={worst ? `${metric.format(worst[metric.field])} · ${metric.label.toLowerCase()}` : "No accountable DVOC"} sx={{ gridColumn: { xs: "1 / -1", md: "auto" } }} icon={<TrendingUpOutlined sx={{ fontSize: 15 }} />} />
               <StatCard label="Accountable DVOC" value={fmtNum(summary.accountable)} hint={`of ${fmtNum(summary.dvoc)} DVOC`} delta={delta("accountable")} goodWhen="down" />
               <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtNum(summary.samples)} samples` : months.length ? "No samples entered" : "Needs whole months"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
               <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtNum(summary.online)} online` : months.length ? "No online data" : "Needs whole months"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
@@ -252,21 +284,35 @@ const TeamTrendsPage = () => {
 
             <SectionCard title={`Worst ${Math.min(10, chartRows.length) || ""} teams · ${metric.label}`} description={metric.description} sx={{ mb: 2 }}>
               {chartRows.length ? (
-                <Box sx={{ height: Math.max(180, chartRows.length * 34 + 30) }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartRows} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
-                      <CartesianGrid horizontal={false} stroke="var(--border)" />
-                      <XAxis type="number" tick={{ fontSize: 11.5, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => (metric.rate ? `${v}%` : v)} allowDecimals={metric.rate} />
-                      <YAxis type="category" dataKey="teamName" width={140} tick={{ fontSize: 12, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
-                      <Tooltip cursor={{ fill: "var(--surface-hover)" }} content={<ChartTooltip metric={metric} />} />
-                      <Bar dataKey={metric.field} radius={[0, 4, 4, 0]} barSize={18} onClick={(d) => d?.teamId && navigate(`/team-analysis/${d.teamId}`)} style={{ cursor: "pointer" }}>
-                        {chartRows.map((r) => (
-                          <Cell key={r.key} fill={r.rank <= WORST_COUNT ? "var(--danger)" : "var(--warning)"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
+                <>
+                  {chartHasSamples ? (
+                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", fontSize: 12, color: "var(--text-secondary)", mb: 1.5 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}><Box sx={{ width: 10, height: 10, borderRadius: "2px", backgroundColor: "var(--danger)" }} />Accountable DVOC</Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}><Box sx={{ width: 10, height: 10, borderRadius: "2px", backgroundColor: "var(--border-strong)" }} />Rest of net samples</Box>
+                      <span>Bar length = net samples (survey samples − non-accountable DVOC) · label = accountable / net samples · %</span>
+                    </Box>
+                  ) : (
+                    <Typography sx={{ fontSize: 12, color: "var(--text-muted)", mb: 1.5 }}>
+                      {months.length ? "No team survey samples are entered for these months, so only accountable DVOC is shown." : "Team survey samples are recorded per month, so a week shows accountable DVOC only. Pick a whole-month period to see samples next to it."}
+                    </Typography>
+                  )}
+                  <Box sx={{ height: Math.max(180, chartRows.length * 38 + 30) }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartRows} layout="vertical" margin={{ top: 4, right: chartHasSamples ? 150 : 24, bottom: 4, left: 8 }}>
+                        <CartesianGrid horizontal={false} stroke="var(--border)" />
+                        <XAxis type="number" tick={{ fontSize: 11.5, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <YAxis type="category" dataKey="teamName" width={160} tick={{ fontSize: 12, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
+                        <Tooltip cursor={{ fill: "var(--surface-hover)" }} content={<ChartTooltip metric={metric} />} />
+                        <Bar dataKey="accountable" name="Accountable DVOC" stackId="s" fill="var(--danger)" barSize={18} radius={chartHasSamples ? 0 : [0, 4, 4, 0]} onClick={(d) => d?.teamId && navigate(`/team-analysis/${d.teamId}`)} style={{ cursor: "pointer" }} />
+                        {chartHasSamples && (
+                          <Bar dataKey="restOfSamples" name="Rest of net samples" stackId="s" fill="var(--border-strong)" barSize={18} radius={[0, 4, 4, 0]} onClick={(d) => d?.teamId && navigate(`/team-analysis/${d.teamId}`)} style={{ cursor: "pointer" }}>
+                            <LabelList dataKey="chartLabel" position="right" style={{ fontSize: 11.5, fill: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }} />
+                          </Bar>
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </>
               ) : (
                 <EmptyState minHeight={180} title="No accountable DVOC in this period" description={metric.rate && !summary.samples && metric.value === "perSample" ? "No team survey samples are entered for these months." : "Every team is at zero for this metric."} />
               )}
