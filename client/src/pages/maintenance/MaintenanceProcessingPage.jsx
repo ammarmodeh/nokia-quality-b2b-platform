@@ -3,7 +3,7 @@ import { useOutletContext, useSearchParams } from "react-router-dom";
 import { Box, Button, InputBase, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ConfirmationNumberOutlined from "@mui/icons-material/ConfirmationNumberOutlined";
-import { formatDistanceToNowStrict, format } from "date-fns";
+import { format } from "date-fns";
 import SectionCard from "../../components/ui/SectionCard";
 import EmptyState from "../../components/ui/EmptyState";
 import ErrorState from "../../components/ui/ErrorState";
@@ -104,7 +104,7 @@ const MaintenanceProcessingPage = () => {
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 0.5, fontSize: 12, color: "var(--text-muted)" }}>
                       <Badge tone={STATUS_TONE[t.status]} dot>{t.status}</Badge>
-                      {t.lastStep ? <span>{t.lastStep.transactionType}{t.lastStep.transactionState ? ` · ${t.lastStep.transactionState}` : ""} · {formatDistanceToNowStrict(new Date(t.lastStep.eventDate || t.lastTicketAt))} ago</span> : <span>No steps yet · created {format(new Date(t.createdAt), "d MMM")}</span>}
+                      {t.lastStep ? <span>{t.lastStep.transactionType}{t.lastStep.transactionState ? ` · ${t.lastStep.transactionState}` : ""} · {format(new Date(t.lastStep.eventDate || t.lastTicketAt), "d MMM")}</span> : <span>No steps yet · created {format(new Date(t.createdAt), "d MMM")}</span>}
                     </Box>
                   </Box>
                 </Box>

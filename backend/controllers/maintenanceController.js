@@ -363,7 +363,9 @@ export const createTask = handle(async (req, res) => {
   const data = cleanTask(req.body);
   await validateTaskRefs(data, { creating: true });
   if (!req.body.allowDuplicateSlid) {
-    const open = await MaintenanceTask.findOne({ slid: data.slid, status: { $ne: "Closed" } }).select("_id taskNumber").lean();
+    const open = await MaintenanceTask.findOne({ slid: data.slid, status: { $ne: "Closed" } }).select("_id taskNumber requestKey").lean();
+    // A concurrent copy of this same submission got there first: that's the duplicate, not a conflict.
+    if (open && requestKey && open.requestKey === requestKey) return res.status(200).json({ _id: open._id, taskNumber: open.taskNumber, duplicate: true });
     if (open) fail(409, `SLID ${data.slid} already has an open maintenance task (${open.taskNumber}).`, { code: "OPEN_TASK_EXISTS", existingId: open._id, taskNumber: open.taskNumber });
   }
   if (data.status === "Closed") data.closedAt = new Date();
