@@ -90,8 +90,29 @@ describe("summarize", () => {
 });
 
 describe("parseMonths", () => {
-  it("parses and validates year-month lists", () => {
-    expect(parseMonths("2026-9, 2026-10,bad,2026-13")).toEqual([{ year: 2026, month: 9 }, { year: 2026, month: 10 }]);
+  it("parses year-month lists with optional month shares", () => {
+    expect(parseMonths("2026-9, 2026-10:0.2258,bad,2026-13,2026-11:0,2026-12:1.5")).toEqual([
+      { year: 2026, month: 9, weight: 1 },
+      { year: 2026, month: 10, weight: 0.2258 },
+    ]);
     expect(parseMonths("")).toEqual([]);
+  });
+});
+
+describe("pro-rated samples for partial months (weeks)", () => {
+  const rows = buildTeamTrends({
+    tasks: [task("A", ["Yes"]), task("A", ["No"])],
+    // A week of 7 days: 4 days in a 30-day month + 3 days in a 31-day month.
+    samples: [{ teamName: "A", sampleSize: 60, weight: 4 / 30 }, { teamName: "A", sampleSize: 62, weight: 3 / 31 }],
+    online: [{ teamName: "A", onlineTransactions: 310, weight: 3 / 31 }],
+  });
+  it("takes each month's share of samples and online", () => {
+    expect(rows[0].samples).toBe(14); // 8 + 6
+    expect(rows[0].online).toBe(30);
+  });
+  it("removes the period's non-accountable DVOC from the estimated samples", () => {
+    expect(rows[0].adjustedSamples).toBe(13);
+    expect(rows[0].perSamplePct).toBe(7.7); // 1 / 13
+    expect(rows[0].perOnlinePct).toBe(3.33); // 1 / 30
   });
 });

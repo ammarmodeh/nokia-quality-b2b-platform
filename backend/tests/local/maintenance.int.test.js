@@ -192,11 +192,16 @@ describe("Teams Trends API", () => {
     expect(reach.rows[0].teamName).toBe("Install Alpha");
   });
 
-  it("gives no rates for partial-month periods and validates dates", async () => {
-    const res = (await request(app).get("/api/team-trends").query({ from: "2026-09-07T00:00:00.000Z", to: "2026-09-13T23:59:59.999Z" }).set(auth(member)).expect(200)).body;
-    expect(res.ratesAvailable).toBe(false);
-    expect(res.rows.every((r) => r.perSamplePct === null)).toBe(true);
-    expect(res.summary.accountable).toBe(1);
+  it("pro-rates monthly samples for a week and validates dates", async () => {
+    // 10–16 Sep: 7 of September's 30 days. Alpha has the S1 (accountable) and S2 (not) tasks in that week.
+    const res = (await request(app).get("/api/team-trends").query({ from: "2026-09-10T00:00:00.000Z", to: "2026-09-16T23:59:59.999Z", months: "2026-9:0.2333" }).set(auth(member)).expect(200)).body;
+    expect(res.estimated).toBe(true);
+    const alpha = res.rows.find((r) => r.teamName === "Install Alpha");
+    expect(alpha).toMatchObject({ accountable: 1, notAccountable: 1, samples: 4.9, adjustedSamples: 3.9, online: 93.3 }); // 21 × 0.2333, 400 × 0.2333
+    expect(alpha.perSamplePct).toBe(25.6); // 1 / 3.9
+    // Without month shares no rates are computed.
+    const none = (await request(app).get("/api/team-trends").query({ from: "2026-09-10T00:00:00.000Z", to: "2026-09-16T23:59:59.999Z" }).set(auth(member)).expect(200)).body;
+    expect(none.rows.every((r) => r.perSamplePct === null)).toBe(true);
     await request(app).get("/api/team-trends").query({ from: "nope", to: "2026-09-13" }).set(auth(member)).expect(400);
   });
 });

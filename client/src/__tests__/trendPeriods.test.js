@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveMetric, monthsCovered, trendQuery } from "../pages/teams/trendPeriods";
+import { effectiveMetric, monthShares, monthsCovered, trendQuery } from "../pages/teams/trendPeriods";
 import { resolvePeriod } from "../pages/dashboard/npsPeriods";
 
 const d = (y, m, day, end = false) => (end ? new Date(y, m - 1, day, 23, 59, 59, 999) : new Date(y, m - 1, day));
@@ -24,13 +24,17 @@ describe("Trends periods use the dashboard's period rules", () => {
     const cur = resolvePeriod("month", {}, {}, now).current;
     expect(trendQuery(cur, "perSample").months).toBe("2026-10");
   });
-  it("weeks have no whole months, so a rate metric falls back to the accountable count", () => {
+  it("weeks send their share of the month so samples can be pro-rated", () => {
     const week = resolvePeriod("lastWeek", {}, {}, now).current;
     const q = trendQuery(week, "perSample");
-    expect(q.months).toBe("");
+    expect(q.months).toMatch(/^2026-10:0.2258$/); // 7 of October's 31 days
+    expect(effectiveMetric("perSample", ["2026-10"]).value).toBe("perSample");
     expect(effectiveMetric("perSample", []).value).toBe("accountable");
-    expect(effectiveMetric("reach", []).value).toBe("reach");
-    expect(effectiveMetric("perOnline", ["2026-9"]).value).toBe("perOnline");
+  });
+  it("a week across two months takes a share of each", () => {
+    const shares = monthShares(d(2026, 9, 28), d(2026, 10, 4, true));
+    expect(shares.map((m) => [m.key, m.days, m.daysInMonth])).toEqual([["2026-9", 3, 30], ["2026-10", 4, 31]]);
+    expect(trendQuery({ start: d(2026, 9, 28), end: d(2026, 10, 4) }, "perSample").months).toBe("2026-9:0.1000,2026-10:0.1290");
   });
   it("sends the end of the last day as `to`", () => {
     const cur = resolvePeriod("month", {}, {}, now).current;

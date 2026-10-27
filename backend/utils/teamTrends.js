@@ -7,6 +7,9 @@
 // - DVOC / Online %  = accountable / online transactions × 100                      (onlineSummary)
 // - REACH ownership: the task's `responsible` contains "reach" (FieldTeamPortal "Owner Reach").
 // Each task counts once per team, whatever the number of RCA rows.
+// Samples and online volumes are stored per team per month. For a period that covers part of a month
+// (a week), each month's figure is pro-rated by the share of its days inside the period (approved
+// 2026-10-27): samples × overlapDays ÷ daysInMonth. Whole months have weight 1, so they stay exact.
 
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
@@ -18,8 +21,9 @@ const pct = (num, den, digits) => (den > 0 ? +((num / den) * 100).toFixed(digits
 
 /**
  * @param tasks    DVOC tasks in the period: { teamName, teamAccountability, responsible }
- * @param samples  team monthly samples for the period's full months: { teamName, sampleSize }
- * @param online   team monthly online rows for the period's full months: { teamName, onlineTransactions }
+ * @param samples  team monthly samples for the period's months: { teamName, sampleSize, weight? }
+ * @param online   team monthly online rows for the period's months: { teamName, onlineTransactions, weight? }
+ *                 weight = share of that month inside the period (default 1)
  * @param teams    field teams to include even without activity: { _id, teamName, teamCompany, teamCode, isTerminated }
  * @param ratesAvailable false when the period isn't whole months (denominators are stored per month)
  */
@@ -51,11 +55,11 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
   // Denominators are summed only when present, so "no data entered" (null) stays distinct from 0.
   for (const s of samples) {
     const r = row(s.teamName);
-    if (r) r.samples = (r.samples || 0) + (Number(s.sampleSize) || 0);
+    if (r) r.samples = (r.samples || 0) + (Number(s.sampleSize) || 0) * (s.weight ?? 1);
   }
   for (const o of online) {
     const r = row(o.teamName);
-    if (r) r.online = (r.online || 0) + (Number(o.onlineTransactions) || 0);
+    if (r) r.online = (r.online || 0) + (Number(o.onlineTransactions) || 0) * (o.weight ?? 1);
   }
 
   const out = [];
@@ -63,9 +67,12 @@ export const buildTeamTrends = ({ tasks = [], samples = [], online = [], teams =
     // Terminated teams with nothing in the period are noise.
     if (r.isTerminated && !r.dvoc && !r.samples && !r.online) continue;
     const adjustedSamples = r.samples == null ? null : Math.max(0, r.samples - r.notAccountable);
+    const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10); // pro-rated values are fractional
     out.push({
       ...r,
-      adjustedSamples,
+      samples: round1(r.samples),
+      online: round1(r.online),
+      adjustedSamples: round1(adjustedSamples),
       perSamplePct: ratesAvailable && adjustedSamples != null ? pct(r.accountable, adjustedSamples, 1) : null,
       perOnlinePct: ratesAvailable && r.online != null ? pct(r.accountable, r.online, 2) : null,
     });
@@ -117,10 +124,16 @@ export const summarize = (rows) => {
   };
 };
 
-/** "2026-9,2026-10" → [{year:2026, month:9}, …]; invalid entries dropped. */
+/**
+ * "2026-9,2026-10:0.2258" → [{year:2026, month:9, weight:1}, {year:2026, month:10, weight:0.2258}].
+ * weight = share of the month inside the period (0 < w ≤ 1, default 1); invalid entries dropped.
+ */
 export const parseMonths = (s) =>
   String(s || "")
     .split(",")
-    .map((x) => x.trim().split("-").map(Number))
-    .filter(([y, m]) => Number.isInteger(y) && y > 2000 && Number.isInteger(m) && m >= 1 && m <= 12)
-    .map(([year, month]) => ({ year, month }));
+    .map((x) => {
+      const [ym, w] = x.trim().split(":");
+      const [y, m] = String(ym).split("-").map(Number);
+      return { year: y, month: m, weight: w === undefined ? 1 : Number(w) };
+    })
+    .filter(({ year, month, weight }) => Number.isInteger(year) && year > 2000 && Number.isInteger(month) && month >= 1 && month <= 12 && weight > 0 && weight <= 1);

@@ -22,12 +22,14 @@ import PageLoader from "../../components/ui/PageLoader";
 import Badge from "../../components/ui/Badge";
 import { exportRows } from "../../utils/exportRows";
 import { resolvePeriod } from "../dashboard/npsPeriods";
-import { TREND_METRICS, TREND_PERIODS, effectiveMetric, monthsCovered, trendQuery } from "./trendPeriods";
+import { TREND_METRICS, TREND_PERIODS, effectiveMetric, monthShares, trendQuery } from "./trendPeriods";
 
 const WORST_COUNT = 5; // teams flagged as "worst" in the table and chart
 
 const fmtPct = (v) => (v == null ? "—" : `${v}%`);
-const fmtNum = (v) => (v == null ? "—" : v.toLocaleString());
+const fmtNum = (v) => (v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: 1 }));
+// Pro-rated (week / partial-month) samples and online volumes are estimates: shown with "≈".
+const fmtEst = (v, est) => (v == null ? "—" : `${est ? "≈ " : ""}${fmtNum(v)}`);
 
 const COLUMNS = [
   { key: "rank", label: "Rank", align: "right", get: (r) => r.rank ?? Infinity, render: (r) => r.rank ?? "—" },
@@ -37,9 +39,9 @@ const COLUMNS = [
   { key: "reachAccountable", label: "REACH owned", align: "right", get: (r) => r.reachAccountable, render: (r) => fmtNum(r.reachAccountable), title: "Accountable DVOC where REACH is the responsible owner" },
   { key: "accountable", label: "Accountable", align: "right", get: (r) => r.accountable, render: (r) => fmtNum(r.accountable) },
   { key: "dvoc", label: "All DVOC", align: "right", get: (r) => r.dvoc, render: (r) => fmtNum(r.dvoc) },
-  { key: "samples", label: "Samples", align: "right", get: (r) => r.samples, render: (r) => fmtNum(r.samples) },
-  { key: "adjustedSamples", label: "Net samples", align: "right", get: (r) => r.adjustedSamples, render: (r) => fmtNum(r.adjustedSamples), title: "Survey samples − non-accountable DVOC (the DVOC / sample denominator)" },
-  { key: "online", label: "Online", align: "right", get: (r) => r.online, render: (r) => fmtNum(r.online) },
+  { key: "samples", label: "Samples", align: "right", get: (r) => r.samples, render: (r, est) => fmtEst(r.samples, est) },
+  { key: "adjustedSamples", label: "Net samples", align: "right", get: (r) => r.adjustedSamples, render: (r, est) => fmtEst(r.adjustedSamples, est), title: "Survey samples − non-accountable DVOC (the DVOC / sample denominator)" },
+  { key: "online", label: "Online", align: "right", get: (r) => r.online, render: (r, est) => fmtEst(r.online, est) },
   { key: "change", label: "vs previous", align: "right", get: (r) => r.change, render: null },
 ];
 
@@ -115,7 +117,7 @@ const TeamTrendsPage = () => {
   const metricKey = params.get("metric") || "perSample";
   const companyFilter = useMemo(() => (params.get("company") ? params.get("company").split(",").filter(Boolean) : []), [params]);
   const [q, setQ] = useState("");
-  const [showIdle, setShowIdle] = useState(false);
+  const [hideIdle, setHideIdle] = useState(false); // all teams by default; zero-activity teams are the "best" end of the ranking
   const [sort, setSort] = useState({ key: "rank", dir: "asc" });
   const [settings, setSettings] = useState(null);
   const [refresh, setRefresh] = useState(0);
@@ -142,7 +144,11 @@ const TeamTrendsPage = () => {
   }, []);
 
   const period = useMemo(() => (settings ? resolvePeriod(periodKey, settings, { from, to }) : null), [periodKey, settings, from, to]);
-  const months = useMemo(() => (period ? monthsCovered(period.current.start, period.current.end) : []), [period]);
+  const months = useMemo(() => (period ? monthShares(period.current.start, period.current.end) : []), [period]);
+  const partial = months.filter((m) => m.weight < 1);
+  const est = partial.length > 0;
+  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const shareText = partial.map((m) => `${m.days}/${m.daysInMonth} days of ${MONTH_NAMES[m.month - 1]} ${m.year}`).join(" + ");
   const metric = effectiveMetric(metricKey, months);
   const requested = TREND_METRICS.find((m) => m.value === metricKey) || TREND_METRICS[0];
   const fellBack = metric.value !== requested.value;
@@ -172,7 +178,7 @@ const TeamTrendsPage = () => {
 
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    let list = rows.filter((r) => (showIdle || r.dvoc > 0 || r.samples || r.online) && (!needle || r.teamName.toLowerCase().includes(needle) || (r.teamCode || "").toLowerCase().includes(needle)) && (!companyFilter.length || companyFilter.includes(r.teamCompany || "Not set")));
+    let list = rows.filter((r) => (!hideIdle || r.dvoc > 0 || r.samples || r.online) && (!needle || r.teamName.toLowerCase().includes(needle) || (r.teamCode || "").toLowerCase().includes(needle)) && (!companyFilter.length || companyFilter.includes(r.teamCompany || "Not set")));
     const col = COLUMNS.find((c) => c.key === sort.key) || COLUMNS[0];
     list = [...list].sort((a, b) => {
       const av = col.get(a);
@@ -184,14 +190,14 @@ const TeamTrendsPage = () => {
       return sort.dir === "asc" ? d : -d;
     });
     return list;
-  }, [rows, q, showIdle, companyFilter, sort]);
+  }, [rows, q, hideIdle, companyFilter, sort]);
 
   const ranked = useMemo(() => rows.filter((r) => r.rank != null && r[metric.field] > 0), [rows, metric.field]);
   // Each bar = net samples (samples − non-accountable), red part = accountable, so the bar shows the rate.
   const chartRows = ranked.slice(0, 10).map((r) => ({
     ...r,
     restOfSamples: r.adjustedSamples != null ? Math.max(0, r.adjustedSamples - r.accountable) : null,
-    chartLabel: r.adjustedSamples != null ? `${r.accountable} / ${r.adjustedSamples}${r.perSamplePct != null ? ` · ${r.perSamplePct}%` : ""}` : "",
+    chartLabel: r.adjustedSamples != null ? `${r.accountable} / ${est ? "≈" : ""}${fmtNum(r.adjustedSamples)}${r.perSamplePct != null ? ` · ${r.perSamplePct}%` : ""}` : "",
   }));
   const chartHasSamples = chartRows.some((r) => r.adjustedSamples != null);
   const worst = ranked[0];
@@ -249,11 +255,13 @@ const TeamTrendsPage = () => {
         </Box>
       </PageHeader>
 
-      {fellBack && (
+      {(est || fellBack) && (
         <Box role="note" sx={{ display: "flex", gap: 1, alignItems: "flex-start", p: 1.5, mb: 2, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--surface-subtle)" }}>
           <InfoOutlined sx={{ fontSize: 17, color: "var(--text-secondary)", mt: "1px" }} />
           <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)" }}>
-            Survey samples and online transactions are recorded per team per month, so “{requested.label}” needs a whole-month period. Ranking by total accountable DVOC instead. Pick Last month, Current month or a custom range of whole months to see rates.
+            {est
+              ? `Team survey samples and online transactions are entered per month, so for this period they are estimated (≈) as ${shareText} of each team's monthly figures. Net samples = estimated samples − this period's non-accountable DVOC.`
+              : `“${requested.label}” needs survey samples; ranking by total accountable DVOC instead.`}
           </Typography>
         </Box>
       )}
@@ -277,8 +285,8 @@ const TeamTrendsPage = () => {
                   ) : "—"
                 } hint={worst ? `${metric.format(worst[metric.field])} · ${metric.label.toLowerCase()}` : "No accountable DVOC"} sx={{ gridColumn: { xs: "1 / -1", md: "auto" } }} icon={<TrendingUpOutlined sx={{ fontSize: 15 }} />} />
               <StatCard label="Accountable DVOC" value={fmtNum(summary.accountable)} hint={`of ${fmtNum(summary.dvoc)} DVOC`} delta={delta("accountable")} goodWhen="down" />
-              <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtNum(summary.samples)} samples` : months.length ? "No samples entered" : "Needs whole months"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
-              <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtNum(summary.online)} online` : months.length ? "No online data" : "Needs whole months"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
+              <StatCard label="DVOC / survey sample" value={fmtPct(summary.perSamplePct)} hint={summary.samples != null ? `${fmtEst(summary.samples, est)} samples` : "No samples entered"} delta={delta("perSamplePct")} deltaSuffix=" pts" goodWhen="down" />
+              <StatCard label="DVOC / online" value={fmtPct(summary.perOnlinePct)} hint={summary.online != null ? `${fmtEst(summary.online, est)} online` : "No online data"} delta={delta("perOnlinePct")} deltaSuffix=" pts" goodWhen="down" />
               <StatCard label="REACH ownership" value={fmtNum(summary.reachAccountable)} hint="accountable, REACH owner" delta={delta("reachAccountable")} goodWhen="down" />
             </Box>
 
@@ -293,7 +301,7 @@ const TeamTrendsPage = () => {
                     </Box>
                   ) : (
                     <Typography sx={{ fontSize: 12, color: "var(--text-muted)", mb: 1.5 }}>
-                      {months.length ? "No team survey samples are entered for these months, so only accountable DVOC is shown." : "Team survey samples are recorded per month, so a week shows accountable DVOC only. Pick a whole-month period to see samples next to it."}
+                      No team survey samples are entered for this period’s month(s), so only accountable DVOC is shown. Enter them in Survey samples on the dashboard.
                     </Typography>
                   )}
                   <Box sx={{ height: Math.max(180, chartRows.length * 38 + 30) }}>
@@ -330,8 +338,8 @@ const TeamTrendsPage = () => {
                   </Box>
                   <FilterChip label="Company" options={companyOptions} value={companyFilter} onChange={(v) => setQuery({ company: v })} />
                   <Box component="label" sx={{ display: "flex", alignItems: "center", fontSize: 12.5, color: "var(--text-secondary)", cursor: "pointer" }}>
-                    <Switch size="small" checked={showIdle} onChange={(e) => setShowIdle(e.target.checked)} />
-                    No activity
+                    <Switch size="small" checked={hideIdle} onChange={(e) => setHideIdle(e.target.checked)} />
+                    Hide teams with no activity
                   </Box>
                 </Box>
               }
@@ -366,7 +374,7 @@ const TeamTrendsPage = () => {
                               ) : c.key === "change" ? (
                                 <Change value={r.change} metric={metric} />
                               ) : (
-                                c.render(r)
+                                c.render(r, est)
                               )}
                             </Box>
                           ))}
