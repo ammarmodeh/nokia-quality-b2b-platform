@@ -9,7 +9,7 @@ import { MdArrowBack } from "react-icons/md";
 import { alpha } from "../theme/colorFns";
 import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Button, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Autocomplete, LinearProgress } from '@mui/material';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Button, useMediaQuery, useTheme, Divider, TablePagination, Tooltip, Chip, MenuItem, Select, FormControl, InputLabel, Autocomplete, LinearProgress, Stack } from '@mui/material';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import {
   MdSearch,
@@ -1587,7 +1587,7 @@ const AllTasksList = () => {
         values = [resp];
       }
       if (values.length === 0) values = ['Unknown'];
-      
+
       // Total occurrences / issues identified count across all tasks
       values.forEach(v => { ownerCounts[v] = (ownerCounts[v] || 0) + 1; });
 
@@ -3828,7 +3828,7 @@ const AllTasksList = () => {
     }));
 
     // 2.5 Training Detractor Summary
- // This is total reach, wait
+    // This is total reach, wait
     // We need detractor reach
     const trainingDetTableData = Object.entries(trainingAggregates).map(([status, data]) => {
       // Need to find detractor reach in aggregates? 
@@ -5464,13 +5464,13 @@ const AllTasksList = () => {
     // Col 14 (Directive)             → Dark Green
     const reachHdrRowR = reachTeamTableTitleR; // 0-indexed row of the header row
     const reachHdrColColors = [
-      { cols: [0, 1],        bg: '0F172A', fg: 'FFFFFF' }, // Deep Navy  — Identity
-      { cols: [2, 3, 4],    bg: '3730A3', fg: 'FFFFFF' }, // Indigo     — Acc. Reach & Share
-      { cols: [5, 6],       bg: 'B91C1C', fg: 'FFFFFF' }, // Crimson    — Detractor block
-      { cols: [7, 8],       bg: '0F766E', fg: 'FFFFFF' }, // Teal       — Neutral block
-      { cols: [9, 10],      bg: '334155', fg: 'FFFFFF' }, // Slate      — Total / Non-Acc.
+      { cols: [0, 1], bg: '0F172A', fg: 'FFFFFF' }, // Deep Navy  — Identity
+      { cols: [2, 3, 4], bg: '3730A3', fg: 'FFFFFF' }, // Indigo     — Acc. Reach & Share
+      { cols: [5, 6], bg: 'B91C1C', fg: 'FFFFFF' }, // Crimson    — Detractor block
+      { cols: [7, 8], bg: '0F766E', fg: 'FFFFFF' }, // Teal       — Neutral block
+      { cols: [9, 10], bg: '334155', fg: 'FFFFFF' }, // Slate      — Total / Non-Acc.
       { cols: [11, 12, 13], bg: '6D28D9', fg: 'FFFFFF' }, // Purple     — Top RCA Analysis
-      { cols: [14],         bg: '065F46', fg: 'FFFFFF' }  // Green      — Directive
+      { cols: [14], bg: '065F46', fg: 'FFFFFF' }  // Green      — Directive
     ];
     reachHdrColColors.forEach(({ cols, bg, fg }) => {
       cols.forEach(c => {
@@ -5481,10 +5481,10 @@ const AllTasksList = () => {
           fill: { fgColor: { rgb: bg } },
           alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
           border: {
-            top:    { style: 'medium', color: { rgb: '000000' } },
+            top: { style: 'medium', color: { rgb: '000000' } },
             bottom: { style: 'medium', color: { rgb: '000000' } },
-            left:   { style: 'thin',   color: { rgb: '1E293B' } },
-            right:  { style: 'thin',   color: { rgb: '1E293B' } }
+            left: { style: 'thin', color: { rgb: '1E293B' } },
+            right: { style: 'thin', color: { rgb: '1E293B' } }
           }
         };
       });
@@ -8526,7 +8526,7 @@ const AllTasksList = () => {
     applyHeaderStyle(wsDailyOnline, { s: { r: 7, c: 0 }, e: { r: 7, c: 3 } }, "475569");
     applyHeaderStyle(wsDailyOnline, { s: { r: 7, c: 4 }, e: { r: 7, c: 7 } }, "475569");
     applyDataRowStyle(wsDailyOnline, { s: { r: 8, c: 0 }, e: { r: 8, c: 3 } });
-    
+
     // Format the note cell
     if (wsDailyOnline['E9']) {
       wsDailyOnline['E9'].s = {
@@ -9045,13 +9045,13 @@ const AllTasksList = () => {
         const subRelVals = normalizeArrayField(task.relatedToSubscription);
         const teamAccVals = normalizeArrayField(task.teamAccountability);
 
-        const hasIssueAtIndex = (reasonVals[i] !== undefined) || 
-                                (ownerVals[i] !== undefined) || 
-                                (subReasonVals[i] !== undefined) || 
-                                (rootCauseVals[i] !== undefined) ||
-                                (itnVals[i] !== undefined) ||
-                                (subRelVals[i] !== undefined) ||
-                                (teamAccVals[i] !== undefined);
+        const hasIssueAtIndex = (reasonVals[i] !== undefined) ||
+          (ownerVals[i] !== undefined) ||
+          (subReasonVals[i] !== undefined) ||
+          (rootCauseVals[i] !== undefined) ||
+          (itnVals[i] !== undefined) ||
+          (subRelVals[i] !== undefined) ||
+          (teamAccVals[i] !== undefined);
 
         interleavedFields.forEach(({ field, label }) => {
           const values = normalizeArrayField(task[field]);
@@ -11960,87 +11960,87 @@ const AllTasksList = () => {
         actions={<Button variant="outlined" onClick={() => setDrillDownState(prev => ({ ...prev, open: false }))}>Close</Button>}
         bodySx={{ p: 0 }}
       >
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Date</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Week</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>SLID</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Customer</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Verbatim</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Reason</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Root Cause</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Team Name</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Owner</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Score</TableCell>
-                  <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }} align="right">Action</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {drillDownState.tasks.map((task) => (
-                  <TableRow key={task._id}>
-                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
-                      {task.interviewDate ? format(new Date(task.interviewDate), 'dd/MM/yyyy') : '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
-                      {task.interviewDate ? getWeekDisplay(task.interviewDate) : '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: '600' }}>{task.slid}</TableCell>
-                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
-                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 280, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                      {task.customerFeedback || task.feedback || task.verbatim || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                      {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                      {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || task.technicalDetails?.rootCause || '-'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.teamName || '-'}</TableCell>
-                    <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                      {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
-                    </TableCell>
-                    <TableCell>
-                      {task.evaluationScore !== undefined && task.evaluationScore !== null && (
-                        <Chip
-                          label={task.evaluationScore}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.65rem',
-                            fontWeight: '600',
-                            bgcolor: task.evaluationScore >= 9 ? 'rgba(22, 163, 74, 0.2)' :
-                              task.evaluationScore >= 7 ? 'rgba(217, 119, 6, 0.2)' : 'rgba(220, 38, 38, 0.2)',
-                            color: task.evaluationScore >= 9 ? '#16A34A' :
-                              task.evaluationScore >= 7 ? '#D97706' : '#DC2626'
-                          }}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'var(--overlay-subtle)' }}>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Date</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Week</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>SLID</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Customer</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Verbatim</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Reason</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Root Cause</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Team Name</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Owner</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }}>Score</TableCell>
+                <TableCell sx={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.75rem' }} align="right">Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {drillDownState.tasks.map((task) => (
+                <TableRow key={task._id}>
+                  <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
+                    {task.interviewDate ? format(new Date(task.interviewDate), 'dd/MM/yyyy') : '-'}
+                  </TableCell>
+                  <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>
+                    {task.interviewDate ? getWeekDisplay(task.interviewDate) : '-'}
+                  </TableCell>
+                  <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: '600' }}>{task.slid}</TableCell>
+                  <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.customerName}</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 280, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                    {task.customerFeedback || task.feedback || task.verbatim || '-'}
+                  </TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                    {Array.isArray(task.reason) ? task.reason.join(', ') : task.reason || '-'}
+                  </TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                    {Array.isArray(task.rootCause) ? task.rootCause.join(', ') : task.rootCause || task.technicalDetails?.rootCause || '-'}
+                  </TableCell>
+                  <TableCell sx={{ color: 'var(--text)', fontSize: '0.8rem' }}>{task.teamName || '-'}</TableCell>
+                  <TableCell sx={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                    {Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible || '-'}
+                  </TableCell>
+                  <TableCell>
+                    {task.evaluationScore !== undefined && task.evaluationScore !== null && (
+                      <Chip
+                        label={task.evaluationScore}
                         size="small"
-                        variant="text"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setViewDialogOpen(true);
-                        }}
                         sx={{
-                          textTransform: 'none',
-                          color: 'var(--accent-text)',
+                          height: 20,
+                          fontSize: '0.65rem',
                           fontWeight: '600',
-                          '&:hover': { bgcolor: alpha('#6C47FF', 0.1) }
+                          bgcolor: task.evaluationScore >= 9 ? 'rgba(22, 163, 74, 0.2)' :
+                            task.evaluationScore >= 7 ? 'rgba(217, 119, 6, 0.2)' : 'rgba(220, 38, 38, 0.2)',
+                          color: task.evaluationScore >= 9 ? '#16A34A' :
+                            task.evaluationScore >= 7 ? '#D97706' : '#DC2626'
                         }}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => {
+                        setSelectedTask(task);
+                        setViewDialogOpen(true);
+                      }}
+                      sx={{
+                        textTransform: 'none',
+                        color: 'var(--accent-text)',
+                        fontWeight: '600',
+                        '&:hover': { bgcolor: alpha('#6C47FF', 0.1) }
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </AppDialog>
 
       {/* Permanent delete: backup export + typed confirmation */}
