@@ -27,18 +27,5 @@ export default defineConfig({
       }
     }
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('@mui') || id.includes('@emotion')) return 'vendor-mui';
-            if (id.includes('xlsx') || id.includes('jspdf') || id.includes('papaparse')) return 'vendor-export';
-            if (id.includes('chart.js') || id.includes('recharts') || id.includes('react-chartjs-2')) return 'vendor-charts';
-            return 'vendor';
-          }
-        }
-      }
-    }
-  }
+
 })

@@ -102,6 +102,11 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    // 5. Allow Hostinger deployments
+    if (/^https?:\/\/([a-z0-9-_]+\.)?hostingersite\.com$/.test(cleanOrigin)) {
+      return callback(null, true);
+    }
+
     console.warn(`[CORS] Blocked request from origin: "${origin}"`);
     console.warn(`[CORS] Configured Origins:`, configuredOrigins);
     return callback(new Error(`CORS policy: origin ${origin} is not allowed`));
