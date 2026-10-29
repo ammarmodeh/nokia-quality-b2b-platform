@@ -63,35 +63,47 @@ app.use((req, res, next) => {
 });
 
 // ------------------------------------------------------------------
-// CORS configuration
+// CORS configuration (Dynamic: seamless for both local dev and production)
 // ------------------------------------------------------------------
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:3000",
-  "http://localhost:3002",
-  "http://localhost:5173", // Common Vite port
-  "http://127.0.0.1:3000",
-  "http://127.0.0.1:3002",
-  "http://127.0.0.1:5173",
-].map(o => o?.trim()).filter(Boolean);
+const configuredOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map(o => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const defaultAllowedOrigins = [
+  "https://nokia-quality-b2b-platform-bfrq.vercel.app",
+  "https://nokia-quality-b2b-platform.vercel.app",
+];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (server-to-server, Postman, health checks)
+    // Allow requests with no origin (server-to-server, mobile apps, Postman, health checks)
     if (!origin) return callback(null, true);
 
-    // Development fallback: Allow all localhost/127.0.0.1 origins
-    if (process.env.NODE_ENV !== 'production') {
-      if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-        return callback(null, true);
-      }
-    }
+    const cleanOrigin = origin.trim().replace(/\/+$/, "");
 
-    if (allowedOrigins.includes(origin)) {
+    // 1. Always allow localhost and 127.0.0.1 on any port
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin)) {
       return callback(null, true);
     }
+
+    // 2. Allow configured frontend URLs (from process.env.FRONTEND_URL)
+    if (configuredOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
+
+    // 3. Allow known production origins
+    if (defaultAllowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
+
+    // 4. Allow any Vercel deployment of this platform (branch preview or alias)
+    if (/^https:\/\/nokia-quality-[a-z0-9-_]+\.vercel\.app$/.test(cleanOrigin)) {
+      return callback(null, true);
+    }
+
     console.warn(`[CORS] Blocked request from origin: "${origin}"`);
-    console.warn(`[CORS] Allowed Origins were: ${JSON.stringify(allowedOrigins)}`);
+    console.warn(`[CORS] Configured Origins:`, configuredOrigins);
     return callback(new Error(`CORS policy: origin ${origin} is not allowed`));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -103,7 +115,6 @@ const corsOptions = {
 };
 
 
-// Explicitly handle pre-flight OPTIONS requests
 app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
 

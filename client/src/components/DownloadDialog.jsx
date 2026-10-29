@@ -15,7 +15,7 @@ export default function DownloadDialog({ open, onClose, onPasscodeValid }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const CORRECT_PASSCODE = import.meta.env.VITE_PASSCODE;
+  const CORRECT_PASSCODE = import.meta.env.VITE_PASSCODE || "passCode123";
 
   const handleSubmit = (event) => {
     event.preventDefault();

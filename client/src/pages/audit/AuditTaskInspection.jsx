@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import api from '../../api/api';
+import api from '../../api/api';
+import { getBackendUrl } from '../../utils/backendUrl';
 import {
   Box,
   Typography,
@@ -40,7 +41,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { Snackbar, Alert, Tooltip } from '@mui/material';
 
-// const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+// const API_URL = `${getBackendUrl()}/api/audit`;
 const API_URL = "/audit";
 
 const AuditTaskInspection = () => {
@@ -507,7 +508,7 @@ const AuditTaskInspection = () => {
                     <Grid item xs={12} sm={6} key={pIdx}>
                       <Box sx={{ position: 'relative', borderRadius: 0, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                         <img
-                          src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
+                          src={photo.url.startsWith('http') ? photo.url : `${getBackendUrl()}${photo.url}`}
                           alt="evidence"
                           style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                         />

@@ -3,7 +3,8 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
+import { saveAs } from 'file-saver';
+import { getBackendUrl } from '../../utils/backendUrl';
 
 import {
   Box,
@@ -347,7 +348,7 @@ const AuditorDashboard = () => {
 
   const navigate = useNavigate();
 
-  // const API_URL = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/audit`;
+  // const API_URL = `${getBackendUrl()}/api/audit`;
   const API_URL = "/audit";
 
   const [loading, setLoading] = useState(false);
@@ -471,7 +472,7 @@ const AuditorDashboard = () => {
 
     const downloadPromises = selectedTask.photos.map(async (photo) => {
       try {
-        const imageUrl = photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`;
+        const imageUrl = photo.url.startsWith('http') ? photo.url : `${getBackendUrl()}${photo.url}`;
         const response = await fetch(imageUrl);
         if (!response.ok) throw new Error("Network response was not ok");
         const blob = await response.blob();
@@ -982,7 +983,7 @@ const AuditorDashboard = () => {
                             onClick={() => setPreviewImage(photo)}
                           >
                             <img
-                              src={photo.url.startsWith('http') ? photo.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${photo.url}`}
+                              src={photo.url.startsWith('http') ? photo.url : `${getBackendUrl()}${photo.url}`}
                               alt={photo.checkpointName}
                               style={{ width: '100%', height: '120px', objectFit: 'cover' }}
                             />
@@ -1049,7 +1050,7 @@ const AuditorDashboard = () => {
           <DialogContent sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 0, bgcolor: '#0a0a0a' }}>
             {previewImage && (
               <img
-                src={previewImage.url.startsWith('http') ? previewImage.url : `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}${previewImage.url}`}
+                src={previewImage.url.startsWith('http') ? previewImage.url : `${getBackendUrl()}${previewImage.url}`}
                 alt={previewImage.checkpointName}
                 style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
               />

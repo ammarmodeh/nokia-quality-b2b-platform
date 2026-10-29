@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
+import { getApiBaseUrl } from '../utils/backendUrl';
 
 export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
   const [timeLeft, setTimeLeft] = useState(() => {
@@ -18,7 +18,7 @@ export const Timer = ({ timeLimit = 60, onTimeUp, teamId }) => {
       }
       // Use XMLHttpRequest for synchronous call in beforeunload
       const xhr = new XMLHttpRequest();
-      const url = `${backendUrl}/api/field-teams/toggle-quiz-permission/${teamId}`;
+      const url = `${getApiBaseUrl()}/field-teams/toggle-quiz-permission/${teamId}`;
       xhr.open('PUT', url, false); // false for synchronous
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send(JSON.stringify({ canTakeQuiz: false }));

@@ -1,14 +1,15 @@
 import axios from "axios";
 import store from "../redux/store";
 import { logout } from "../redux/slices/authSlice";
-import { activity } from "./activity";
+import { activity } from "./activity";
+import { getApiBaseUrl } from "../utils/backendUrl";
 
 // console.log('import.meta.env.VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
 
 const api = axios.create({
   // Use /api to leverage the Vite proxy during local development, 
   // or the full URL from environment variables in production.
-  baseURL: import.meta.env.DEV ? '/api' : `${import.meta.env.VITE_BACKEND_URL}/api`,
+  baseURL: getApiBaseUrl(),
   withCredentials: true,
 });
 
