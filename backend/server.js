@@ -133,6 +133,19 @@ app.use(cookieParser());
 connectDB();
 
 // ------------------------------------------------------------------
+// Root & Health Check routes
+// ------------------------------------------------------------------
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Nokia Quality Task Tracker API is running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+    healthCheck: "/api/health"
+  });
+});
+
+// ------------------------------------------------------------------
 // API routes
 // ------------------------------------------------------------------
 app.use("/api", ensureTrackers); // trackers added online join the taxonomy
