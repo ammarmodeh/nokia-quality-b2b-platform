@@ -61,6 +61,7 @@ const MaintenanceTeamsPage = lazy(() => import("./pages/maintenance/MaintenanceT
 const MaintenanceSamplesPage = lazy(() => import("./pages/maintenance/MaintenanceSamplesPage"));
 const MaintenanceTasksPage = lazy(() => import("./pages/maintenance/MaintenanceTasksPage"));
 const MaintenanceProcessingPage = lazy(() => import("./pages/maintenance/MaintenanceProcessingPage"));
+const MaintenanceReportsPage = lazy(() => import("./pages/maintenance/MaintenanceReportsPage"));
 const QuizManagement = lazy(() => import("./pages/QuizManagement"));
 const IssuePreventionAnalytics = lazy(() => import("./pages/IssuePreventionAnalytics"));
 const PreventionDeepDive = lazy(() => import("./pages/PreventionDeepDive"));
@@ -204,6 +205,9 @@ const App = () => {
             <Route path="samples" element={<MaintenanceSamplesPage />} />
             <Route path="tasks" element={<MaintenanceTasksPage />} />
             <Route path="processing" element={<MaintenanceProcessingPage />} />
+            <Route path="reports" element={<MaintenanceReportsPage />} />
+            <Route path="reports/:teamId" element={<MaintenanceReportsPage />} />
+            <Route path="team-analysis/:teamId" element={<MaintenanceReportsPage />} />
           </Route>
           <Route path="/tables/:id" element={<TablePage />} />
           <Route path="/customer-issues" element={<Navigate to="/ojo-snags" replace />} />

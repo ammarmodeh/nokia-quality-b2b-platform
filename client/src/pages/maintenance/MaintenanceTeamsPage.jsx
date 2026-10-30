@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext, useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useOutletContext, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Box, Button, IconButton, InputBase, TextField, Tooltip, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -151,7 +151,21 @@ const TeamSheet = ({ teamId, onClose, onEdit }) => {
     maintenanceApi.teams.get(teamId).then(setTeam).catch((e) => setError(errMsg(e, "Couldn't load the team")));
   }, [teamId]);
   return (
-    <Sheet open={Boolean(teamId)} onClose={onClose} width={560} title={team?.teamName || "Team"} description={team ? [team.teamCode, team.company, team.governorate].filter(Boolean).join(" · ") || "Maintenance team" : undefined} actions={team && <Button variant="outlined" onClick={() => onEdit(team)}>Edit</Button>}>
+    <Sheet
+      open={Boolean(teamId)}
+      onClose={onClose}
+      width={560}
+      title={team?.teamName || "Team"}
+      description={team ? [team.teamCode, team.company, team.governorate].filter(Boolean).join(" · ") || "Maintenance team" : undefined}
+      actions={
+        team && (
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button variant="contained" component={RouterLink} to={`/dvoc-maintenance/reports/${team._id}`}>View Analysis</Button>
+            <Button variant="outlined" onClick={() => onEdit(team)}>Edit</Button>
+          </Box>
+        )
+      }
+    >
       {error && <ErrorState message={error} />}
       {team && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
@@ -238,10 +252,27 @@ const MaintenanceTeamsPage = () => {
     { key: "supervisor", label: "Supervisor", render: (t) => t.supervisor || "—" },
     { key: "governorate", label: "Area", render: (t) => [t.governorate, t.shift].filter(Boolean).join(" · ") || "—" },
     { key: "crew", label: "Crew", align: "right", render: (t) => t.members?.length || 0 },
-    { key: "open", label: "Open tasks", align: "right", render: (t) => t.stats.openTasks },
-    { key: "tasks", label: "All tasks", align: "right", render: (t) => t.stats.tasks },
+    { key: "tasks", label: "Tasks", align: "right", render: (t) => t.stats.tasks },
+    { key: "resolved", label: "Resolved", align: "right", render: (t) => t.stats.resolvedTasks || 0 },
     { key: "samples", label: "Samples", align: "right", render: (t) => t.stats.samples.toLocaleString() },
     { key: "status", label: "Status", render: (t) => <Badge tone={t.status === "Active" ? "success" : "neutral"} dot>{t.status}</Badge> },
+    {
+      key: "analysis",
+      label: "Analysis",
+      align: "center",
+      render: (t) => (
+        <Button
+          size="small"
+          variant="outlined"
+          component={RouterLink}
+          to={`/dvoc-maintenance/reports/${t._id}`}
+          onClick={(e) => e.stopPropagation()}
+          sx={{ fontSize: 11, py: 0.25, px: 1, minWidth: "auto", textTransform: "none" }}
+        >
+          View Analysis
+        </Button>
+      ),
+    },
     ...(isAdmin ? [{ key: "actions", label: "", align: "right", render: (t) => (
       <Tooltip title="Delete team">
         <IconButton size="small" aria-label={`Delete ${t.teamName}`} onClick={(e) => { e.stopPropagation(); setDeleteError(null); setDeleting(t); }}>

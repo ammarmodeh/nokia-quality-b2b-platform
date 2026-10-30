@@ -10,6 +10,7 @@ const MAINTENANCE_TABS = [
   { to: "samples", label: "Survey samples" },
   { to: "tasks", label: "Tasks" },
   { to: "processing", label: "Process tasks" },
+  { to: "reports", label: "Analysis & Reports" },
 ];
 
 /** DVOC · Maintenance shell: overview numbers + tabs. Child pages call `refreshOverview` after writes. */
@@ -26,8 +27,8 @@ const MaintenanceLayout = () => {
       <PageHeader title="DVOC Maintenance" description="Maintenance teams, their survey samples, tasks and ticket processing — kept apart from DVOC Installation data." />
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 1.5, mb: 2.5 }}>
         <StatCard label="Active teams" value={overview ? overview.activeTeams.toLocaleString() : null} hint={overview ? `${overview.teams} total` : undefined} loading={!overview} />
-        <StatCard label="Open tasks" value={overview ? ((s.Todo || 0) + (s["In Progress"] || 0)).toLocaleString() : null} hint={overview ? `${s["In Progress"] || 0} in progress` : undefined} loading={!overview} />
-        <StatCard label="Overdue" value={overview ? overview.overdue.toLocaleString() : null} hint="open past the due date" loading={!overview} />
+        <StatCard label="Total tasks" value={overview ? (overview.tasks ?? 0).toLocaleString() : null} hint="all maintenance tasks" loading={!overview} />
+        <StatCard label="Resolved tasks" value={overview ? (overview.resolvedTasks ?? 0).toLocaleString() : null} hint="after visit" loading={!overview} />
         <StatCard label="Samples this month" value={overview ? overview.samplesThisMonth.toLocaleString() : null} hint={overview ? `${overview.sampleEntriesThisMonth} team entries` : undefined} loading={!overview} />
       </Box>
       <Box component="nav" aria-label="DVOC Maintenance sections" sx={{ display: "flex", gap: 0.5, borderBottom: "1px solid var(--border)", mb: 2.5, overflowX: "auto" }}>

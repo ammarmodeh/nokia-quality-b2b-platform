@@ -14,7 +14,7 @@ import Badge from "../../components/ui/Badge";
 import TicketPanel from "./TicketPanel";
 import MaintenanceTaskSheet from "./MaintenanceTaskSheet";
 import MaintenanceTaskForm from "./MaintenanceTaskForm";
-import { PRIORITY_TONE, STATUS_TONE, errMsg, maintenanceApi, useMaintenanceTeams } from "./maintenanceApi";
+import { errMsg, maintenanceApi, useMaintenanceTeams } from "./maintenanceApi";
 
 /** Process maintenance tasks: a queue of open tasks (least recently worked first) and the record-step panel. */
 const MaintenanceProcessingPage = () => {
@@ -88,7 +88,6 @@ const MaintenanceProcessingPage = () => {
           <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0, maxHeight: { lg: "calc(100vh - 320px)" }, overflowY: "auto" }}>
             {queue.map((t) => {
               const active = t._id === selectedId;
-              const overdue = t.dueDate && t.status !== "Closed" && new Date(t.dueDate) < new Date();
               return (
                 <Box component="li" key={t._id}>
                   <Box component="button" type="button" onClick={() => select(t._id)} aria-current={active ? "true" : undefined} sx={{ display: "block", width: "100%", textAlign: "left", font: "inherit", border: 0, borderBottom: "1px solid var(--border)", px: 1.75, py: 1.25, cursor: "pointer", backgroundColor: active ? "var(--accent-subtle)" : "transparent", "&:hover": { backgroundColor: active ? "var(--accent-subtle)" : "var(--surface-hover)" } }}>
@@ -96,14 +95,14 @@ const MaintenanceProcessingPage = () => {
                       <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{t.slid}</Typography>
                       <Typography sx={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>{t.taskNumber}</Typography>
                       <Box sx={{ flex: 1 }} />
-                      {overdue && <Badge tone="danger">Overdue</Badge>}
-                      <Badge tone={PRIORITY_TONE[t.priority]}>{t.priority}</Badge>
+                      {t.resolvedAfterVisit && t.resolvedAfterVisit !== "Not specified" && (
+                        <Badge tone={t.resolvedAfterVisit === "Yes" ? "success" : "danger"}>{t.resolvedAfterVisit === "Yes" ? "Resolved" : "Unresolved"}</Badge>
+                      )}
                     </Box>
                     <Typography sx={{ fontSize: 12, color: "var(--text-secondary)", mt: 0.25 }}>
                       {[t.customerName, t.team?.teamName].filter(Boolean).join(" · ") || "—"}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 0.5, fontSize: 12, color: "var(--text-muted)" }}>
-                      <Badge tone={STATUS_TONE[t.status]} dot>{t.status}</Badge>
                       {t.lastStep ? <span>{t.lastStep.transactionType}{t.lastStep.transactionState ? ` · ${t.lastStep.transactionState}` : ""} · {format(new Date(t.lastStep.eventDate || t.lastTicketAt), "d MMM")}</span> : <span>No steps yet · created {format(new Date(t.createdAt), "d MMM")}</span>}
                     </Box>
                   </Box>

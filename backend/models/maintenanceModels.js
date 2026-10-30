@@ -71,15 +71,28 @@ const maintenanceTaskSchema = new Schema(
     ticketNumber: { type: String, trim: true, default: "" }, // fault / trouble-ticket number
     customerName: { type: String, trim: true, default: "" },
     contactNumber: { type: String, trim: true, default: "" },
+    customerComplaint: { type: String, trim: true, default: "" },
+    fiberCategory: { type: String, trim: true, default: "" }, // FTTHW (Fiber is working) | FTTHN (Fiber not working)
     governorate: { type: String, trim: true, default: "" },
     district: { type: String, trim: true, default: "" },
     team: { type: ObjectId, ref: "MaintenanceTeam", required: [true, "Maintenance team is required"] },
     surveySample: { type: ObjectId, ref: "MaintenanceSurveySample", default: null },
     evaluationScore: { type: Number, min: 1, max: 10, default: null },
     customerFeedback: { type: String, trim: true, default: "" },
+    teamFeedback: { type: String, trim: true, default: "" },
     interviewDate: { type: Date, default: null },
-    faultDate: { type: Date, default: null },
-    dueDate: { type: Date, default: null },
+    faultDate: { type: Date, default: null }, // reporting date
+    creationDate: { type: Date, default: null },
+    dueDate: { type: Date, default: null }, // clearance date
+    installationDate: { type: Date, default: null },
+    ncf: { type: Boolean, default: false }, // New connection fault (ticket created within 1 month from installation date)
+    hcResponsibility: { type: Boolean, default: false }, // HC responsibility
+    resolvedAfterVisit: { type: String, enum: ["Yes", "No", "Not specified"], default: "Not specified" },
+    // "Is it Team Responsibility?" — is the issue attributable to the maintenance team (MT)?
+    // Same idea as DVOC Installation's Team accountability. null = not recorded (older tasks).
+    teamResponsibility: { type: String, enum: ["Yes", "No", null], default: null },
+    // "Does customer needs follow-up?" — null = not recorded (older tasks).
+    customerFollowUp: { type: String, enum: ["Yes", "No", null], default: null },
     faultType: { type: String, trim: true, default: "" },
     priority: { type: String, enum: MAINTENANCE_PRIORITIES, default: "Medium" },
     status: { type: String, enum: MAINTENANCE_TASK_STATUSES, default: "Todo" },
@@ -114,8 +127,11 @@ maintenanceTaskSchema.index({ requestKey: 1 }, { unique: true, sparse: true });
 maintenanceTaskSchema.index({ team: 1, createdAt: -1 });
 maintenanceTaskSchema.index({ status: 1, createdAt: -1 });
 maintenanceTaskSchema.index({ slid: 1 });
+maintenanceTaskSchema.index({ creationDate: 1 });
 maintenanceTaskSchema.index({ dueDate: 1 });
 maintenanceTaskSchema.index({ surveySample: 1 });
+maintenanceTaskSchema.index({ ncf: 1 });
+maintenanceTaskSchema.index({ hcResponsibility: 1 });
 
 // Processing log / tickets for maintenance tasks (modelled on the Q-Ops ticket log, own collection).
 const maintenanceTicketSchema = new Schema(

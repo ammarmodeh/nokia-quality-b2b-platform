@@ -9,9 +9,33 @@ import ErrorState from "../../components/ui/ErrorState";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import SegmentedControl from "../../components/ui/SegmentedControl";
 import TicketPanel from "./TicketPanel";
-import { PRIORITY_TONE, STATUS_TONE, errMsg, maintenanceApi, monthLabel } from "./maintenanceApi";
+import { errMsg, maintenanceApi, monthLabel } from "./maintenanceApi";
 
 const fmt = (d) => (d ? format(new Date(d), "d MMM yyyy") : null);
+const fmtDateTime = (d) => (d ? format(new Date(d), "d MMM yyyy, HH:mm") : null);
+
+const formatDuration = (start, end) => {
+  if (!start || !end) return "—";
+  const s = new Date(start).getTime();
+  const e = new Date(end).getTime();
+  if (isNaN(s) || isNaN(e)) return "—";
+  const diffMs = e - s;
+  const isNegative = diffMs < 0;
+  const absMs = Math.abs(diffMs);
+  const totalMins = Math.round(absMs / 60000);
+  const days = Math.floor(totalMins / 1440);
+  const hours = Math.floor((totalMins % 1440) / 60);
+  const mins = totalMins % 60;
+
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0 || days > 0) parts.push(`${hours}h`);
+  parts.push(`${mins}m`);
+
+  const text = parts.join(" ");
+  return isNegative ? `-${text}` : text;
+};
+
 const Detail = ({ label, children }) => (
   <Box sx={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 1, py: 0.75, fontSize: 13, borderBottom: "1px solid var(--border)" }}>
     <Typography sx={{ fontSize: 12.5, color: "var(--text-secondary)" }}>{label}</Typography>
@@ -63,9 +87,11 @@ const MaintenanceTaskSheet = ({ taskId, onClose, onEdit, onChanged, initialTab =
       {task && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-            <Badge tone={STATUS_TONE[task.status]} dot>{task.status}</Badge>
-            <Badge tone={PRIORITY_TONE[task.priority]}>{task.priority}</Badge>
-            {task.dueDate && task.status !== "Closed" && new Date(task.dueDate) < new Date() && <Badge tone="danger">Overdue</Badge>}
+            {task.resolvedAfterVisit && task.resolvedAfterVisit !== "Not specified" && (
+              <Badge tone={task.resolvedAfterVisit === "Yes" ? "success" : "danger"}>Resolved: {task.resolvedAfterVisit}</Badge>
+            )}
+            {task.ncf && <Badge tone="warning">NCF</Badge>}
+            {task.hcResponsibility && <Badge tone="danger">HC</Badge>}
             <Box sx={{ flex: 1 }} />
             <SegmentedControl size="sm" ariaLabel="Task view" value={tab} onChange={setTab} options={[{ value: "details", label: "Details" }, { value: "processing", label: `Processing${task.ticketCount ? ` · ${task.ticketCount}` : ""}` }, { value: "history", label: "History" }]} />
           </Box>
@@ -76,14 +102,88 @@ const MaintenanceTaskSheet = ({ taskId, onClose, onEdit, onChanged, initialTab =
               <Detail label="Fault ticket">{task.ticketNumber}</Detail>
               <Detail label="Customer">{[task.customerName, task.contactNumber].filter(Boolean).join(" · ")}</Detail>
               <Detail label="Location">{[task.governorate, task.district].filter(Boolean).join(" · ")}</Detail>
+              {task.customerComplaint && (
+                <Detail label="Customer complaint">
+                  <span dir="auto" style={{ whiteSpace: "pre-wrap" }}>{task.customerComplaint}</span>
+                </Detail>
+              )}
+              <Detail label="Fiber category">
+                {task.fiberCategory ? (
+                  <Badge tone={task.fiberCategory === "FTTHW" ? "success" : "warning"}>
+                    {task.fiberCategory === "FTTHW" ? "Fiber is working (FTTHW)" : task.fiberCategory === "FTTHN" ? "Fiber not working (FTTHN)" : task.fiberCategory}
+                  </Badge>
+                ) : (
+                  "Not specified"
+                )}
+              </Detail>
+              {task.teamFeedback && (
+                <Detail label="Team feedback">
+                  <span dir="auto" style={{ whiteSpace: "pre-wrap" }}>{task.teamFeedback}</span>
+                </Detail>
+              )}
               <Detail label="Team">{task.team ? `${task.team.teamName}${task.team.status === "Inactive" ? " (inactive)" : ""}` : null}</Detail>
               <Detail label="Survey month">{task.surveySample ? `${monthLabel(task.surveySample.year, task.surveySample.month)} · ${task.surveySample.sampleSize} samples` : null}</Detail>
               <Detail label="Score">{task.evaluationScore ?? null}</Detail>
-              <Detail label="Interview">{fmt(task.interviewDate)}</Detail>
               <Detail label="Fault type">{task.faultType}</Detail>
-              <Detail label="Fault / due">{[fmt(task.faultDate), fmt(task.dueDate)].map((x) => x || "—").join(" → ")}</Detail>
+              <Detail label="Reporting date">{fmtDateTime(task.faultDate)}</Detail>
+              <Detail label="Creation date">{fmtDateTime(task.creationDate || task.createdAt)}</Detail>
+              <Detail label="Clearance date">{fmtDateTime(task.dueDate)}</Detail>
+              <Detail label="Interview date">{fmtDateTime(task.interviewDate)}</Detail>
+
+              <Box sx={{ my: 1.5, p: 1.5, borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "rgba(0, 0, 0, 0.02)" }}>
+                <Typography sx={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px", mb: 1 }}>
+                  Time differences
+                </Typography>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" }, gap: 1 }}>
+                  <Box sx={{ p: 1, backgroundColor: "var(--surface, #fff)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    <Typography sx={{ fontSize: 11, color: "var(--text-muted)" }}>Reporting → Creation</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 0.25 }}>
+                      {formatDuration(task.faultDate, task.creationDate || task.createdAt)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1, backgroundColor: "var(--surface, #fff)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    <Typography sx={{ fontSize: 11, color: "var(--text-muted)" }}>Reporting → Close</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 0.25 }}>
+                      {formatDuration(task.faultDate, task.dueDate)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1, backgroundColor: "var(--surface, #fff)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    <Typography sx={{ fontSize: 11, color: "var(--text-muted)" }}>Creation → Close</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 0.25 }}>
+                      {formatDuration(task.creationDate || task.createdAt, task.dueDate)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 1, backgroundColor: "var(--surface, #fff)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                    <Typography sx={{ fontSize: 11, color: "var(--text-muted)" }}>Close → Interview</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 0.25 }}>
+                      {formatDuration(task.dueDate, task.interviewDate)}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Detail label="Resolved after visit">
+                {task.resolvedAfterVisit && task.resolvedAfterVisit !== "Not specified" ? (
+                  <Badge tone={task.resolvedAfterVisit === "Yes" ? "success" : "danger"}>{task.resolvedAfterVisit}</Badge>
+                ) : (
+                  "Not specified"
+                )}
+              </Detail>
+              <Detail label="Team responsibility (MT)">
+                {task.teamResponsibility ? <Badge tone={task.teamResponsibility === "Yes" ? "danger" : "success"}>{task.teamResponsibility}</Badge> : "Not recorded"}
+              </Detail>
+              <Detail label="Customer needs follow-up">
+                {task.customerFollowUp ? <Badge tone={task.customerFollowUp === "Yes" ? "warning" : "neutral"}>{task.customerFollowUp}</Badge> : "Not recorded"}
+              </Detail>
+              <Detail label="NCF">
+                {task.ncf ? <Badge tone="warning">NCF (New connection fault)</Badge> : "No"}
+              </Detail>
+              <Detail label="HC responsibility">
+                {task.hcResponsibility ? <Badge tone="danger">Yes</Badge> : "No"}
+              </Detail>
+              {task.installationDate && <Detail label="Installation date">{fmtDateTime(task.installationDate)}</Detail>}
               <Detail label="Assigned">{(task.assignedTo || []).map((u) => u.name).join(", ")}</Detail>
-              {task.customerFeedback && <Detail label="Feedback"><span dir="auto" style={{ whiteSpace: "pre-wrap" }}>{task.customerFeedback}</span></Detail>}
+              {task.customerFeedback && <Detail label="Customer feedback"><span dir="auto" style={{ whiteSpace: "pre-wrap" }}>{task.customerFeedback}</span></Detail>}
               {task.rca?.length > 0 && (
                 <Detail label="Root cause">
                   {task.rca.map((r, i) => (

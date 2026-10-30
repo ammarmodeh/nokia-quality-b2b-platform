@@ -32,6 +32,7 @@ export const maintenanceApi = {
     update: (id, body) => data(api.put(`/maintenance/tasks/${id}`, body)),
     remove: (id) => data(api.delete(`/maintenance/tasks/${id}`)),
     queue: (params) => data(api.get("/maintenance/processing", { params })),
+    bulkUpload: (body) => data(api.post("/maintenance/tasks/bulk-upload", body)),
   },
   tickets: {
     list: (taskId) => data(api.get(`/maintenance/tasks/${taskId}/tickets`)),

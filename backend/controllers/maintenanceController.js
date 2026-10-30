@@ -109,23 +109,97 @@ export const listTeams = handle(async (req, res) => {
   const [taskStats, sampleStats] = await Promise.all([
     MaintenanceTask.aggregate([
       { $match: { team: { $in: ids } } },
-      { $group: { _id: "$team", total: { $sum: 1 }, open: { $sum: { $cond: [{ $ne: ["$status", "Closed"] }, 1, 0] } }, lastTaskAt: { $max: "$createdAt" } } },
+      {
+        $group: {
+          _id: "$team",
+          total: { $sum: 1 },
+          open: { $sum: { $cond: [{ $ne: ["$status", "Closed"] }, 1, 0] } },
+          resolved: { $sum: { $cond: [{ $eq: ["$resolvedAfterVisit", "Yes"] }, 1, 0] } },
+          lastTaskAt: { $max: "$createdAt" },
+          detractors: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$evaluationScore", null] },
+                    { $gte: ["$evaluationScore", 1] },
+                    { $lte: ["$evaluationScore", 6] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          neutrals: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$evaluationScore", null] },
+                    { $gte: ["$evaluationScore", 7] },
+                    { $lte: ["$evaluationScore", 8] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          highRated: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$evaluationScore", null] },
+                    { $gte: ["$evaluationScore", 9] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
     ]),
     MaintenanceSurveySample.aggregate([{ $match: { team: { $in: ids } } }, { $group: { _id: "$team", samples: { $sum: "$sampleSize" }, entries: { $sum: 1 } } }]),
   ]);
   const ts = new Map(taskStats.map((s) => [String(s._id), s]));
   const ss = new Map(sampleStats.map((s) => [String(s._id), s]));
   res.json(
-    teams.map((t) => ({
-      ...t,
-      stats: {
-        tasks: ts.get(String(t._id))?.total || 0,
-        openTasks: ts.get(String(t._id))?.open || 0,
-        lastTaskAt: ts.get(String(t._id))?.lastTaskAt || null,
-        samples: ss.get(String(t._id))?.samples || 0,
-        sampleEntries: ss.get(String(t._id))?.entries || 0,
-      },
-    }))
+    teams.map((t) => {
+      const tsData = ts.get(String(t._id)) || {};
+      const ssData = ss.get(String(t._id)) || {};
+      const taskCount = tsData.total || 0;
+      const sampleCount = ssData.samples || 0;
+      const det = tsData.detractors || 0;
+      const neu = tsData.neutrals || 0;
+      const high = tsData.highRated || 0;
+      const nonPromoters = det + neu;
+      const promoters = sampleCount > 0 ? Math.max(0, sampleCount - nonPromoters) : high;
+      const promoterRate = sampleCount > 0 ? Number(((promoters / sampleCount) * 100).toFixed(1)) : (nonPromoters + high > 0 ? Number(((high / (nonPromoters + high)) * 100).toFixed(1)) : null);
+      const dvocSampleRate = sampleCount > 0 ? Number(((taskCount / sampleCount) * 100).toFixed(1)) : null;
+
+      return {
+        ...t,
+        stats: {
+          tasks: taskCount,
+          dvoc: taskCount,
+          openTasks: tsData.open || 0,
+          resolvedTasks: tsData.resolved || 0,
+          lastTaskAt: tsData.lastTaskAt || null,
+          samples: sampleCount,
+          sampleEntries: ssData.entries || 0,
+          detractors: det,
+          neutrals: neu,
+          nonPromoters,
+          promoters,
+          promoterRate,
+          dvocSampleRate,
+        },
+      };
+    })
   );
 });
 
@@ -268,18 +342,43 @@ export const deleteSample = handle(async (req, res) => {
 
 // ---------------------------------------------------------------------------- tasks
 
-const TASK_FIELDS = ["slid", "ticketNumber", "customerName", "contactNumber", "governorate", "district", "team", "surveySample", "evaluationScore", "customerFeedback", "interviewDate", "faultDate", "dueDate", "faultType", "priority", "status", "assignedTo", "rca", "notes"];
-const DATE_FIELDS = ["interviewDate", "faultDate", "dueDate"];
+const TASK_FIELDS = ["slid", "ticketNumber", "customerName", "contactNumber", "customerComplaint", "fiberCategory", "governorate", "district", "team", "surveySample", "evaluationScore", "customerFeedback", "teamFeedback", "interviewDate", "faultDate", "creationDate", "dueDate", "installationDate", "ncf", "hcResponsibility", "resolvedAfterVisit", "teamResponsibility", "customerFollowUp", "faultType", "priority", "status", "assignedTo", "rca", "notes"];
+const DATE_FIELDS = ["interviewDate", "faultDate", "creationDate", "dueDate", "installationDate"];
+
+/** "Yes" | "No" | null (cleared) | undefined (not sent). Accepts Yes/No, true/false, MT wording from sheets. */
+const normYesNo = (v) => {
+  if (v === undefined) return undefined;
+  if (v === null || v === "" || v === "Not specified") return null;
+  const s = String(v).trim().toLowerCase();
+  if (["yes", "y", "true", "1", "mt"].includes(s)) return "Yes";
+  if (["no", "n", "false", "0"].includes(s)) return "No";
+  return v; // left as is so validation reports it
+};
 
 const cleanTask = (body) => {
   const t = pick(body, TASK_FIELDS);
+  if ("teamResponsibility" in t) t.teamResponsibility = normYesNo(t.teamResponsibility);
+  if ("customerFollowUp" in t) t.customerFollowUp = normYesNo(t.customerFollowUp);
   for (const k of DATE_FIELDS) if (t[k] === "") t[k] = null;
   if (t.surveySample === "") t.surveySample = null;
   if (t.evaluationScore === "" || t.evaluationScore === "Not specified") t.evaluationScore = null;
   if (t.evaluationScore != null) t.evaluationScore = Number(t.evaluationScore);
+  if (typeof t.fiberCategory === "string") t.fiberCategory = t.fiberCategory.trim();
+  if (t.ncf !== undefined) t.ncf = Boolean(t.ncf === true || t.ncf === "true" || t.ncf === "Yes" || t.ncf === "1" || t.ncf === 1);
+  if (t.hcResponsibility !== undefined) t.hcResponsibility = Boolean(t.hcResponsibility === true || t.hcResponsibility === "true" || t.hcResponsibility === "Yes" || t.hcResponsibility === "1" || t.hcResponsibility === 1);
+  if (t.installationDate && (t.ncf === undefined || t.ncf === null)) {
+    const refDate = t.creationDate || t.faultDate || new Date();
+    const diffMs = new Date(refDate).getTime() - new Date(t.installationDate).getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (diffDays >= 0 && diffDays <= 31) t.ncf = true;
+  }
   if (Array.isArray(t.assignedTo)) t.assignedTo = t.assignedTo.map((u) => (u && typeof u === "object" ? u._id : u)).filter((id) => isValidObjectId(id));
   if (Array.isArray(t.rca)) t.rca = t.rca.filter((r) => r && Object.values(r).some((v) => v && v !== "Not specified")).map((r) => pick(r, ["reason", "subReason", "rootCause", "responsible", "teamAccountability"]));
   if (typeof t.slid === "string") t.slid = t.slid.trim().toUpperCase();
+  if (t.resolvedAfterVisit === "Yes" && (!t.status || t.status === "Todo" || t.status === "In Progress")) {
+    t.status = "Closed";
+    t.closedAt = new Date();
+  }
   return t;
 };
 
@@ -302,8 +401,14 @@ const validateTaskRefs = async (data, { creating }) => {
       else if (data.team && String(s.team) !== String(data.team)) errors.surveySample = "That sample entry belongs to another team";
     }
   }
+  // Required on new tasks; older tasks without a value can still be edited.
+  if (creating && !data.teamResponsibility) errors.teamResponsibility = "Choose whether it is the maintenance team's responsibility";
+  else if (data.teamResponsibility != null && !["Yes", "No"].includes(data.teamResponsibility)) errors.teamResponsibility = "Team responsibility must be Yes or No";
+  if (creating && !data.customerFollowUp) errors.customerFollowUp = "Choose whether the customer needs a follow-up";
+  else if (data.customerFollowUp != null && !["Yes", "No"].includes(data.customerFollowUp)) errors.customerFollowUp = "Customer follow-up must be Yes or No";
   if (data.evaluationScore != null && !(Number.isInteger(data.evaluationScore) && data.evaluationScore >= 1 && data.evaluationScore <= 10)) errors.evaluationScore = "Score must be 1–10";
-  if (data.dueDate && data.faultDate && new Date(data.dueDate) < new Date(data.faultDate)) errors.dueDate = "Due date is before the fault date";
+  if (data.dueDate && data.creationDate && new Date(data.dueDate) < new Date(data.creationDate)) errors.dueDate = "Clearance date cannot be before creation date";
+  if (data.dueDate && data.faultDate && new Date(data.dueDate) < new Date(data.faultDate)) errors.dueDate = "Clearance date cannot be before reporting date";
   if (Object.keys(errors).length) fail(400, Object.values(errors)[0], { fields: errors });
 };
 
@@ -316,11 +421,17 @@ const populateTask = (q) => q.populate("team", "teamName teamCode status").popul
 
 export const listTasks = handle(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+  const parsedLimit = parseInt(req.query.limit, 10);
+  const limit = req.query.limit === "all" || parsedLimit > 100
+    ? Math.min(50000, Math.max(1, parsedLimit || 50000))
+    : Math.min(100, Math.max(1, parsedLimit || 25));
   const filter = {};
   if (req.query.status) filter.status = { $in: String(req.query.status).split(",").filter((s) => MAINTENANCE_TASK_STATUSES.includes(s)) };
   if (req.query.priority) filter.priority = { $in: String(req.query.priority).split(",") };
   if (req.query.team) filter.team = { $in: String(req.query.team).split(",").filter(isValidObjectId) };
+  if (req.query.ncf === "1" || req.query.ncf === "true") filter.ncf = true;
+  else if (req.query.ncf === "0" || req.query.ncf === "false") filter.ncf = false;
+  if (req.query.hc === "1" || req.query.hc === "true") filter.hcResponsibility = true;
   if (req.query.mine === "1") filter.assignedTo = req.user._id;
   if (req.query.from || req.query.to) {
     filter.createdAt = {};
@@ -329,7 +440,7 @@ export const listTasks = handle(async (req, res) => {
   }
   if (req.query.q) {
     const rx = new RegExp(escapeRegex(req.query.q.trim()), "i");
-    filter.$or = [{ slid: rx }, { taskNumber: rx }, { ticketNumber: rx }, { customerName: rx }, { contactNumber: rx }];
+    filter.$or = [{ slid: rx }, { taskNumber: rx }, { ticketNumber: rx }, { customerName: rx }, { contactNumber: rx }, { customerComplaint: rx }, { fiberCategory: rx }, { customerFeedback: rx }, { teamFeedback: rx }];
   }
   const SORTS = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, due: { dueDate: 1, createdAt: -1 }, updated: { updatedAt: -1 } };
   const sort = SORTS[req.query.sort] || SORTS.newest;
@@ -368,6 +479,7 @@ export const createTask = handle(async (req, res) => {
     if (open && requestKey && open.requestKey === requestKey) return res.status(200).json({ _id: open._id, taskNumber: open.taskNumber, duplicate: true });
     if (open) fail(409, `SLID ${data.slid} already has an open maintenance task (${open.taskNumber}).`, { code: "OPEN_TASK_EXISTS", existingId: open._id, taskNumber: open.taskNumber });
   }
+  if (!data.creationDate) data.creationDate = new Date();
   if (data.status === "Closed") data.closedAt = new Date();
 
   let task;
@@ -398,6 +510,13 @@ export const updateTask = handle(async (req, res) => {
   const data = cleanTask(req.body);
   await validateTaskRefs({ ...data, team: data.team ?? String(before.team), surveySample: data.surveySample === undefined ? before.surveySample : data.surveySample }, { creating: false });
   if (data.status && data.status !== before.status) data.closedAt = data.status === "Closed" ? new Date() : null;
+  if (data.resolvedAfterVisit === "Yes") {
+    data.status = "Closed";
+    data.closedAt = before.closedAt || new Date();
+  } else if (data.resolvedAfterVisit === "No" && before.status === "Closed" && !req.body.status) {
+    data.status = "In Progress";
+    data.closedAt = null;
+  }
   const task = await withTransaction(async (session, undo) => {
     const updated = await MaintenanceTask.findByIdAndUpdate(before._id, { ...data, updatedBy: req.user._id }, { new: true, runValidators: true, session });
     undo(() => MaintenanceTask.replaceOne({ _id: before._id }, before));
@@ -470,7 +589,7 @@ export const processingQueue = handle(async (req, res) => {
   if (req.query.team && isValidObjectId(req.query.team)) filter.team = req.query.team;
   if (req.query.q) {
     const rx = new RegExp(escapeRegex(req.query.q.trim()), "i");
-    filter.$or = [{ slid: rx }, { taskNumber: rx }, { ticketNumber: rx }, { customerName: rx }];
+    filter.$or = [{ slid: rx }, { taskNumber: rx }, { ticketNumber: rx }, { customerName: rx }, { customerComplaint: rx }, { teamFeedback: rx }];
   }
   const tasks = await MaintenanceTask.find(filter).sort({ lastTicketAt: 1, createdAt: 1 }).limit(200).populate("team", "teamName teamCode").select("taskNumber slid customerName status priority dueDate ticketCount lastTicketAt createdAt team").lean();
   const latest = await MaintenanceTicket.aggregate([
@@ -562,13 +681,159 @@ export const deleteTicket = handle(async (req, res) => {
 
 /** Module overview for the landing tabs. */
 export const getOverview = handle(async (_req, res) => {
-  const [teams, activeTeams, tasks, statusCounts, overdue, samplesThisMonth] = await Promise.all([
+  const [teams, activeTeams, tasks, resolvedTasks, samplesThisMonth] = await Promise.all([
     MaintenanceTeam.countDocuments({}),
     MaintenanceTeam.countDocuments({ status: "Active" }),
     MaintenanceTask.countDocuments({}),
-    MaintenanceTask.aggregate([{ $group: { _id: "$status", n: { $sum: 1 } } }]),
-    MaintenanceTask.countDocuments({ status: { $ne: "Closed" }, dueDate: { $lt: new Date() } }),
+    MaintenanceTask.countDocuments({ resolvedAfterVisit: "Yes" }),
     MaintenanceSurveySample.aggregate([{ $match: { year: new Date().getFullYear(), month: new Date().getMonth() + 1 } }, { $group: { _id: null, n: { $sum: "$sampleSize" }, entries: { $sum: 1 } } }]),
   ]);
-  res.json({ teams, activeTeams, tasks, statusCounts: Object.fromEntries(statusCounts.map((s) => [s._id, s.n])), overdue, samplesThisMonth: samplesThisMonth[0]?.n || 0, sampleEntriesThisMonth: samplesThisMonth[0]?.entries || 0 });
+  res.json({ teams, activeTeams, tasks, resolvedTasks, samplesThisMonth: samplesThisMonth[0]?.n || 0, sampleEntriesThisMonth: samplesThisMonth[0]?.entries || 0 });
+});
+
+/** Bulk upload maintenance sheet with "Tel no" mapping to SLID, NCF auto-detection and HC responsibility. */
+export const bulkUploadTasks = handle(async (req, res) => {
+  const { rows, defaultTeam, updateExistingNcf = true } = req.body || {};
+  if (!Array.isArray(rows) || !rows.length) fail(400, "No rows provided for upload");
+
+  let targetTeam = defaultTeam;
+  if (!targetTeam || !isValidObjectId(targetTeam)) {
+    const active = await MaintenanceTeam.findOne({ status: "Active" }).select("_id").lean();
+    if (active) targetTeam = String(active._id);
+  }
+
+  let createdCount = 0;
+  let updatedCount = 0;
+  const errors = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const rawSlid = r.slid || r.telNo || r.tel || r.telephone || r["Tel no"] || r["Tel No"] || r["tel no"] || r["TEL NO"] || "";
+    const slid = String(rawSlid).trim().toUpperCase();
+    if (!slid) continue;
+
+    let instDate = r.installationDate || r.installDate || r.pisDate || r["Installation date"] || r["PIS date"] || r["Install Date"] || null;
+    if (instDate) {
+      instDate = new Date(instDate);
+      if (isNaN(instDate.getTime())) instDate = null;
+    }
+
+    let creationDate = r.creationDate || r.createdDate || r.faultDate || r.date || r["Creation date"] || r["Date"] || r["Reporting date"] || null;
+    if (creationDate) {
+      creationDate = new Date(creationDate);
+      if (isNaN(creationDate.getTime())) creationDate = null;
+    }
+
+    let isNcf = r.ncf != null ? Boolean(r.ncf === true || r.ncf === "true" || r.ncf === "Yes" || r.ncf === "1" || r.ncf === 1) : null;
+    if (isNcf == null && instDate) {
+      const refDate = creationDate || new Date();
+      const diffMs = refDate.getTime() - instDate.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      if (diffDays >= 0 && diffDays <= 31) isNcf = true;
+      else isNcf = false;
+    }
+
+    let isHc = r.hcResponsibility != null ? Boolean(r.hcResponsibility === true || r.hcResponsibility === "true" || r.hcResponsibility === "Yes" || r.hcResponsibility === "1" || r.hcResponsibility === 1) : false;
+
+    // RCA & Team accountability extraction from uploaded row
+    const reason = String(r.reason || r["Reason"] || r["Main reason"] || "").trim();
+    const subReason = String(r.subReason || r["Sub reason"] || r["Sub-Reason"] || "").trim();
+    const rootCause = String(r.rootCause || r["Root cause"] || "").trim();
+    const responsible = String(r.responsible || r["Responsible"] || r["Owner"] || "").trim();
+    const rawAccountable = r.teamAccountability || r["Team accountability"] || r["Accountability"] || r["Team Accountable"] || "";
+    let teamAccountability = "No";
+    if (typeof rawAccountable === "string" && (rawAccountable.toLowerCase().startsWith("y") || rawAccountable.toLowerCase() === "true" || rawAccountable === "1")) {
+      teamAccountability = "Yes";
+    } else if (rawAccountable === true || rawAccountable === 1) {
+      teamAccountability = "Yes";
+    } else if (typeof rawAccountable === "string" && rawAccountable.trim()) {
+      teamAccountability = rawAccountable.trim();
+    }
+
+    const rcaList = [];
+    if (reason || subReason || rootCause || responsible || rawAccountable) {
+      rcaList.push({
+        reason: reason || "Unknown",
+        subReason: subReason || "Unknown",
+        rootCause: rootCause || "Unknown",
+        responsible: responsible || "Unknown",
+        teamAccountability: teamAccountability || "No",
+      });
+    }
+
+    // Check if task with this SLID already exists
+    const existing = await MaintenanceTask.findOne({ slid }).lean();
+    if (existing) {
+      if (updateExistingNcf) {
+        const patch = {};
+        if (isNcf !== null) patch.ncf = isNcf;
+        else if (instDate) {
+          const refDate = existing.creationDate || existing.faultDate || existing.createdAt || new Date();
+          const diffMs = new Date(refDate).getTime() - instDate.getTime();
+          const diffDays = diffMs / (1000 * 60 * 60 * 24);
+          if (diffDays >= 0 && diffDays <= 31) patch.ncf = true;
+        }
+        if (instDate) patch.installationDate = instDate;
+        if (isHc) patch.hcResponsibility = true;
+        if (r.teamFeedback) patch.teamFeedback = String(r.teamFeedback).trim();
+        if (r.customerComplaint) patch.customerComplaint = String(r.customerComplaint).trim();
+        if (r.fiberCategory) patch.fiberCategory = String(r.fiberCategory).trim();
+        if (rcaList.length > 0) patch.rca = rcaList;
+        const resp = normYesNo(r.teamResponsibility ?? r["Team responsibility"]);
+        if (resp === "Yes" || resp === "No") patch.teamResponsibility = resp;
+        const followUp = normYesNo(r.customerFollowUp ?? r["Customer follow-up"]);
+        if (followUp === "Yes" || followUp === "No") patch.customerFollowUp = followUp;
+        if (Object.keys(patch).length > 0) {
+          patch.updatedBy = req.user._id;
+          await MaintenanceTask.findByIdAndUpdate(existing._id, patch);
+          updatedCount++;
+        }
+      }
+    } else {
+      try {
+        const taskData = cleanTask({
+          slid,
+          ticketNumber: String(r.ticketNumber || r["Ticket number"] || r.ticket || "").trim(),
+          customerName: String(r.customerName || r["Customer name"] || r.customer || "").trim(),
+          contactNumber: String(r.contactNumber || r["Contact number"] || r.phone || "").trim(),
+          customerComplaint: String(r.customerComplaint || r["Customer complaint"] || "").trim(),
+          fiberCategory: String(r.fiberCategory || r["Fiber category"] || "").trim(),
+          teamFeedback: String(r.teamFeedback || r["Team feedback"] || "").trim(),
+          faultType: String(r.faultType || r["Fault type"] || "").trim(),
+          faultDate: r.faultDate ? new Date(r.faultDate) : null,
+          creationDate: creationDate || new Date(),
+          dueDate: r.dueDate ? new Date(r.dueDate) : null,
+          interviewDate: r.interviewDate ? new Date(r.interviewDate) : null,
+          installationDate: instDate,
+          ncf: isNcf || false,
+          hcResponsibility: isHc || false,
+          team: r.team && isValidObjectId(r.team) ? r.team : targetTeam,
+          resolvedAfterVisit: r.resolvedAfterVisit || "Not specified",
+          teamResponsibility: r.teamResponsibility ?? r["Team responsibility"],
+          customerFollowUp: r.customerFollowUp ?? r["Customer follow-up"],
+          rca: rcaList.length > 0 ? rcaList : undefined,
+        });
+        if (taskData.team) {
+          await MaintenanceTask.create({
+            ...taskData,
+            taskNumber: nextTaskNumber(),
+            createdBy: req.user._id,
+            updatedBy: req.user._id,
+          });
+          createdCount++;
+        } else {
+          errors.push({ slid, error: "No maintenance team specified" });
+        }
+      } catch (err) {
+        errors.push({ slid, error: err.message });
+      }
+    }
+  }
+
+  res.json({
+    created: createdCount,
+    updated: updatedCount,
+    total: rows.length,
+    errors: errors.slice(0, 10),
+  });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Autocomplete, Box, Button, IconButton, TextField, Tooltip, Typography } from "@mui/material";
+import { Autocomplete, Box, Button, Checkbox, FormControlLabel, IconButton, TextField, Tooltip, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import { toast } from "sonner";
@@ -9,8 +9,20 @@ import { FreeAutocomplete, Pair, Row, SelectField, SmallLabel } from "../../comp
 import { field } from "../../components/ui/formField";
 import { errMsg, fieldErrors, maintenanceApi, monthLabel, newRequestKey, useDropdowns } from "./maintenanceApi";
 
-const toInput = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
-const EMPTY = { slid: "", ticketNumber: "", customerName: "", contactNumber: "", governorate: "", district: "", team: "", surveySample: "", evaluationScore: "", customerFeedback: "", interviewDate: "", faultDate: "", dueDate: "", faultType: "", priority: "Medium", status: "Todo", assignedTo: [], rca: [], notes: "" };
+const toDateInput = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+const toDateTimeInput = (d) => {
+  if (!d) return "";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const MM = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+};
+const EMPTY = { slid: "", ticketNumber: "", customerName: "", contactNumber: "", customerComplaint: "", fiberCategory: "", teamFeedback: "", governorate: "", district: "", team: "", surveySample: "", evaluationScore: "", customerFeedback: "", interviewDate: "", faultDate: "", creationDate: "", dueDate: "", resolvedAfterVisit: "Not specified", teamResponsibility: "", customerFollowUp: "", ncf: false, hcResponsibility: false, faultType: "", priority: "Medium", status: "Todo", assignedTo: [], rca: [], notes: "" };
 const EMPTY_RCA = { reason: "", subReason: "", rootCause: "", responsible: "", teamAccountability: "Not specified" };
 
 const SectionTitle = ({ children }) => <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 2, "&:first-of-type": { mt: 0.5 } }}>{children}</Typography>;
@@ -33,11 +45,36 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
   useEffect(() => {
     if (!open) return;
     requestKey.current = newRequestKey(); // stays the same for every retry of this submission
-    setV(
-      task
-        ? { ...EMPTY, ...task, team: task.team?._id || task.team || "", surveySample: task.surveySample?._id || task.surveySample || "", evaluationScore: task.evaluationScore ?? "", interviewDate: toInput(task.interviewDate), faultDate: toInput(task.faultDate), dueDate: toInput(task.dueDate), assignedTo: task.assignedTo || [], rca: task.rca || [] }
-        : { ...EMPTY, team: defaultTeam || "" }
-    );
+    if (task) {
+      setV({
+        ...EMPTY,
+        ...task,
+        team: task.team?._id || task.team || "",
+        surveySample: task.surveySample?._id || task.surveySample || "",
+        evaluationScore: task.evaluationScore ?? "",
+        customerComplaint: task.customerComplaint || "",
+        fiberCategory: task.fiberCategory || "",
+        customerFeedback: task.customerFeedback || "",
+        teamFeedback: task.teamFeedback || "",
+        interviewDate: toDateTimeInput(task.interviewDate),
+        faultDate: toDateTimeInput(task.faultDate),
+        creationDate: toDateTimeInput(task.creationDate || task.createdAt),
+        dueDate: toDateTimeInput(task.dueDate),
+        resolvedAfterVisit: task.resolvedAfterVisit || "Not specified",
+        teamResponsibility: task.teamResponsibility || "", // older tasks have none yet
+        customerFollowUp: task.customerFollowUp || "",
+        ncf: Boolean(task.ncf),
+        hcResponsibility: Boolean(task.hcResponsibility),
+        assignedTo: task.assignedTo || [],
+        rca: task.rca || [],
+      });
+    } else {
+      setV({
+        ...EMPTY,
+        team: defaultTeam || "",
+        creationDate: toDateTimeInput(new Date()),
+      });
+    }
     setErrors({});
     setError(null);
     setConflict(null);
@@ -66,7 +103,14 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
     const errs = {};
     if (!v.slid.trim()) errs.slid = "SLID is required";
     if (!v.team) errs.team = "Choose a maintenance team";
-    if (v.dueDate && v.faultDate && v.dueDate < v.faultDate) errs.dueDate = "Due date is before the fault date";
+    // Required on new tasks; an older task without it can still be saved (and answered later).
+    if (!task && !v.teamResponsibility) errs.teamResponsibility = "Choose Yes or No";
+    if (!task && !v.customerFollowUp) errs.customerFollowUp = "Choose Yes or No";
+    if (v.dueDate && v.creationDate && new Date(v.dueDate) < new Date(v.creationDate)) {
+      errs.dueDate = "Clearance date cannot be before creation date";
+    } else if (v.dueDate && v.faultDate && new Date(v.dueDate) < new Date(v.faultDate)) {
+      errs.dueDate = "Clearance date cannot be before reporting date";
+    }
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setSaving(true);
@@ -125,6 +169,41 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
           <TextField {...field} value={v.district} onChange={set("district")} placeholder="District" slotProps={{ htmlInput: { "aria-label": "District" } }} />
         </Pair>
       </Row>
+      <Row label="Customer complaint" align="start" hint="Specific complaint reported by the customer.">
+        <TextField
+          {...field}
+          multiline
+          minRows={2}
+          value={v.customerComplaint}
+          onChange={set("customerComplaint")}
+          placeholder="Describe the customer's complaint..."
+          inputProps={{ dir: "auto", "aria-label": "Customer complaint" }}
+        />
+      </Row>
+      <Row label="Fiber category" hint="Fiber working (FTTHW) or Fiber not working (FTTHN).">
+        <SelectField
+          value={v.fiberCategory || ""}
+          onChange={set("fiberCategory")}
+          options={[
+            { value: "", label: "Not specified" },
+            { value: "FTTHW", label: "Fiber is working (FTTHW)" },
+            { value: "FTTHN", label: "Fiber not working (FTTHN)" },
+          ]}
+          ariaLabel="Fiber category"
+          placeholder="Choose category"
+        />
+      </Row>
+      <Row label="Team feedback" align="start" hint="Team feedback after the visit or phone call.">
+        <TextField
+          {...field}
+          multiline
+          minRows={2}
+          value={v.teamFeedback}
+          onChange={set("teamFeedback")}
+          placeholder="Technician / team findings and feedback after visit or phone call..."
+          inputProps={{ dir: "auto", "aria-label": "Team feedback" }}
+        />
+      </Row>
 
       <SectionTitle>Team & survey</SectionTitle>
       <Row label="Maintenance team" required>
@@ -135,13 +214,19 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
         <SelectField value={v.surveySample} onChange={set("surveySample")} options={[{ value: "", label: "Not linked" }, ...samples.map((s) => ({ value: s._id, label: `${monthLabel(s.year, s.month)} · ${s.sampleSize} samples` }))]} ariaLabel="Survey sample month" placeholder="Not linked" />
         {errors.surveySample && <Typography sx={{ fontSize: 12, color: "var(--danger)", mt: 0.5 }}>{errors.surveySample}</Typography>}
       </Row>
-      <Row label="Satisfaction score" hint="1–6 detractor · 7–8 neutral · 9–10 promoter.">
+      <Row label="Satisfaction & interview" align="start" hint="1–6 detractor · 7–8 neutral · 9–10 promoter.">
         <Pair>
-          <SelectField value={v.evaluationScore} onChange={set("evaluationScore")} options={[{ value: "", label: "Not specified" }, ...Array.from({ length: 10 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))]} ariaLabel="Satisfaction score" />
-          <TextField {...field} type="date" value={v.interviewDate} onChange={set("interviewDate")} slotProps={{ htmlInput: { "aria-label": "Interview date" } }} />
+          <Box>
+            <SmallLabel>Satisfaction score</SmallLabel>
+            <SelectField value={v.evaluationScore} onChange={set("evaluationScore")} options={[{ value: "", label: "Not specified" }, ...Array.from({ length: 10 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))]} ariaLabel="Satisfaction score" />
+          </Box>
+          <Box>
+            <SmallLabel>Interview date & time</SmallLabel>
+            <TextField {...field} type="datetime-local" value={v.interviewDate} onChange={set("interviewDate")} slotProps={{ htmlInput: { "aria-label": "Interview date and time" } }} />
+          </Box>
         </Pair>
       </Row>
-      <Row label="Customer feedback" align="start">
+      <Row label="Customer feedback" align="start" hint="Customer feedback from the satisfaction survey.">
         <TextField {...field} multiline minRows={2} value={v.customerFeedback} onChange={set("customerFeedback")} inputProps={{ dir: "auto", "aria-label": "Customer feedback" }} />
       </Row>
 
@@ -149,17 +234,77 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
       <Row label="Fault type">
         <FreeAutocomplete options={[...new Set([...optValues("MAINTENANCE_FAULT_TYPE"), "No service", "Slow speed", "Intermittent connection", "Fiber cut", "ONT fault", "Wi-Fi coverage", "Relocation"])]} value={v.faultType} onChange={set("faultType")} ariaLabel="Fault type" />
       </Row>
-      <Row label="Fault & due dates" hint="When the fault was reported, and when it must be fixed.">
+      <Row label="Reporting & creation" align="start" hint="When the fault was reported, and when the task was created.">
         <Pair>
-          <TextField {...field} type="date" value={v.faultDate} onChange={set("faultDate")} slotProps={{ htmlInput: { "aria-label": "Fault date" } }} />
-          <TextField {...field} type="date" value={v.dueDate} onChange={set("dueDate")} error={!!errors.dueDate} helperText={errors.dueDate} slotProps={{ htmlInput: { "aria-label": "Due date" } }} />
+          <Box>
+            <SmallLabel>Reporting date & time</SmallLabel>
+            <TextField {...field} type="datetime-local" value={v.faultDate} onChange={set("faultDate")} slotProps={{ htmlInput: { "aria-label": "Reporting date and time" } }} />
+          </Box>
+          <Box>
+            <SmallLabel>Creation date & time</SmallLabel>
+            <TextField {...field} type="datetime-local" value={v.creationDate} onChange={set("creationDate")} slotProps={{ htmlInput: { "aria-label": "Creation date and time" } }} />
+          </Box>
         </Pair>
       </Row>
-      <Row label={task ? "Priority & status" : "Priority"} hint={task ? "Status normally changes by recording tickets." : undefined}>
+      <Row label="Clearance & resolution" align="start" hint="When the fault was cleared, and whether the issue was resolved after this visit.">
         <Pair>
-          <SelectField value={v.priority} onChange={set("priority")} options={["High", "Medium", "Low"].map((p) => ({ value: p, label: p }))} ariaLabel="Priority" />
-          {task && <SelectField value={v.status} onChange={set("status")} options={["Todo", "In Progress", "Closed"].map((p) => ({ value: p, label: p }))} ariaLabel="Status" />}
+          <Box>
+            <SmallLabel>Clearance date & time</SmallLabel>
+            <TextField {...field} type="datetime-local" value={v.dueDate} onChange={set("dueDate")} error={!!errors.dueDate} helperText={errors.dueDate} slotProps={{ htmlInput: { "aria-label": "Clearance date and time" } }} />
+          </Box>
+          <Box>
+            <SmallLabel>Resolved after this visit?</SmallLabel>
+            <SelectField
+              value={v.resolvedAfterVisit || "Not specified"}
+              onChange={set("resolvedAfterVisit")}
+              options={["Not specified", "Yes", "No"].map((x) => ({ value: x, label: x }))}
+              ariaLabel="Resolved after this visit"
+            />
+          </Box>
         </Pair>
+      </Row>
+      <Row label="Is it Team Responsibility?" required={!task} hint="Whether the issue is attributable to the maintenance team (MT).">
+        <SelectField
+          value={v.teamResponsibility || ""}
+          onChange={set("teamResponsibility")}
+          options={[
+            { value: "", label: task ? "Not recorded" : "Choose…" },
+            { value: "Yes", label: "Yes — the maintenance team's responsibility" },
+            { value: "No", label: "No — not the maintenance team's responsibility" },
+          ]}
+          ariaLabel="Is it Team Responsibility?"
+          placeholder={task ? "Not recorded" : "Choose…"}
+        />
+        {errors.teamResponsibility && <Typography sx={{ fontSize: 12, color: "var(--danger)", mt: 0.5 }}>{errors.teamResponsibility}</Typography>}
+      </Row>
+      <Row label="Does customer needs follow-up?" required={!task} hint="Whether the customer should be contacted again after this visit.">
+        <SelectField
+          value={v.customerFollowUp || ""}
+          onChange={set("customerFollowUp")}
+          options={[
+            { value: "", label: task ? "Not recorded" : "Choose…" },
+            { value: "Yes", label: "Yes — follow-up needed" },
+            { value: "No", label: "No — no follow-up needed" },
+          ]}
+          ariaLabel="Does customer needs follow-up?"
+          placeholder={task ? "Not recorded" : "Choose…"}
+        />
+        {errors.customerFollowUp && <Typography sx={{ fontSize: 12, color: "var(--danger)", mt: 0.5 }}>{errors.customerFollowUp}</Typography>}
+      </Row>
+      <Row label="NCF & HC" hint="Quality classification flags.">
+        <Box sx={{ display: "flex", gap: 3, alignItems: "center", flexWrap: "wrap", pt: 0.5 }}>
+          <FormControlLabel
+            control={<Checkbox checked={Boolean(v.ncf)} onChange={(e) => set("ncf")(e.target.checked)} color="primary" />}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500 }}>NCF (New connection fault)</Typography>}
+          />
+          <FormControlLabel
+            control={<Checkbox checked={Boolean(v.hcResponsibility)} onChange={(e) => set("hcResponsibility")(e.target.checked)} color="error" />}
+            label={<Typography sx={{ fontSize: 13, fontWeight: 500 }}>HC responsibility</Typography>}
+          />
+        </Box>
+        <Typography sx={{ fontSize: 11.5, color: "var(--text-muted)", mt: 0.5 }}>
+          NCF indicates the maintenance ticket was created within 1 month from the installation date.
+        </Typography>
       </Row>
       <Row label="Assigned to">
         <Autocomplete

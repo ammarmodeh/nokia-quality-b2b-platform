@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import {
+  bulkUploadTasks,
   createSample,
   createTask,
   createTeam,
@@ -44,6 +45,7 @@ router.put("/samples/:id", updateSample);
 router.delete("/samples/:id", deleteSample);
 
 router.get("/tasks", listTasks);
+router.post("/tasks/bulk-upload", bulkUploadTasks);
 router.post("/tasks", createTask);
 router.get("/processing", processingQueue);
 router.get("/tasks/:id", getTask);
