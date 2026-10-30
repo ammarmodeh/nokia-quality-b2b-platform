@@ -2116,10 +2116,10 @@ const MaintenanceReportsPage = () => {
                             <TableCell align="center">
                               <Badge
                                 tone={
-                                  task.resolvedAfterVisit === "Yes" || task.status === "Closed"
-                                    ? "success"
-                                    : task.resolvedAfterVisit === "No"
+                                  task.resolvedAfterVisit === "No"
                                     ? "danger"
+                                    : task.resolvedAfterVisit === "Yes" || task.status === "Closed"
+                                    ? "success"
                                     : "neutral"
                                 }
                               >
@@ -2265,8 +2265,8 @@ const MaintenanceReportsPage = () => {
                         {task.hcResponsibility ? <Badge tone="warning" sx={{ fontSize: 10 }}>HC</Badge> : "—"}
                       </TableCell>
                       <TableCell align="center">
-                        <Badge tone={task.resolvedAfterVisit === "Yes" || task.status === "Closed" ? "success" : "danger"}>
-                          {task.resolvedAfterVisit === "Yes" || task.status === "Closed" ? "Yes" : "No"}
+                        <Badge tone={task.resolvedAfterVisit === "No" ? "danger" : task.resolvedAfterVisit === "Yes" || task.status === "Closed" ? "success" : "neutral"}>
+                          {task.resolvedAfterVisit === "Yes" ? "Yes" : task.resolvedAfterVisit === "No" ? "No" : task.status === "Closed" ? "Closed" : "Pending"}
                         </Badge>
                       </TableCell>
                       <TableCell sx={{ fontSize: 11, maxWidth: 240 }}>

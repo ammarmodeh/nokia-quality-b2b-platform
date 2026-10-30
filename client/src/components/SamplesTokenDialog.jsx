@@ -209,6 +209,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   // Team Monthly Samples State
   const [fieldTeams, setFieldTeams] = useState([]);
   const [teamMonthlyData, setTeamMonthlyData] = useState({}); // { [monthNum]: { [teamName]: sampleSize } }
+  // Saved entries whose team name matches no field team (e.g. saved before a rename). Not counted.
+  const [unmatchedTeamSamples, setUnmatchedTeamSamples] = useState({}); // { [monthNum]: [{ teamName, sampleSize }] }
   const [selectedTeamMonth, setSelectedTeamMonth] = useState(new Date().getMonth() + 1);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [showInactiveWithSamples, setShowInactiveWithSamples] = useState(false);
@@ -314,13 +316,27 @@ const SamplesTokenDialog = ({ open, onClose }) => {
           initialTeamData[m] = {};
         }
 
-        savedTeamSamples.forEach(item => {
-          if (item.month >= 1 && item.month <= 12 && item.teamName) {
-            initialTeamData[item.month][item.teamName] = item.sampleSize ?? '';
+        // Entries are keyed by team name. An entry under a name no team has any more is moved to
+        // its team (by teamId) when that team has no entry of its own that month; otherwise it is
+        // listed as unmatched and left out of the totals, like the table and the export.
+        const teamNames = new Set(teamsList.map(t => t.teamName));
+        const teamById = new Map(teamsList.map(t => [String(t._id), t]));
+        const initialUnmatched = {};
+        const valid = savedTeamSamples.filter(item => item.month >= 1 && item.month <= 12 && item.teamName);
+        valid.filter(item => teamNames.has(item.teamName)).forEach(item => {
+          initialTeamData[item.month][item.teamName] = item.sampleSize ?? '';
+        });
+        valid.filter(item => !teamNames.has(item.teamName)).forEach(item => {
+          const team = item.teamId ? teamById.get(String(item.teamId)) : null;
+          if (team && initialTeamData[item.month][team.teamName] === undefined) {
+            initialTeamData[item.month][team.teamName] = item.sampleSize ?? '';
+          } else if ((parseFloat(item.sampleSize) || 0) !== 0) {
+            (initialUnmatched[item.month] ||= []).push({ teamName: item.teamName, sampleSize: parseFloat(item.sampleSize) || 0 });
           }
         });
 
         setTeamMonthlyData(initialTeamData);
+        setUnmatchedTeamSamples(initialUnmatched);
 
         // ── Daily Online & Samples data ───────────────────────────────────
         const initialDailyData = {};
@@ -507,52 +523,43 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   }, [teamMonthlyData]);
 
   // ── Team monthly totals and grand total ─────────────────────────────────
-  // Only count active teams so the badge always matches the visible rows.
+  // Every team's samples count, whatever its status: a team that left still received them.
+  // Only entries that belong to a field team count, so the totals match the rows and the export.
+  const teamNameSet = useMemo(() => new Set(fieldTeams.map(t => t.teamName)), [fieldTeams]);
   const teamMonthTotals = useMemo(() => {
-    const activeNames = new Set(
-      fieldTeams.filter(t => !t.isTerminated && t.isActive !== false).map(t => t.teamName)
-    );
     const totals = {};
     for (let m = 1; m <= 12; m++) {
       const monthObj = teamMonthlyData[m] || {};
-      totals[m] = Object.entries(monthObj).reduce((sum, [name, val]) =>
-        activeNames.has(name) ? sum + (parseFloat(val) || 0) : sum, 0
-      );
+      totals[m] = Object.entries(monthObj).reduce((sum, [name, val]) => (teamNameSet.has(name) ? sum + (parseFloat(val) || 0) : sum), 0);
     }
     return totals;
-  }, [teamMonthlyData, fieldTeams]);
+  }, [teamMonthlyData, teamNameSet]);
 
   const grandTeamSamplesTotal = useMemo(() => {
     return Object.values(teamMonthTotals).reduce((sum, val) => sum + val, 0);
   }, [teamMonthTotals]);
 
-  // Filtered teams list: exclude terminated / inactive, then apply search.
-  // When showInactiveWithSamples is on, also append inactive teams that have
-  // at least one month of saved sample data (across the full year) — BUT only
-  // if no active team already uses the same teamName (samples are keyed by
-  // name, so showing both would duplicate the same value on two rows).
+  // Filtered teams list: active teams, plus inactive / left teams that have samples in the
+  // selected month (they count in the total, so they stay visible). "Show inactive" widens this
+  // to inactive teams with samples in any month of the year. An inactive team is skipped when
+  // an active team uses the same teamName (samples are keyed by name).
   const filteredFieldTeams = useMemo(() => {
     const active = fieldTeams.filter(t => !t.isTerminated && t.isActive !== false);
-
-    let pool = active;
-    if (showInactiveWithSamples) {
-      const activeNames = new Set(active.map(t => t.teamName));
-      const inactiveWithData = fieldTeams
-        .filter(t => t.isTerminated || t.isActive === false)
-        .filter(t => !activeNames.has(t.teamName)) // skip if active twin exists
-        .filter(t =>
-          MONTHS.some(m => {
-            const v = teamMonthlyData[m.month]?.[t.teamName];
-            return v !== undefined && v !== '' && v !== null;
-          })
-        );
-      pool = [...active, ...inactiveWithData];
-    }
+    const activeNames = new Set(active.map(t => t.teamName));
+    const hasValue = (m, name) => {
+      const v = teamMonthlyData[m]?.[name];
+      return v !== undefined && v !== '' && v !== null && (parseFloat(v) || 0) !== 0;
+    };
+    const inactiveWithData = fieldTeams
+      .filter(t => t.isTerminated || t.isActive === false)
+      .filter(t => !activeNames.has(t.teamName))
+      .filter(t => (showInactiveWithSamples ? MONTHS.some(m => hasValue(m.month, t.teamName)) : hasValue(selectedTeamMonth, t.teamName)));
+    const pool = [...active, ...inactiveWithData];
 
     if (!teamSearchQuery.trim()) return pool;
     const q = teamSearchQuery.toLowerCase();
     return pool.filter(t => `${t.teamName || ''} ${t.teamCode || ''}`.toLowerCase().includes(q));
-  }, [fieldTeams, teamSearchQuery, showInactiveWithSamples, teamMonthlyData]);
+  }, [fieldTeams, teamSearchQuery, showInactiveWithSamples, teamMonthlyData, selectedTeamMonth]);
 
   // ── Daily Online & Samples Month Totals and Grand Total ─────────────────
   const dailyOnlineMonthTotals = useMemo(() => {
@@ -787,7 +794,13 @@ const SamplesTokenDialog = ({ open, onClose }) => {
     XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Totals');
 
     // Sheet 3: Team Samples — team × month matrix
-    const activeTeams = fieldTeams.filter(t => !t.isTerminated && t.isActive !== false);
+    // Active teams plus inactive / left teams that have samples this year (their samples count too).
+    const activeList = fieldTeams.filter(t => !t.isTerminated && t.isActive !== false);
+    const activeNameSet = new Set(activeList.map(t => t.teamName));
+    const activeTeams = [
+      ...activeList,
+      ...fieldTeams.filter(t => (t.isTerminated || t.isActive === false) && !activeNameSet.has(t.teamName) && MONTHS.some(m => (parseFloat(teamMonthlyData[m.month]?.[t.teamName]) || 0) !== 0)),
+    ];
     const teamHdr = ['Team Name', 'Team Code', 'Company', ...MONTHS.map(m => m.short), 'Year Total'];
     const teamDataRows = activeTeams.map(ft => {
       const name = ft.teamName;
@@ -796,7 +809,7 @@ const SamplesTokenDialog = ({ open, onClose }) => {
         return v !== undefined && v !== '' ? (parseFloat(v) || 0) : '';
       });
       const yearTotal = monthVals.reduce((s, v) => s + (parseFloat(v) || 0), 0);
-      return [name, ft.teamCode || '', ft.teamCompany || '', ...monthVals, yearTotal];
+      return [activeNameSet.has(name) ? name : `${name} (left)`, ft.teamCode || '', ft.teamCompany || '', ...monthVals, yearTotal];
     });
     const monthColTotals = MONTHS.map(m =>
       activeTeams.reduce((s, ft) => {
@@ -841,7 +854,8 @@ const SamplesTokenDialog = ({ open, onClose }) => {
   // ─── Render ─────────────────────────────────────────────────────────────
   const selectedOnlineMonthName = MONTHS[selectedOnlineMonth - 1]?.name;
   const selectedTeamMonthName = MONTHS[selectedTeamMonth - 1]?.name;
-  const teamsWithSamples = Object.keys(teamMonthlyData[selectedTeamMonth] || {}).length;
+  const teamsWithSamples = Object.entries(teamMonthlyData[selectedTeamMonth] || {}).filter(([name, v]) => teamNameSet.has(name) && (parseFloat(v) || 0) !== 0).length;
+  const unmatchedThisMonth = unmatchedTeamSamples[selectedTeamMonth] || [];
 
   const footerSummary = [
     <>Weekly sample size <strong>{fmt(weeksData.reduce((s, r) => s + (parseFloat(r.sampleSize) || 0), 0))}</strong></>,
@@ -1044,6 +1058,11 @@ const SamplesTokenDialog = ({ open, onClose }) => {
                   {fmt(teamMonthTotals[selectedTeamMonth])} samples this month
                 </Badge>
               </Toolbar>
+              {unmatchedThisMonth.length > 0 && (
+                <Typography sx={{ fontSize: 12.5, color: 'var(--warning, #B45309)', mb: 1.5 }}>
+                  Not counted: {fmt(unmatchedThisMonth.reduce((n, u) => n + u.sampleSize, 0))} sample(s) saved under team name(s) that no field team has any more — {unmatchedThisMonth.map(u => `${u.teamName} (${u.sampleSize})`).join(', ')}. Enter them on the right team and save if they belong to one.
+                </Typography>
+              )}
 
               <TableContainer>
                 <Table size="small" sx={{ minWidth: 720 }}>
