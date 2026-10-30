@@ -6,6 +6,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import UploadFileOutlined from "@mui/icons-material/UploadFileOutlined";
 import AssignmentOutlined from "@mui/icons-material/AssignmentOutlined";
 import BarChartOutlined from "@mui/icons-material/BarChartOutlined";
+import FileDownloadOutlined from "@mui/icons-material/FileDownloadOutlined";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import SectionCard from "../../components/ui/SectionCard";
 import EmptyState from "../../components/ui/EmptyState";
@@ -17,6 +19,26 @@ import MaintenanceTaskForm from "./MaintenanceTaskForm";
 import MaintenanceTaskSheet from "./MaintenanceTaskSheet";
 import MaintenanceUploadDialog from "./MaintenanceUploadDialog";
 import { errMsg, maintenanceApi, useMaintenanceTeams } from "./maintenanceApi";
+import { getTaskRcaRows } from "./maintenanceRca";
+import { exportMaintenanceTasks } from "./maintenanceTasksExport";
+
+/** RCA rows as on the reports register: Reason › Sub-reason › Root cause (Owner). */
+const RcaCell = ({ task }) => {
+  const rows = getTaskRcaRows(task);
+  if (!rows.length) return "—";
+  return (
+    <Box sx={{ whiteSpace: "normal", minWidth: 200, maxWidth: 300, fontSize: 11.5, lineHeight: 1.35 }}>
+      {rows.map((r, i) => (
+        <Box key={i} sx={{ mb: i < rows.length - 1 ? 0.5 : 0 }}>
+          <span style={{ fontWeight: 600, color: "var(--text)" }}>{r.reason}</span>
+          {r.subReason && ` › ${r.subReason}`}
+          {r.hasRootCause && <span style={{ color: "#DB2777" }}> › {r.rootCause}</span>}
+          {r.responsible && <span style={{ color: "var(--text-muted)" }}> ({r.responsible})</span>}
+        </Box>
+      ))}
+    </Box>
+  );
+};
 
 const LIMIT = 25;
 
@@ -37,6 +59,7 @@ const MaintenanceTasksPage = () => {
   const [editing, setEditing] = useState(null); // null | "new" | task
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sheetVersion, setSheetVersion] = useState(0); // remounts the sheet after an edit
+  const [exporting, setExporting] = useState(false);
 
   const setQuery = useCallback(
     (patch) =>
@@ -79,17 +102,36 @@ const MaintenanceTasksPage = () => {
     { key: "customer", label: "Customer", render: (t) => t.customerName || "—" },
     { key: "team", label: "Team", render: (t) => t.team?.teamName || "—" },
     { key: "faultType", label: "Fault", render: (t) => t.faultType || "—" },
+    { key: "rca", label: "R.C.A", render: (t) => <RcaCell task={t} /> },
     { key: "fiber", label: "Fiber", render: (t) => t.fiberCategory ? <Badge tone={t.fiberCategory === "FTTHW" ? "success" : "warning"}>{t.fiberCategory}</Badge> : "—" },
     { key: "ncf", label: "NCF", render: (t) => t.ncf ? <Badge tone="warning">NCF</Badge> : "—" },
     { key: "hc", label: "HC", render: (t) => t.hcResponsibility ? <Badge tone="danger">HC</Badge> : "—" },
     { key: "resolved", label: "Resolved", render: (t) => t.resolvedAfterVisit && t.resolvedAfterVisit !== "Not specified" ? <Badge tone={t.resolvedAfterVisit === "Yes" ? "success" : "danger"}>{t.resolvedAfterVisit}</Badge> : "—" },
-    { key: "teamResp", label: "Team resp.", render: (t) => (t.teamResponsibility ? <Badge tone={t.teamResponsibility === "Yes" ? "danger" : "success"}>{t.teamResponsibility}</Badge> : "—") },
     { key: "followUp", label: "Follow-up", render: (t) => (t.customerFollowUp ? <Badge tone={t.customerFollowUp === "Yes" ? "warning" : "neutral"}>{t.customerFollowUp}</Badge> : "—") },
     { key: "steps", label: "Steps", align: "right", render: (t) => t.ticketCount || 0 },
     { key: "reported", label: "Reporting", render: (t) => (t.faultDate ? format(new Date(t.faultDate), "d MMM HH:mm") : "—") },
-    { key: "due", label: "Clearance", render: (t) => (t.dueDate ? format(new Date(t.dueDate), "d MMM HH:mm") : "—") },
     { key: "created", label: "Created", render: (t) => (t.creationDate || t.createdAt ? format(new Date(t.creationDate || t.createdAt), "d MMM yyyy, HH:mm") : "—") },
+    { key: "due", label: "Clearance", render: (t) => (t.dueDate ? format(new Date(t.dueDate), "d MMM HH:mm") : "—") },
   ];
+
+  // Exports every task matching the current search, team filter and sort (not just this page).
+  const exportXlsx = async () => {
+    setExporting(true);
+    try {
+      const all = await maintenanceApi.tasks.list({ limit: "all", q: q || undefined, team: teamKey || undefined, sort });
+      if (!all.rows.length) {
+        toast.info("No tasks to export");
+        return;
+      }
+      const teamNames = teamFilter.map((id) => teams.find((t) => t._id === id)?.teamName).filter(Boolean);
+      exportMaintenanceTasks(all.rows, { filterNote: [q && `search "${q}"`, teamNames.length && `teams: ${teamNames.join(", ")}`].filter(Boolean).join(" · ") });
+      toast.success(`Exported ${all.rows.length.toLocaleString()} task${all.rows.length === 1 ? "" : "s"}`);
+    } catch (e) {
+      toast.error(errMsg(e, "Couldn't export the tasks"));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const changed = () => {
     load();
@@ -100,6 +142,7 @@ const MaintenanceTasksPage = () => {
     <>
       <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 1, mb: 1.5 }}>
         <Button variant="outlined" component={RouterLink} to="/dvoc-maintenance/reports" startIcon={<BarChartOutlined sx={{ fontSize: 18 }} />}>Analysis & Reports</Button>
+        <Button variant="outlined" startIcon={<FileDownloadOutlined sx={{ fontSize: 18 }} />} onClick={exportXlsx} disabled={exporting || !data?.total}>{exporting ? "Exporting…" : "Export xlsx"}</Button>
         <Button variant="outlined" startIcon={<UploadFileOutlined sx={{ fontSize: 18 }} />} onClick={() => setUploadOpen(true)}>Upload sheet</Button>
         <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => setEditing("new")}>Create task</Button>
       </Box>

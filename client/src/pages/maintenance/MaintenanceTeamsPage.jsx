@@ -22,7 +22,7 @@ import MTable from "./MTable";
 import { STATUS_TONE, errMsg, fieldErrors, maintenanceApi, monthLabel, useDropdowns, useMaintenanceTeams } from "./maintenanceApi";
 
 const SHIFTS = ["Morning", "Evening", "Night", "Rotating"];
-const EMPTY = { teamName: "", teamCode: "", company: "", supervisor: "", supervisorPhone: "", governorate: "", coverageAreas: "", shift: "", vehicle: "", status: "Active", notes: "", members: [] };
+const EMPTY = { teamName: "", teamCode: "", company: "", supervisor: "", supervisorPhone: "", governorate: "", coverageAreas: "", shift: "", vehicle: "", status: "Active", yearsOfExperience: "", training: "", qaResult: "", notes: "", members: [] };
 
 /** Create / edit a maintenance team: identity, supervision, coverage, crew. */
 export const TeamFormDialog = ({ open, team, onClose, onSaved }) => {
@@ -33,7 +33,7 @@ export const TeamFormDialog = ({ open, team, onClose, onSaved }) => {
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (!open) return;
-    setV(team ? { ...EMPTY, ...team, coverageAreas: (team.coverageAreas || []).join(", "), members: team.members || [] } : EMPTY);
+    setV(team ? { ...EMPTY, ...team, yearsOfExperience: team.yearsOfExperience ?? "", training: team.training || "", qaResult: team.qaResult || "", coverageAreas: (team.coverageAreas || []).join(", "), members: team.members || [] } : EMPTY);
     setErrors({});
     setError(null);
   }, [open, team]);
@@ -43,6 +43,7 @@ export const TeamFormDialog = ({ open, team, onClose, onSaved }) => {
   const submit = async () => {
     const errs = {};
     if (!v.teamName.trim()) errs.teamName = "Team name is required";
+    if (v.yearsOfExperience !== "" && !(Number(v.yearsOfExperience) >= 0 && Number(v.yearsOfExperience) <= 60)) errs.yearsOfExperience = "Enter 0–60 years";
     if (v.members.some((m) => !String(m.name || "").trim() && (m.phone || "").trim())) errs.members = "Each crew member needs a name";
     setErrors(errs);
     if (Object.keys(errs).length) return;
@@ -88,6 +89,16 @@ export const TeamFormDialog = ({ open, team, onClose, onSaved }) => {
       </Row>
       <Row label="Status" hint="Inactive teams keep their history but can't get new tasks or samples.">
         <SegmentedControl ariaLabel="Team status" value={v.status} onChange={set("status")} options={[{ value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }]} />
+      </Row>
+      <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 2 }}>Experience & quality</Typography>
+      <Row label="Years of experience">
+        <TextField {...field} type="number" value={v.yearsOfExperience} onChange={set("yearsOfExperience")} placeholder="e.g. 3" error={!!errors.yearsOfExperience} helperText={errors.yearsOfExperience} slotProps={{ htmlInput: { "aria-label": "Years of experience", min: 0, max: 60, step: 0.5 } }} />
+      </Row>
+      <Row label="Training & QA" hint="Training status and the latest QA result.">
+        <Pair>
+          <SelectField value={v.training} onChange={set("training")} options={[{ value: "", label: "Not recorded" }, { value: "Trained", label: "Trained" }, { value: "Not trained", label: "Not trained" }]} ariaLabel="Training" placeholder="Training" />
+          <SelectField value={v.qaResult} onChange={set("qaResult")} options={[{ value: "", label: "Not recorded" }, { value: "Passed", label: "QA passed" }, { value: "Failed", label: "QA failed" }]} ariaLabel="QA result" placeholder="QA result" />
+        </Pair>
       </Row>
       <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 2 }}>Supervision & coverage</Typography>
       <Row label="Supervisor" hint="Name and phone.">
@@ -171,6 +182,9 @@ const TeamSheet = ({ teamId, onClose, onEdit }) => {
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
           <Box>
             <Detail label="Status"><Badge tone={team.status === "Active" ? "success" : "neutral"} dot>{team.status}</Badge></Detail>
+            <Detail label="Experience">{team.yearsOfExperience != null ? `${team.yearsOfExperience} year${team.yearsOfExperience === 1 ? "" : "s"}` : ""}</Detail>
+            <Detail label="Training">{team.training}</Detail>
+            <Detail label="QA result">{team.qaResult && <Badge tone={team.qaResult === "Passed" ? "success" : "danger"}>QA {team.qaResult.toLowerCase()}</Badge>}</Detail>
             <Detail label="Supervisor">{[team.supervisor, team.supervisorPhone].filter(Boolean).join(" · ")}</Detail>
             <Detail label="Shift">{team.shift}</Detail>
             <Detail label="Coverage">{(team.coverageAreas || []).join(", ")}</Detail>
@@ -248,10 +262,6 @@ const MaintenanceTeamsPage = () => {
         {t.teamCode && <Typography component="span" sx={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>{t.teamCode}</Typography>}
       </Box>
     ) },
-    { key: "company", label: "Company", render: (t) => t.company || "—" },
-    { key: "supervisor", label: "Supervisor", render: (t) => t.supervisor || "—" },
-    { key: "governorate", label: "Area", render: (t) => [t.governorate, t.shift].filter(Boolean).join(" · ") || "—" },
-    { key: "crew", label: "Crew", align: "right", render: (t) => t.members?.length || 0 },
     { key: "tasks", label: "Tasks", align: "right", render: (t) => t.stats.tasks },
     { key: "resolved", label: "Resolved", align: "right", render: (t) => t.stats.resolvedTasks || 0 },
     { key: "samples", label: "Samples", align: "right", render: (t) => t.stats.samples.toLocaleString() },

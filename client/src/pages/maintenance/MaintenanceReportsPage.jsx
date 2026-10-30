@@ -61,6 +61,7 @@ import {
   isWithinInterval,
 } from "date-fns";
 import XLSX from "xlsx-js-style";
+import { getTaskRcaRows } from "./maintenanceRca";
 
 import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/ui/StatCard";
@@ -95,62 +96,6 @@ const formatDuration = (start, end) => {
 
   const text = parts.join(" ");
   return isNegative ? `-${text}` : text;
-};
-
-const normalizeArrayField = (val) => {
-  if (!val) return [];
-  if (Array.isArray(val)) {
-    return val
-      .flatMap((v) => (typeof v === "string" ? v.split(",").map((s) => s.trim()) : [v]))
-      .map(String)
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  if (typeof val === "string") {
-    return val
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [String(val).trim()].filter(Boolean);
-};
-
-// Extracts all RCA rows from a task (supporting both `task.rca` objects and legacy string arrays)
-const getTaskRcaRows = (task) => {
-  if (Array.isArray(task?.rca) && task.rca.length > 0) {
-    return task.rca
-      .filter((r) => r.reason || r.subReason || r.rootCause || r.responsible)
-      .map((r) => ({
-        reason: (r.reason || "Unknown").trim(),
-        subReason: (r.subReason || "Unknown").trim(),
-        rootCause: (r.rootCause || "Unknown").trim(),
-        responsible: (r.responsible || "Unknown").trim(),
-        teamAccountability: (r.teamAccountability || "Not specified").trim(),
-        // An empty root cause is shown as "Unknown" but is not an identified root cause.
-        hasRootCause: Boolean((r.rootCause || "").trim()),
-      }));
-  }
-
-  const reasons = normalizeArrayField(task?.reason);
-  const subReasons = normalizeArrayField(task?.subReason);
-  const rootCauses = normalizeArrayField(task?.rootCause);
-  const resps = normalizeArrayField(task?.responsible);
-  const accs = normalizeArrayField(task?.teamAccountability);
-  const max = Math.max(reasons.length, subReasons.length, rootCauses.length, resps.length, accs.length);
-
-  if (max === 0) return [];
-  const rows = [];
-  for (let i = 0; i < max; i++) {
-    rows.push({
-      reason: reasons[i] || reasons[0] || "Unknown",
-      subReason: subReasons[i] || subReasons[0] || "Unknown",
-      rootCause: rootCauses[i] || rootCauses[0] || "Unknown",
-      responsible: resps[i] || resps[0] || "Unknown",
-      teamAccountability: accs[i] || accs[0] || "Not specified",
-      hasRootCause: Boolean(rootCauses[i] || rootCauses[0]),
-    });
-  }
-  return rows;
 };
 
 const matchesRootCause = (row, filter) =>
@@ -207,7 +152,6 @@ const MaintenanceReportsPage = () => {
   const [resolvedFilter, setResolvedFilter] = useState("all");
   const [ncfFilter, setNcfFilter] = useState("all");
   const [hcFilter, setHcFilter] = useState("all");
-  const [teamRespFilter, setTeamRespFilter] = useState("all"); // all | Yes | No | unset
   const [followUpFilter, setFollowUpFilter] = useState("all"); // all | Yes | No | unset
   // RCA filters match within one RCA row (reason → sub-reason → root cause → owner cascade).
   const [rcaReasonFilter, setRcaReasonFilter] = useState("all");
@@ -492,7 +436,6 @@ const MaintenanceReportsPage = () => {
         issues: 0,
         ncf: 0,
         hc: 0,
-        mtResp: 0,
       };
     });
 
@@ -524,7 +467,6 @@ const MaintenanceReportsPage = () => {
           issues: 0,
           ncf: 0,
           hc: 0,
-          mtResp: 0,
         };
       }
       const entry = map[tid];
@@ -533,7 +475,6 @@ const MaintenanceReportsPage = () => {
       if (t.resolvedAfterVisit === "Yes" || t.status === "Closed") entry.resolved++;
       if (t.ncf) entry.ncf++;
       if (t.hcResponsibility) entry.hc++;
-      if (t.teamResponsibility === "Yes") entry.mtResp++;
 
       if (t.evaluationScore !== null) {
         const sc = Number(t.evaluationScore);
@@ -551,7 +492,6 @@ const MaintenanceReportsPage = () => {
         const totalSamp = hasSamples ? t.samples : nonPromoters + t.highRated;
         const promoters = hasSamples ? Math.max(0, t.samples - nonPromoters) : t.highRated;
         const promoterPct = hasSamples ? +((promoters / t.samples) * 100).toFixed(1) : null;
-        const nonPromoterPct = hasSamples ? +((nonPromoters / t.samples) * 100).toFixed(1) : null;
         // DVOC % = DVOC cases (maintenance tasks) per survey sample.
         const dvocPct = hasSamples ? +((t.tasks / t.samples) * 100).toFixed(1) : null;
         const resolvedPct = t.tasks > 0 ? ((t.resolved / t.tasks) * 100).toFixed(1) : "0.0";
@@ -564,7 +504,6 @@ const MaintenanceReportsPage = () => {
           effectiveSamples: totalSamp,
           hasSamples,
           promoterPct,
-          nonPromoterPct,
           dvocPct,
           resolvedPct,
           ncfPct,
@@ -717,9 +656,6 @@ const MaintenanceReportsPage = () => {
         if (hcFilter === "yes" && !t.hcResponsibility) return false;
         if (hcFilter === "no" && t.hcResponsibility) return false;
       }
-      if (teamRespFilter !== "all") {
-        if (teamRespFilter === "unset" ? Boolean(t.teamResponsibility) : t.teamResponsibility !== teamRespFilter) return false;
-      }
       if (followUpFilter !== "all") {
         if (followUpFilter === "unset" ? Boolean(t.customerFollowUp) : t.customerFollowUp !== followUpFilter) return false;
       }
@@ -745,7 +681,7 @@ const MaintenanceReportsPage = () => {
 
       return true;
     });
-  }, [filteredTasks, search, teamFilter, fiberFilter, resolvedFilter, ncfFilter, hcFilter, teamRespFilter, followUpFilter, rcaFiltersActive, rcaReasonFilter, rcaSubReasonFilter, rcaRootCauseFilter, rcaOwnerFilter, scoreFilter]);
+  }, [filteredTasks, search, teamFilter, fiberFilter, resolvedFilter, ncfFilter, hcFilter, followUpFilter, rcaFiltersActive, rcaReasonFilter, rcaSubReasonFilter, rcaRootCauseFilter, rcaOwnerFilter, scoreFilter]);
 
   const paginatedTasks = useMemo(() => {
     return tableFilteredTasks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
@@ -1014,7 +950,7 @@ const MaintenanceReportsPage = () => {
         alignment: { horizontal: "left", vertical: "center", indent: 1 },
       };
       if (!wsTeams["!merges"]) wsTeams["!merges"] = [];
-      wsTeams["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 15 } });
+      wsTeams["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } });
 
       const teamExportRows = teamsMatrix.map((t) => ({
         "Team Name": t.teamName,
@@ -1025,18 +961,16 @@ const MaintenanceReportsPage = () => {
         "Promoter %": t.promoterPct == null ? "—" : `${t.promoterPct}%`,
         Neutrals: t.neutrals,
         Detractors: t.detractors,
-        "Non-Promoter Rate": t.nonPromoterPct == null ? "—" : `${t.nonPromoterPct}%`,
         DVOC: t.tasks,
         "DVOC %": t.dvocPct == null ? "—" : `${t.dvocPct}%`,
-        "MT Responsibility": t.mtResp,
         "Resolved Tasks": t.resolved,
         "Resolved %": `${t.resolvedPct}%`,
         "Total RCA Issues": t.issues,
         "NCF Tasks (≤1M)": t.ncf,
       }));
       XLSX.utils.sheet_add_json(wsTeams, teamExportRows, { origin: "A3", skipHeader: false });
-      applyHeaderStyle(wsTeams, { s: { r: 2, c: 0 }, e: { r: 2, c: 15 } }, "374151");
-      wsTeams["!cols"] = Array(16).fill({ wch: 16 });
+      applyHeaderStyle(wsTeams, { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }, "374151");
+      wsTeams["!cols"] = Array(14).fill({ wch: 16 });
       wsTeams["!cols"][0] = { wch: 28 };
       fixSheetRange(wsTeams);
 
@@ -1086,7 +1020,6 @@ const MaintenanceReportsPage = () => {
           "Resolved After Visit": t.resolvedAfterVisit || "Not specified",
           "NCF (≤ 1 Month)": t.ncf ? "Yes" : "No",
           "HC Responsibility": t.hcResponsibility ? "Yes" : "No",
-          "Team Responsibility (MT)": t.teamResponsibility || "Not recorded",
           "Customer Follow-up": t.customerFollowUp || "Not recorded",
           Status: t.status || "-",
           Priority: t.priority || "Medium",
@@ -1774,10 +1707,8 @@ const MaintenanceReportsPage = () => {
                             <TableCell align="center">Promoter %</TableCell>
                             <TableCell align="center">Neutral (7-8)</TableCell>
                             <TableCell align="center">Detractor (1-6)</TableCell>
-                            <TableCell align="center">Non-Promoter %</TableCell>
                             <TableCell align="center">DVOC</TableCell>
                             <TableCell align="center" title="DVOC cases ÷ survey samples">DVOC %</TableCell>
-                            <TableCell align="center" title="DVOC where “Is it Team Responsibility?” = Yes">MT responsible</TableCell>
                             <TableCell align="center">Resolved %</TableCell>
                             <TableCell align="center">RCA Issues</TableCell>
                             <TableCell align="center">NCF (≤1M)</TableCell>
@@ -1787,7 +1718,7 @@ const MaintenanceReportsPage = () => {
                         <TableBody>
                           {displayedTeams.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={13} align="center" sx={{ py: 3, color: "var(--text-muted)" }}>
+                              <TableCell colSpan={11} align="center" sx={{ py: 3, color: "var(--text-muted)" }}>
                                 No teams match these filters.
                               </TableCell>
                             </TableRow>
@@ -1820,16 +1751,12 @@ const MaintenanceReportsPage = () => {
                                   "0"
                                 )}
                               </TableCell>
-                              <TableCell align="center" sx={{ fontWeight: 600 }}>
-                                {t.nonPromoterPct == null ? "—" : `${t.nonPromoterPct}%`}
-                              </TableCell>
                               <TableCell align="center" sx={{ fontWeight: 700 }}>
                                 {t.tasks}
                               </TableCell>
                               <TableCell align="center" sx={{ fontWeight: 600 }}>
                                 {t.dvocPct == null ? "—" : `${t.dvocPct}%`}
                               </TableCell>
-                              <TableCell align="center">{t.mtResp ? <Badge tone="danger">{t.mtResp}</Badge> : "0"}</TableCell>
                               <TableCell align="center">
                                 <Badge tone={t.resolved > 0 ? "success" : "neutral"}>
                                   {t.resolvedPct}%
@@ -1979,24 +1906,6 @@ const MaintenanceReportsPage = () => {
                     </Select>
                   </FormControl>
 
-                  {/* Team Responsibility (MT) Filter */}
-                  <FormControl size="small" sx={{ minWidth: 130 }}>
-                    <InputLabel sx={{ fontSize: 12 }}>Team resp.</InputLabel>
-                    <Select
-                      value={teamRespFilter}
-                      label="Team resp."
-                      onChange={(e) => {
-                        setTeamRespFilter(e.target.value);
-                        setPage(0);
-                      }}
-                      sx={{ fontSize: 12 }}
-                    >
-                      <MenuItem value="all" sx={{ fontSize: 12 }}>All</MenuItem>
-                      <MenuItem value="Yes" sx={{ fontSize: 12 }}>MT responsible</MenuItem>
-                      <MenuItem value="No" sx={{ fontSize: 12 }}>Not MT</MenuItem>
-                      <MenuItem value="unset" sx={{ fontSize: 12 }}>Not recorded</MenuItem>
-                    </Select>
-                  </FormControl>
 
                   {/* Customer follow-up Filter */}
                   <FormControl size="small" sx={{ minWidth: 120, maxWidth: 220 }}>

@@ -169,9 +169,6 @@ const MaintenanceTaskSheet = ({ taskId, onClose, onEdit, onChanged, initialTab =
                   "Not specified"
                 )}
               </Detail>
-              <Detail label="Team responsibility (MT)">
-                {task.teamResponsibility ? <Badge tone={task.teamResponsibility === "Yes" ? "danger" : "success"}>{task.teamResponsibility}</Badge> : "Not recorded"}
-              </Detail>
               <Detail label="Customer needs follow-up">
                 {task.customerFollowUp ? <Badge tone={task.customerFollowUp === "Yes" ? "warning" : "neutral"}>{task.customerFollowUp}</Badge> : "Not recorded"}
               </Detail>

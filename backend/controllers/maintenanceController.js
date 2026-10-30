@@ -79,12 +79,15 @@ export const getMeta = handle(async (_req, res) => {
 
 // ---------------------------------------------------------------------------- teams
 
-const TEAM_FIELDS = ["teamName", "teamCode", "company", "supervisor", "supervisorPhone", "governorate", "coverageAreas", "shift", "vehicle", "members", "status", "notes"];
+const TEAM_FIELDS = ["teamName", "teamCode", "company", "supervisor", "supervisorPhone", "governorate", "coverageAreas", "shift", "vehicle", "members", "status", "yearsOfExperience", "training", "qaResult", "notes"];
 
 const cleanTeam = (body) => {
   const t = pick(body, TEAM_FIELDS);
   if (typeof t.coverageAreas === "string") t.coverageAreas = t.coverageAreas.split(",");
   if (Array.isArray(t.coverageAreas)) t.coverageAreas = [...new Set(t.coverageAreas.map((s) => String(s).trim()).filter(Boolean))];
+  if ("yearsOfExperience" in t) t.yearsOfExperience = t.yearsOfExperience === "" || t.yearsOfExperience == null ? null : Number(t.yearsOfExperience);
+  if (t.training === "") t.training = null;
+  if (t.qaResult === "") t.qaResult = null;
   if (Array.isArray(t.members)) t.members = t.members.filter((m) => m && String(m.name || "").trim()).map((m) => ({ ...(m._id && isValidObjectId(m._id) ? { _id: m._id } : {}), name: String(m.name).trim(), role: String(m.role || "Technician").trim(), phone: String(m.phone || "").trim() }));
   return t;
 };
@@ -401,9 +404,8 @@ const validateTaskRefs = async (data, { creating }) => {
       else if (data.team && String(s.team) !== String(data.team)) errors.surveySample = "That sample entry belongs to another team";
     }
   }
-  // Required on new tasks; older tasks without a value can still be edited.
-  if (creating && !data.teamResponsibility) errors.teamResponsibility = "Choose whether it is the maintenance team's responsibility";
-  else if (data.teamResponsibility != null && !["Yes", "No"].includes(data.teamResponsibility)) errors.teamResponsibility = "Team responsibility must be Yes or No";
+  // Team responsibility is no longer asked in the form; older values stay valid.
+  if (data.teamResponsibility != null && !["Yes", "No"].includes(data.teamResponsibility)) errors.teamResponsibility = "Team responsibility must be Yes or No";
   if (creating && !data.customerFollowUp) errors.customerFollowUp = "Choose whether the customer needs a follow-up";
   else if (data.customerFollowUp != null && !["Yes", "No"].includes(data.customerFollowUp)) errors.customerFollowUp = "Customer follow-up must be Yes or No";
   if (data.evaluationScore != null && !(Number.isInteger(data.evaluationScore) && data.evaluationScore >= 1 && data.evaluationScore <= 10)) errors.evaluationScore = "Score must be 1–10";

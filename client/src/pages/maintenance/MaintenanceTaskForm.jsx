@@ -22,7 +22,7 @@ const toDateTimeInput = (d) => {
   const mm = pad(date.getMinutes());
   return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
 };
-const EMPTY = { slid: "", ticketNumber: "", customerName: "", contactNumber: "", customerComplaint: "", fiberCategory: "", teamFeedback: "", governorate: "", district: "", team: "", surveySample: "", evaluationScore: "", customerFeedback: "", interviewDate: "", faultDate: "", creationDate: "", dueDate: "", resolvedAfterVisit: "Not specified", teamResponsibility: "", customerFollowUp: "", ncf: false, hcResponsibility: false, faultType: "", priority: "Medium", status: "Todo", assignedTo: [], rca: [], notes: "" };
+const EMPTY = { slid: "", ticketNumber: "", customerName: "", contactNumber: "", customerComplaint: "", fiberCategory: "", teamFeedback: "", governorate: "", district: "", team: "", surveySample: "", evaluationScore: "", customerFeedback: "", interviewDate: "", faultDate: "", creationDate: "", dueDate: "", resolvedAfterVisit: "Not specified", customerFollowUp: "", ncf: false, hcResponsibility: false, faultType: "", priority: "Medium", status: "Todo", assignedTo: [], rca: [], notes: "" };
 const EMPTY_RCA = { reason: "", subReason: "", rootCause: "", responsible: "", teamAccountability: "Not specified" };
 
 const SectionTitle = ({ children }) => <Typography sx={{ fontSize: 13, fontWeight: 600, color: "var(--text)", mt: 2, "&:first-of-type": { mt: 0.5 } }}>{children}</Typography>;
@@ -61,7 +61,6 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
         creationDate: toDateTimeInput(task.creationDate || task.createdAt),
         dueDate: toDateTimeInput(task.dueDate),
         resolvedAfterVisit: task.resolvedAfterVisit || "Not specified",
-        teamResponsibility: task.teamResponsibility || "", // older tasks have none yet
         customerFollowUp: task.customerFollowUp || "",
         ncf: Boolean(task.ncf),
         hcResponsibility: Boolean(task.hcResponsibility),
@@ -104,7 +103,6 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
     if (!v.slid.trim()) errs.slid = "SLID is required";
     if (!v.team) errs.team = "Choose a maintenance team";
     // Required on new tasks; an older task without it can still be saved (and answered later).
-    if (!task && !v.teamResponsibility) errs.teamResponsibility = "Choose Yes or No";
     if (!task && !v.customerFollowUp) errs.customerFollowUp = "Choose Yes or No";
     if (v.dueDate && v.creationDate && new Date(v.dueDate) < new Date(v.creationDate)) {
       errs.dueDate = "Clearance date cannot be before creation date";
@@ -262,20 +260,6 @@ const MaintenanceTaskForm = ({ open, task, teams, defaultTeam, onClose, onSaved,
             />
           </Box>
         </Pair>
-      </Row>
-      <Row label="Is it Team Responsibility?" required={!task} hint="Whether the issue is attributable to the maintenance team (MT).">
-        <SelectField
-          value={v.teamResponsibility || ""}
-          onChange={set("teamResponsibility")}
-          options={[
-            { value: "", label: task ? "Not recorded" : "Choose…" },
-            { value: "Yes", label: "Yes — the maintenance team's responsibility" },
-            { value: "No", label: "No — not the maintenance team's responsibility" },
-          ]}
-          ariaLabel="Is it Team Responsibility?"
-          placeholder={task ? "Not recorded" : "Choose…"}
-        />
-        {errors.teamResponsibility && <Typography sx={{ fontSize: 12, color: "var(--danger)", mt: 0.5 }}>{errors.teamResponsibility}</Typography>}
       </Row>
       <Row label="Does customer needs follow-up?" required={!task} hint="Whether the customer should be contacted again after this visit.">
         <SelectField

@@ -10,6 +10,8 @@ export const MAINTENANCE_TEAM_STATUSES = ["Active", "Inactive"];
 export const MAINTENANCE_SHIFTS = ["Morning", "Evening", "Night", "Rotating"];
 export const MAINTENANCE_TASK_STATUSES = ["Todo", "In Progress", "Closed"];
 export const MAINTENANCE_PRIORITIES = ["High", "Medium", "Low"];
+export const MAINTENANCE_TRAINING = ["Trained", "Not trained"];
+export const MAINTENANCE_QA_RESULTS = ["Passed", "Failed"];
 
 const memberSchema = new Schema(
   {
@@ -33,6 +35,10 @@ const maintenanceTeamSchema = new Schema(
     vehicle: { type: String, trim: true, default: "" },
     members: { type: [memberSchema], default: [] },
     status: { type: String, enum: MAINTENANCE_TEAM_STATUSES, default: "Active" },
+    // Team profile shown on the Survey samples page. null = not recorded.
+    yearsOfExperience: { type: Number, min: [0, "Years of experience can't be negative"], max: 60, default: null },
+    training: { type: String, enum: [...MAINTENANCE_TRAINING, null], default: null },
+    qaResult: { type: String, enum: [...MAINTENANCE_QA_RESULTS, null], default: null },
     notes: { type: String, trim: true, default: "" },
     createdBy: { type: ObjectId, ref: "User" },
     updatedBy: { type: ObjectId, ref: "User" },
